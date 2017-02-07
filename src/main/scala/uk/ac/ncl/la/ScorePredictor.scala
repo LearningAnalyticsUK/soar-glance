@@ -83,16 +83,18 @@ object ScorePredictor {
       conf <- parseCli.right
       spark <- boot(conf).right
       recs <- readrecords(spark, conf).right
-      (model, rmse) <- produceModel(spark, recs, conf).right
-      _ <- writeOut(spark, model, rmse, recs.count(), conf).right
-    } yield {
-      case Left(e) =>
-        //In the event of an error, log and crash out.
-        log.error(e.toString)
-        sys.exit(1)
-      case Right(_) =>
-        //In the event of a successful job, log and finish
-        log.info("Job finished.")
+      model <- produceModel(spark, recs, conf).right
+      _ <- writeOut(spark, model._1, model._2, recs.count(), conf).right
+    } yield { r: Either[Throwable, Unit] =>
+      r match {
+        case Left(e) =>
+          //In the event of an error, log and crash out.
+          log.error(e.toString)
+          sys.exit(1)
+        case Right(_) =>
+          //In the event of a successful job, log and finish
+          log.info("Job finished.")
+      }
     }
 
   }

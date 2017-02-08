@@ -55,8 +55,8 @@ object ScorePredictor {
       case List(st, mc, sc) =>
         //Parse elements of record, returning None in the event of an error
         for {
-          module <- catching(classOf[NumberFormatException]) opt mc.toInt
-          score <- catching(classOf[NumberFormatException]) opt sc.toDouble
+          module <- catching(classOf[NumberFormatException]) opt mc.drop(3).toInt
+          score <- catching(classOf[NumberFormatException]) opt sc.toInt
           if score >= 0 && score <= 100
         } yield new ModuleRecord(st, module, score)
       case _ => None
@@ -71,7 +71,7 @@ object ScorePredictor {
   def main(args: Array[String]): Unit = {
     //Set up the logger
     val log = LogManager.getRootLogger
-    log.setLevel(Level.INFO)
+    log.setLevel(Level.ERROR)
 
     //Create a config object from the command line arguments provided
     val parseCli = parser.parse(args, Config()).fold {
@@ -79,25 +79,23 @@ object ScorePredictor {
     } { Right(_) }
 
     //Compose stages of job
-    for {
+    (for {
       conf <- parseCli.right
       spark <- boot(conf).right
       recs <- readrecords(spark, conf).right
       model <- produceModel(spark, recs, conf).right
-      _ <- writeOut(spark, model._1, model._2, recs.count(), conf).right
-    } yield { r: Either[Throwable, Unit] =>
-      r match {
-        case Left(e) =>
-          //In the event of an error, log and crash out.
-          log.error(e.toString)
-          sys.exit(1)
-        case Right(_) =>
-          //In the event of a successful job, log and finish
-          log.info("Job finished.")
-      }
+      unit <- writeOut(spark, model._1, model._2, recs.count(), conf).right
+    } yield unit) match {
+      case Left(e) =>
+        //In the event of an error, log and crash out.
+        log.error(e.toString)
+        sys.exit(1)
+      case Right(_) =>
+        //In the event of a successful job, log and finish
+        log.info("Job finished.")
     }
-
   }
+
 
   /** Create and configure the spark context */
   private def boot(conf: Config): Either[Throwable, SparkContext] = Either.catchNonFatal {
@@ -116,9 +114,11 @@ object ScorePredictor {
 
       //Import the records
       val recordLines = spark.textFile(conf.recordsPath)
-      //Parse the records and drop errors
-      recordLines.flatMap(line => ModuleRecord(line))
 
+      //Parse the records and drop errors
+      val records = recordLines.flatMap(line => ModuleRecord(line))
+
+      records
     }
 
 
@@ -168,6 +168,7 @@ object ScorePredictor {
                        rmse: Double,
                        numRecs: Long,
                        conf: Config): Either[Throwable, Unit] = Either.catchNonFatal {
+
     //Scala monadic version of try with resources
     //TODO: check path is valid directory not file. (needed?)
     for {

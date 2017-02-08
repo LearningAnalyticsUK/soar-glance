@@ -71,7 +71,7 @@ object ScorePredictor {
   def main(args: Array[String]): Unit = {
     //Set up the logger
     val log = LogManager.getRootLogger
-    log.setLevel(Level.ERROR)
+    log.setLevel(Level.WARN)
 
     //Create a config object from the command line arguments provided
     val parseCli = parser.parse(args, Config()).fold {
@@ -116,9 +116,7 @@ object ScorePredictor {
       val recordLines = spark.textFile(conf.recordsPath)
 
       //Parse the records and drop errors
-      val records = recordLines.flatMap(line => ModuleRecord(line))
-
-      records
+      recordLines.flatMap(line => ModuleRecord(line))
     }
 
 
@@ -137,9 +135,8 @@ object ScorePredictor {
     val eval = ev.persist()
 
     //Train ALS using the config params
-    //TODO: Evaluate training model over space (using k-cover) and return best one.
+    //TODO: Evaluate training model over space (using k-cover cross validation) and return best one.
     val model = ALS.train(training, conf.rank, conf.iter, conf.lambda)
-
 
     //Evaluate ALS
     //Drop the ratings to leave you with just the user product pairs
@@ -171,8 +168,12 @@ object ScorePredictor {
 
     //Scala monadic version of try with resources
     //TODO: check path is valid directory not file. (needed?)
+    val out = Paths.get(conf.outputPath)
+
+    val outPath = if(Files.exists(out)) out else Files.createDirectories(out)
+
     for {
-      writer <- managed(Files.newBufferedWriter(Paths.get(s"${conf.outputPath}/model-summary.txt"),
+      writer <- managed(Files.newBufferedWriter(Paths.get(s"${outPath.toAbsolutePath}/model-summary.txt"),
         StandardCharsets.UTF_8, StandardOpenOption.CREATE, StandardOpenOption.APPEND))
     } {
       //Write out summary stats
@@ -184,11 +185,13 @@ object ScorePredictor {
       writer.newLine()
       writer.write(s"The alpha parameter used: ${conf.alpha}")
       writer.newLine()
+      writer.write(s"The lambda parameter used: ${conf.lambda}")
+      writer.newLine()
       writer.write(s"Model RMSE score: $rmse")
     }
 
     //Wite out the model
-    model.save(spark, s"${conf.outputPath}/model")
+    model.save(spark, s"${outPath.toAbsolutePath}/model")
   }
 
 }

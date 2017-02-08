@@ -26,7 +26,7 @@ import scopt._
 package object la {
 
   /** Config bag */
-  case class Config(recordsPath: String = "", outputPath: String = "", rank: Int = 10, iter: Int = 5,
+  case class Config(recordsPath: String = "", outputPath: String = "", rank: Int = 20, iter: Int = 12,
                     lambda: Double = 0.01, alpha: Double = 1.0, master: String = "local[2]", exMem: String = "4g")
 
   /** Package private helper object for parsing command line arguments, provided by scopt */
@@ -37,7 +37,7 @@ package object la {
     //Define the individual command line options
     opt[String]('i', "input").required().valueName("<file>")
       .action( (x, c) => c.copy(recordsPath = x) )
-        .text("input is a required .csv file containing student/module scores. " +
+      .text("input is a required .csv file containing student/module scores. " +
           "Format \"StudentNumber, Module Code, Percentage\"")
 
     opt[String]('o', "output").required().valueName("<directory>")

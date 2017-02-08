@@ -19,7 +19,11 @@ Assuming you have all the pre-requisites, run the following commands:
 
 1. `sbt clean`
 2. `sbt assembly`
-3. `./submit.sh input_file.csv output_directory`
+3. `sudo ./submit.sh input_file.csv output_directory`
 
 I will expand in the immediate future to allow interactive on-demand predictions from a generated
 or loaded model.
+
+**Note**: The submit script requires sudo at the moment because the quickest fix for specifying an
+output location for spark's log4j logs was to use the system /var/log/ dir. Will modify to user home
+soon but that requires a little bit of platform specific runtime hackery so its on the todo list...

@@ -15,15 +15,16 @@
   * See the License for the specific language governing permissions and
   * limitations under the License.
   */
-package uk.ac.ncl
+package uk.ac.ncl.la
 
+import org.apache.spark.mllib.recommendation.Rating
 import scopt._
 
 /** Package object containing command line options and the parser object
   *
   * @author hugofirth
   */
-package object la {
+package object model {
 
   /** Config bag */
   case class Config(recordsPath: String = "", outputPath: String = "", rank: Int = 20, iter: Int = 12,
@@ -63,6 +64,11 @@ package object la {
     opt[String]("executor").valueName("[string]")
       .action( (x, c) => c.copy(exMem = x) )
       .text("executor is an optional parameter for configuring the application SparkContext.")
+  }
+
+  /** Syntax enrichment from ModuleRecord to spark's built in Rating type */
+  final implicit class ModuleRecordOps(val mr: ModuleRecord) extends AnyVal {
+    @inline def toRating: Rating = Rating(mr.student.toInt, mr.module, mr.score)
   }
 
 }

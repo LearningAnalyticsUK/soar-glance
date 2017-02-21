@@ -15,22 +15,19 @@
   * See the License for the specific language governing permissions and
   * limitations under the License.
   */
-package uk.ac.ncl.la
+package uk.ac.ncl.la.model
 
 import java.nio.charset.StandardCharsets
 import java.nio.file.{Files, Paths, StandardOpenOption}
 
-import org.apache.spark.{SparkConf, SparkContext}
-import cats._
-import cats.data._
 import cats.implicits._
 import org.apache.log4j.{Level, LogManager}
 import org.apache.spark.mllib.evaluation.RegressionMetrics
 import org.apache.spark.mllib.recommendation.{ALS, MatrixFactorizationModel, Rating}
 import org.apache.spark.rdd.RDD
+import org.apache.spark.{SparkConf, SparkContext}
 import resource._
-
-import scala.util.control.Exception._
+import uk.ac.ncl.la.ModuleRecord
 
 /** Simple singleton entry point to Spark job
   *
@@ -40,33 +37,6 @@ import scala.util.control.Exception._
   */
 object ScorePredictor {
 
-  /** Some type aliases for clarity */
-  type StudentNumber = String
-  type ModuleCode = Int
-
-  /** General purpose Record Struct */
-  final class ModuleRecord private (val student: StudentNumber, val module: ModuleCode, val score: Double)
-
-  /** Record Companion */
-  object ModuleRecord {
-
-    /** apply method parses a record string (comma separated) */
-    def apply(record: String): Option[ModuleRecord] = record.split(",").toList match {
-      case List(st, mc, sc) =>
-        //Parse elements of record, returning None in the event of an error
-        for {
-          module <- catching(classOf[NumberFormatException]) opt mc.drop(3).toInt
-          score <- catching(classOf[NumberFormatException]) opt sc.toInt
-          if score >= 0 && score <= 100
-        } yield new ModuleRecord(st, module, score)
-      case _ => None
-    }
-  }
-
-  /** Syntax enrichment from ModuleRecord to built in Rating type */
-  final implicit class ModuleRecordOps(val mr: ModuleRecord) extends AnyVal {
-    @inline def toRating: Rating = Rating(mr.student.toInt, mr.module, mr.score)
-  }
 
   def main(args: Array[String]): Unit = {
     //Set up the logger
@@ -79,13 +49,16 @@ object ScorePredictor {
     } { Right(_) }
 
     //Compose stages of job
+    //TODO: Lift ops into effect capturing type like Task[_], rather than just Either[NonFatal, _]
     (for {
       conf <- parseCli.right
       spark <- boot(conf).right
-      recs <- readrecords(spark, conf).right
-      model <- produceModel(spark, recs, conf).right
-      unit <- writeOut(spark, model._1, model._2, recs.count(), conf).right
-    } yield unit) match {
+      rs <- readRatings(spark, conf).right
+      Array(tr, ev) <- split(rs).right
+      model <- produceModel(spark, tr, conf).right
+      rmse <- evaluateModel(spark, ev, model, conf).right
+      _ <- writeOut(spark, model, rmse, rs.count(), conf).right
+    } yield ()) match {
       case Left(e) =>
         //In the event of an error, log and crash out.
         log.error(e.toString)
@@ -109,38 +82,52 @@ object ScorePredictor {
   }
 
   /** Import training data */
-  private def readrecords(spark: SparkContext, conf: Config): Either[Throwable, RDD[ModuleRecord]] =
+  private def readRatings(spark: SparkContext, conf: Config): Either[Throwable, RDD[Rating]] =
     Either.catchNonFatal {
 
       //Import the records
       val recordLines = spark.textFile(conf.recordsPath)
 
       //Parse the records and drop errors
-      recordLines.flatMap(line => ModuleRecord(line))
+      val records = recordLines.flatMap(line => ModuleRecord(line))
+
+      //Turn the records into Ratings.
+      records.map(_.toRating)
     }
 
+  /** Split a ratings RDD into training and evaluation data */
+  private def split(rs: RDD[Rating]): Either[Throwable, Array[RDD[Rating]]] =
+    Either.catchNonFatal(rs.randomSplit(Array(0.7, 0.3)))
 
   /** Produce the predictive model */
   private def produceModel(spark: SparkContext,
-                           records: RDD[ModuleRecord],
-                           conf: Config): Either[Throwable, (MatrixFactorizationModel, Double)] = Either.catchNonFatal {
+                           tr: RDD[Rating],
+                           conf: Config): Either[Throwable, MatrixFactorizationModel] = Either.catchNonFatal {
 
-    //Turn the records into Ratings.
-    val ratings = records.map(_.toRating)
-
-    //Split Ratings RDD into a training and eval set with a ratio of 70% / 30% respectively
-    val Array(tr, ev) = ratings.randomSplit(Array(0.7, 0.3))
-    //Then persist both
+    //Persist training rdd
     val training = tr.persist()
-    val eval = ev.persist()
 
     //Train ALS using the config params
-    //TODO: Evaluate training model over space (using k-cover cross validation) and return best one.
     val model = ALS.train(training, conf.rank, conf.iter, conf.lambda)
+    //Unpersist the training RDD
+    training.unpersist()
+    //Return the model
+    model
+  }
+
+  /** Evaluate a predictive model */
+  private def evaluateModel(spark: SparkContext,
+                            ev: RDD[Rating],
+                            model: MatrixFactorizationModel,
+                            conf: Config): Either[Throwable, Double] = Either.catchNonFatal {
+
+    //TODO: Evaluate training model over space (using k-cover cross validation) and return best one.
+    //Persist the eval rdd
+    val eval = ev.persist()
 
     //Evaluate ALS
     //Drop the ratings to leave you with just the user product pairs
-    val evProductPairs = ev.map(r => (r.user, r.product))
+    val evProductPairs = eval.map(r => (r.user, r.product))
     //Pass this pair RDD to the model to generate predictions
     val evPredictions = model.predict(evProductPairs)
     //Split out ratings from predictions from ratings to give an RDD[((Int, Int), Double)] (A pair RDD with (Int, Int) key)
@@ -148,15 +135,18 @@ object ScorePredictor {
     val evPredictedRatings = evPredictions.map(splitFn)
     //Perform the same split on the original ratings from ev, and then join the two RDD[((Int, Int), Double)]. This merges
     // on key and produces an RDD[((Int, Int), (Double, Double))] so that we can compare predicted and actual ratings
-    val evActiualRatings = ev.map(splitFn)
+    val evActiualRatings = eval.map(splitFn)
     //Extract just the predicted and actual ratings as an RDD
     val evJoinedRatings = evPredictedRatings.join(evActiualRatings).map { case ((_, _), (predicted, actual)) =>
       (predicted, actual)
     }
 
-    val evaluation = new RegressionMetrics(evJoinedRatings)
-
-    (model, evaluation.rootMeanSquaredError)
+    //Get RMSE
+    val evaluation = new RegressionMetrics(evJoinedRatings).rootMeanSquaredError
+    //Unpersist eval rdd
+    eval.unpersist()
+    //Return RMSE
+    evaluation
   }
 
   /** Write out the model, parameters and RMSE score */
@@ -166,28 +156,25 @@ object ScorePredictor {
                        numRecs: Long,
                        conf: Config): Either[Throwable, Unit] = Either.catchNonFatal {
 
-    //Scala monadic version of try with resources
-    //TODO: check path is valid directory not file. (needed?)
     val out = Paths.get(conf.outputPath)
 
     val outPath = if(Files.exists(out)) out else Files.createDirectories(out)
-
+    //Scala monadic version of try with resources
     for {
       writer <- managed(Files.newBufferedWriter(Paths.get(s"${outPath.toAbsolutePath}/model-summary.txt"),
         StandardCharsets.UTF_8, StandardOpenOption.CREATE, StandardOpenOption.APPEND))
     } {
       //Write out summary stats
-      writer.write(s"The number of records provided: $numRecs")
-      writer.newLine()
-      writer.write(s"The rank parameter used: ${conf.rank}")
-      writer.newLine()
-      writer.write(s"The numIterations parameter used: ${conf.iter}")
-      writer.newLine()
-      writer.write(s"The alpha parameter used: ${conf.alpha}")
-      writer.newLine()
-      writer.write(s"The lambda parameter used: ${conf.lambda}")
-      writer.newLine()
-      writer.write(s"Model RMSE score: $rmse")
+      val summary =
+        s"""
+           |The number of records provided: $numRecs
+           |The rank parameter used: ${conf.rank}
+           |The numIterations parameter used: ${conf.iter}
+           |The alpha parameter used: ${conf.alpha}
+           |The lambda parameter used: ${conf.lambda}
+           |The Model's RMSE score: $rmse
+         """.stripMargin
+      writer.write(summary)
     }
 
     //Wite out the model

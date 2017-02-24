@@ -1,5 +1,7 @@
 ## Student Score Predictor
 
+**Note**: Readme is severely out of date. Update incoming
+
 This repo contains a minimal and untested spark job for producing models which predict the outcomes
 of student/module pairings based upon past performance. 
 

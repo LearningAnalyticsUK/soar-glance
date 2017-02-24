@@ -15,7 +15,7 @@
   * See the License for the specific language governing permissions and
   * limitations under the License.
   */
-package uk.ac.ncl.la.model
+package uk.ac.ncl.la.soar.model
 
 import java.nio.charset.StandardCharsets
 import java.nio.file.{Files, Paths, StandardOpenOption}
@@ -27,7 +27,7 @@ import org.apache.spark.mllib.recommendation.{ALS, MatrixFactorizationModel, Rat
 import org.apache.spark.rdd.RDD
 import org.apache.spark.{SparkConf, SparkContext}
 import resource._
-import uk.ac.ncl.la.ModuleRecord
+import uk.ac.ncl.la.soar.{ModuleScore}
 
 /** Simple singleton entry point to Spark job
   *
@@ -44,7 +44,7 @@ object ScorePredictor {
     log.setLevel(Level.WARN)
 
     //Create a config object from the command line arguments provided
-    val parseCli = parser.parse(args, Config()).fold {
+    val parseCli = Config.parser.parse(args, Config()).fold {
       Left(new IllegalArgumentException("Failed to correctly parse command line arguments!")): Either[Throwable, Config]
     } { Right(_) }
 
@@ -54,7 +54,8 @@ object ScorePredictor {
       conf <- parseCli.right
       spark <- boot(conf).right
       rs <- readRatings(spark, conf).right
-      Array(tr, ev) <- split(rs).right
+      rSplit <- split(rs).right
+      Array(tr, ev) = rSplit //If Either supported withFilter we could do this in one step ...
       model <- produceModel(spark, tr, conf).right
       rmse <- evaluateModel(spark, ev, model, conf).right
       _ <- writeOut(spark, model, rmse, rs.count(), conf).right
@@ -89,7 +90,7 @@ object ScorePredictor {
       val recordLines = spark.textFile(conf.recordsPath)
 
       //Parse the records and drop errors
-      val records = recordLines.flatMap(line => ModuleRecord(line))
+      val records = recordLines.flatMap(line => ModuleScore.parseLine(line, ','))
 
       //Turn the records into Ratings.
       records.map(_.toRating)
@@ -135,9 +136,9 @@ object ScorePredictor {
     val evPredictedRatings = evPredictions.map(splitFn)
     //Perform the same split on the original ratings from ev, and then join the two RDD[((Int, Int), Double)]. This merges
     // on key and produces an RDD[((Int, Int), (Double, Double))] so that we can compare predicted and actual ratings
-    val evActiualRatings = eval.map(splitFn)
+    val evActualRatings = eval.map(splitFn)
     //Extract just the predicted and actual ratings as an RDD
-    val evJoinedRatings = evPredictedRatings.join(evActiualRatings).map { case ((_, _), (predicted, actual)) =>
+    val evJoinedRatings = evPredictedRatings.join(evActualRatings).map { case ((_, _), (predicted, actual)) =>
       (predicted, actual)
     }
 

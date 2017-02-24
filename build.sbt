@@ -1,8 +1,6 @@
 //Use the typelevel compiler for partial unification
 scalaOrganization in ThisBuild := "org.typelevel"
 
-//TODO: Figure out which scala options we want to use
-
 //Separate seqs of dependencies into separate lazy values to convey intent more clearly
 //lazy val langFixes = Seq(
 //  "com.github.mpilquist" %% "simulacrum" % "0.10.0",
@@ -82,7 +80,7 @@ lazy val model = SoarProject("model")
       "com.github.scopt" %% "scopt" % "3.5.0",
       "com.jsuereth" %% "scala-arm" % "2.0"
     ),
-    mainClass in assembly := Some("uk.ac.ncl.uk.ac.ncl.la.ScorePredictor"),
+    mainClass in assembly := Some("uk.ac.ncl.la.soar.model.ScorePredictor"),
     assemblyJarName in assembly := "model.jar",
     assemblyMergeStrategy in assembly := {
       case PathList("javax", "servlet", xs @ _*) => MergeStrategy.last
@@ -113,6 +111,6 @@ lazy val eval = SoarProject("eval")
   .dependsOn(core)
   .settings(name := "Soar Evaluation", moduleName := "soar-eval")
 
-//Add some command aliases for testing all modules, rather than aggregating tasks from root indiscriminately
-addCommandAlias("testAll", "; core/test; model/test; eval/test")
-
+//Add some command aliases for testing/compiling all modules, rather than aggregating tasks from root indiscriminately
+addCommandAlias("testAll", ";core/test; model/test; eval/test")
+addCommandAlias("compileAll", ";core/compile;model/compile")

@@ -1,4 +1,4 @@
-/** soar
+/** student-attainment-predictor
   *
   * Copyright (c) 2017 Hugo Firth
   * Email: <me@hugofirth.com/>
@@ -15,15 +15,19 @@
   * See the License for the specific language governing permissions and
   * limitations under the License.
   */
-package uk.ac.ncl
+package uk.ac.ncl.la.soar
 
-/** Package object containing type aliases and various implicits
+import org.apache.spark.mllib.recommendation.Rating
+
+/** Package object containing various needed implicit enrichment
   *
   * @author hugofirth
   */
-package object la {
+package object model {
 
-  /** Some type aliases for clarity throughout job code */
-  type StudentNumber = String
-  type ModuleCode = Int
+  /** Syntax enrichment from ModuleScore to spark's built in Rating type */
+  final implicit class ModuleScoreOps(val mr: ModuleScore) extends AnyVal {
+    @inline def toRating: Rating = Rating(mr.student.toInt, mr.module, mr.score)
+  }
+
 }

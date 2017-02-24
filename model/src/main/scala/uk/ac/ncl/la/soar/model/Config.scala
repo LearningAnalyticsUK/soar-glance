@@ -1,4 +1,4 @@
-/** student-attainment-predictor
+/** soar
   *
   * Copyright (c) 2017 Hugo Firth
   * Email: <me@hugofirth.com/>
@@ -15,23 +15,21 @@
   * See the License for the specific language governing permissions and
   * limitations under the License.
   */
-package uk.ac.ncl.la
+package uk.ac.ncl.la.soar.model
 
-import org.apache.spark.mllib.recommendation.Rating
 import scopt._
 
-/** Package object containing command line options and the parser object
+/** Config "bag" case class and accompanying scopt parser
   *
   * @author hugofirth
   */
-package object model {
+final case class Config(recordsPath: String = "", outputPath: String = "", rank: Int = 20, iter: Int = 12,
+                        lambda: Double = 0.01, alpha: Double = 1.0, master: String = "local[2]", exMem: String = "4g")
 
-  /** Config bag */
-  case class Config(recordsPath: String = "", outputPath: String = "", rank: Int = 20, iter: Int = 12,
-                    lambda: Double = 0.01, alpha: Double = 1.0, master: String = "local[2]", exMem: String = "4g")
+object Config {
 
   /** Package private helper object for parsing command line arguments, provided by scopt */
-  private[la] val parser = new OptionParser[Config]("ScorePredictor") {
+  private[model] val parser = new OptionParser[Config]("ScorePredictor") {
     //Define the header for the command line display text
     head("Score Predictor", "0.1.x")
 
@@ -39,7 +37,7 @@ package object model {
     opt[String]('i', "input").required().valueName("<file>")
       .action( (x, c) => c.copy(recordsPath = x) )
       .text("input is a required .csv file containing student/module scores. " +
-          "Format \"StudentNumber, Module Code, Percentage\"")
+        "Format \"StudentNumber, Module Code, Percentage\"")
 
     opt[String]('o', "output").required().valueName("<directory>")
       .action( (x, c) => c.copy(outputPath = x) )
@@ -65,10 +63,4 @@ package object model {
       .action( (x, c) => c.copy(exMem = x) )
       .text("executor is an optional parameter for configuring the application SparkContext.")
   }
-
-  /** Syntax enrichment from ModuleRecord to spark's built in Rating type */
-  final implicit class ModuleRecordOps(val mr: ModuleRecord) extends AnyVal {
-    @inline def toRating: Rating = Rating(mr.student.toInt, mr.module, mr.score)
-  }
-
 }

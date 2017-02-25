@@ -107,9 +107,13 @@ lazy val model = SoarProject("model")
   )
 
 //Module which contains code for the empirical evaluation of Soar, and an explanation of its methodology
-lazy val eval = SoarProject("eval")
+lazy val evaluation = SoarProject("evaluation")
   .dependsOn(core)
-  .settings(name := "Soar Evaluation", moduleName := "soar-eval")
+  .settings(
+    name := "Soar Evaluation",
+    moduleName := "soar-eval",
+    libraryDependencies += "com.github.scopt" %% "scopt" % "3.5.0"
+  )
 
 //Add some command aliases for testing/compiling all modules, rather than aggregating tasks from root indiscriminately
 addCommandAlias("testAll", ";core/test; model/test; eval/test")

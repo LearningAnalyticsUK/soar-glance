@@ -17,18 +17,26 @@
   */
 package uk.ac.ncl.la.soar.eval
 
+import scala.io.Source
+import scopt._
+
 /** Entry point to the Eval script
   *
   * @author hugofirth
   */
 object Main {
 
-  //Read in ModuleScore CSV
-  //Group by ModuleCode
-  //Produce ModuleRecords
-  //(Optional) Write out completed CSV
-  //Prepare survey by dropping random sample (with given seed) of scores for given modules.
-  //Write out survey CSV
-  //Write out meta data file saying which modules have been dropped and which seed was used to generate.
+  def main(args: Array[String]): Unit = {
+
+    //Read in ModuleScore CSV
+//    val scoreLines = Source.fromF
+    //Group by ModuleCode
+    //Produce ModuleRecords
+    //(Optional) Write out completed CSV
+    //Prepare survey by dropping random sample (with given seed) of scores for given modules.
+    //Write out survey CSV
+    //Write out meta data file saying which modules have been dropped and which seed was used to generate.
+  }
+
 
 }

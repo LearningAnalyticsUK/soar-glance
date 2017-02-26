@@ -20,11 +20,11 @@ package uk.ac.ncl.la.soar.eval
 import scopt._
 import uk.ac.ncl.la.soar.ModuleCode
 
-/** Config "bag" case class and accompanying scopt parser
+/** Config "bag" case class for the survey generator and accompanying scopt parser
   *
   * @author hugofirth
   */
-final case class Config(recordsPath: String = "", outputPath: String = "", elided: Int = 10, numSurveys: Int = 0,
+final case class Config(recordsPath: String = "", outputPath: String = "", elided: Int = 20, numSurveys: Int = 1,
                         fixed: ModuleCode = 0, specialized: Seq[ModuleCode] = Seq.empty[ModuleCode], seed: Int = 1921437)
 
 object Config {
@@ -44,6 +44,21 @@ object Config {
       .action((x, c) => c.copy(outputPath = x))
       .text("output is a required parameter specifying the directory to write the surveys to.")
 
+    opt[Int]('e', "elided").valueName("e.g. 20")
+      .action((x, c) => c.copy(elided = x))
+      .text("elided is an optional parameter specifying how many student records to partially elide in the generated " +
+        "surveys.")
+
+    opt[Int]('n', "numSurveys").valueName("e.g. 5")
+      .action((x, c) => c.copy(numSurveys = x))
+      .text("numSurveys is an optional parameter specifying how many surveys to generate.")
+
+
+
   }
 }
 
+/** Config "bag" case class for the survey evaluator and accompanying scopt parser.
+  *
+  * @author hugofirth
+  */

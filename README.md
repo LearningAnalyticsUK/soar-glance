@@ -82,14 +82,19 @@ following command (from within the project root directory):
 This will produce a traditional unix style help dialogue:
 
 > Soar Evaluation Survey generator 0.1.x
-> Usage: SoarEvalGen [options]
 > 
->    -i, --input   <file>                    input is a required .csv file containing student/module scores. Format "StudentNumber, Module Code, Percentage"
+>Usage: SoarEvalGen [options]
+> 
+>    -i, --input   <file>                    input is a required .csv file containing student/module scores. Format "StudentNumber, Module Code, Percentage" 
+>
 >    -o, --output  <directory>               output is a required parameter specifying the directory to write the surveys to.
 >                             
 >    -e, --elided  e.g. 20                   elided is an optional parameter specifying how many student records to partially elide in the generated surveys.
+>
 >    -m, --modules e.g. CSC1021, CSC2024...  modules is the list of modules for which to elide a students records. Only one module record will be elided per student. One survey is generated per elided module code.
+>
 >    -c, --common  e.g. CSC2024              common is an optional parameter specifying an additional module to elide student records for in *all* generated surveys.
+>
 >    -s, --seed    <int>                     seed is an optional parameter specifying a number to use as a seed when randomly selecting student records to elide.
 
 Once you have executed the job, you will see that within the specified output directory, a folder has been created for 

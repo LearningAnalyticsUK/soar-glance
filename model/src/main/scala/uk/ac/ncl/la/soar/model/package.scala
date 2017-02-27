@@ -27,7 +27,7 @@ package object model {
 
   /** Syntax enrichment from ModuleScore to spark's built in Rating type */
   final implicit class ModuleScoreOps(val mr: ModuleScore) extends AnyVal {
-    @inline def toRating: Rating = Rating(mr.student.toInt, mr.module, mr.score)
+    @inline def toRating: Rating = Rating(mr.student.toInt, mr.module.hashCode, mr.score)
   }
 
 }

@@ -25,5 +25,5 @@ package object soar {
 
   /** Some type aliases for clarity throughout job code */
   type StudentNumber = String
-  type ModuleCode = Int
+  type ModuleCode = String
 }

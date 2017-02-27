@@ -29,7 +29,7 @@ object ModuleScore {
 
   /** apply Factory method checks for bounded range of score and returns option to represent failure */
   def apply(student: StudentNumber, module: ModuleCode, score: Double): Option[ModuleScore] = {
-    if (score >= 100 && score <= 100)
+    if (score >= 0 && score <= 100)
       Some(new ModuleScore(student, module, score))
     else None
   }
@@ -51,7 +51,7 @@ object ModuleScore {
         //Parse elements of record, returning None in the event of an error
         for {
           score <- catching(classOf[NumberFormatException]) opt sc.toDouble
-          record <- ModuleScore(st, mc.hashCode, score)
+          record <- ModuleScore(st, mc, score)
         } yield record
       case _ => None
     }
@@ -59,6 +59,6 @@ object ModuleScore {
   private[soar] def parseLineStrict(line: (String, Int), sep: Char): Either[(String, Int), ModuleScore] =
     parseLine(line._1, sep).fold(Either.left[(String, Int), ModuleScore](line))(r => Either.right(r))
 
-  //TODO: provide typeclass instances for ModuleRecord
+  //TODO: provide typeclass instances for ModuleScore
 }
 

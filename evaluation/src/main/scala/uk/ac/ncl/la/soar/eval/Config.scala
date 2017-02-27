@@ -24,13 +24,20 @@ import uk.ac.ncl.la.soar.ModuleCode
   *
   * @author hugofirth
   */
-final case class Config(recordsPath: String = "", outputPath: String = "", elided: Int = 20, numSurveys: Int = 1,
-                        fixed: ModuleCode = 0, specialized: Seq[ModuleCode] = Seq.empty[ModuleCode], seed: Int = 1921437)
+final case class GeneratorConfig(recordsPath: String = "", outputPath: String = "", elided: Int = 10,
+                                 modules: Seq[String] = Seq.empty[String], common: Option[String] = None, seed: Int = 1921437)
+
+/** Config "bag" case class for the survey evaluator and accompanying scopt parser.
+  *
+  * @author hugofirth
+  */
+final case class EvaluatorConfig(inputPath: String = "", outputPath: String = "", modelPath: String = "",
+                                 metric: String = "rmse")
 
 object Config {
 
   /** Package private helper object for parsing command line arguments, provided by scopt */
-  private[eval] val parser = new OptionParser[Config]("SoarEval") {
+  private[eval] val generatorParser = new OptionParser[GeneratorConfig]("SoarEvalGen") {
     //Define the header for the command line display text
     head("Soar Evaluation Survey generator", "0.1.x")
 
@@ -49,16 +56,23 @@ object Config {
       .text("elided is an optional parameter specifying how many student records to partially elide in the generated " +
         "surveys.")
 
-    opt[Int]('n', "numSurveys").valueName("e.g. 5")
-      .action((x, c) => c.copy(numSurveys = x))
-      .text("numSurveys is an optional parameter specifying how many surveys to generate.")
+    opt[Seq[String]]('m', "modules").required().valueName("e.g. CSC1021, CSC2024...")
+      .action((x, c) => c.copy(modules = x))
+      .text("modules is the list of modules for which to elide a students records. Only one module record will be " +
+        "elided per student. One survey is generated per elided module code.")
 
+    opt[String]('c', "common").valueName("e.g. CSC2024")
+      .action({ (x, c) =>
+        val cmn = if(x == "") None else Option(x)
+        c.copy(common = cmn)
+      })
+      .text("common is an optional parameter specifying an additional module to elide student records for in *all* " +
+        "generated surveys.")
 
-
+    opt[Int]('s', "seed").valueName("<int>")
+      .action((x, c) => c.copy(seed = x))
+      .text("seed is an optional parameter specifying a number to use as a seed when randomly selecting student " +
+        "records to elide.")
   }
 }
 
-/** Config "bag" case class for the survey evaluator and accompanying scopt parser.
-  *
-  * @author hugofirth
-  */

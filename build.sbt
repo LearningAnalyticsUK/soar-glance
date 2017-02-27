@@ -102,7 +102,7 @@ lazy val model = SoarProject("model")
     name := "Soar Model Generator",
     moduleName := "soar-model",
     libraryDependencies ++= commonSparkBatch,
-    commonAssembly("uk.ac.ncl.la.soar.modeli.ScorePredictor", "model.jar")
+    commonAssembly("uk.ac.ncl.la.soar.model.ScorePredictor", "model.jar")
   )
 
 //Module which contains code for the empirical evaluation of Soar, and an explanation of its methodology

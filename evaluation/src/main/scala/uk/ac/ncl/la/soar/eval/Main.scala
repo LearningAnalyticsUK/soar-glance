@@ -27,7 +27,9 @@ import cats._
 import cats.implicits._
 import org.apache.log4j.{Level, LogManager}
 import resource._
-import uk.ac.ncl.la.soar.{ModuleCode, ModuleScore, StudentRecord}
+import uk.ac.ncl.la.soar.{Record, ModuleCode}
+import uk.ac.ncl.la.soar.data.{ModuleScore, StudentRecords}
+import uk.ac.ncl.la.soar.Record._
 
 import scala.collection.immutable.SortedMap
 import scala.util.{Properties, Random}
@@ -80,16 +82,16 @@ object Main {
   }
 
   /** Group module scores by studnet numbers and construct StudentRecords */
-  private def groupByStudents(scores: List[ModuleScore]): List[StudentRecord[String]] = {
+  private def groupByStudents(scores: List[ModuleScore]): List[StudentRecords[SortedMap]] = {
 
     //Group by studentNumber and construct records
     val fullRecords = scores.groupBy(_.student).map { case (stud, studScores) =>
       val full = SortedMap.newBuilder[ModuleCode, Double] ++= studScores.iterator.map(s => s.module -> s.score)
-      StudentRecord(stud, full.result)
+      StudentRecords(stud, full.result)
     }
 
     //TODO: replace magic number filter to drop students with few records with a conf option
-    fullRecords.filter(_.moduleRecords.size > 10).toList
+    fullRecords.filter(_.record.size > 10).toList
   }
 
   /** Get the list of distinct ModuleCodes, sorted alphanumerically (therefore chronologically) */
@@ -97,8 +99,8 @@ object Main {
 
   /** Randomly sample the student records, selecting conf.elided students *per* module, and removing both the score for
     * that module and the score for any module which follows it in the order (where alphanum ~ chronological). */
-  private def sample(records: List[StudentRecord[String]],
-                     conf: GeneratorConfig): Either[Throwable, Map[ModuleCode, List[StudentRecord[ModuleCode]]]] =
+  private def sample(records: List[StudentRecords[SortedMap]],
+                     conf: GeneratorConfig): Either[Throwable, Map[ModuleCode, List[StudentRecords[SortedMap]]]] =
     Either.catchNonFatal {
       //Create the rng with provided seed
       val rand = new Random(conf.seed)
@@ -113,16 +115,15 @@ object Main {
       }
 
       //Then chunk s into segments the size of elided, then drop modules from each chunk to create survey pieces
-      //TODO: Handle duplicates in the modules list
-      val surveyChunks = conf.modules.iterator.zip(s.grouped(conf.elided)).map({ case (module, students) =>
+      val surveyChunks = conf.modules.distinct.iterator.zip(s.grouped(conf.elided)).map({ case (module, students) =>
         module -> students.map { s =>
-          val truncated = s.moduleRecords.to(module).updated(module, -1.0)
-          s.copy(moduleRecords = truncated)
+          val truncated = s.record.toKey(module).updated(module, -1.0)
+          s.copy(record = truncated)
         }
       }).toMap
 
       //If a common module has been specified, retrieve its chunk and remove it from surveyChunks
-      val commonChunk = conf.common.flatMap(surveyChunks.get).getOrElse(List.empty[StudentRecord[String]])
+      val commonChunk = conf.common.flatMap(surveyChunks.get).getOrElse(List.empty[StudentRecords[SortedMap]])
       val chunksNoCommon = conf.common.fold(surveyChunks)(surveyChunks - _)
 
       //Combine training, common and a survey chunk to produce a survey of records, sorted by studentNumber.
@@ -130,12 +131,13 @@ object Main {
   }
 
   private def writeOut(modules: List[ModuleCode],
-                       chunks: Map[ModuleCode, List[StudentRecord[ModuleCode]]],
+                       chunks: Map[ModuleCode, List[StudentRecords[SortedMap]]],
                        conf: GeneratorConfig): Either[Throwable, Unit] = Either.catchNonFatal {
 
     val header = s"Student Number, ${modules.mkString(", ")}"
+    val metaFn = List((s: StudentRecords[SortedMap]) => s.number)
     val csvs = chunks.mapValues { surveyLines =>
-      surveyLines.map(_.toCsv(modules)).mkString(Properties.lineSeparator)
+      surveyLines.map(_.toCSV(metaFn, modules)).mkString(Properties.lineSeparator)
     }
 
     val out = Paths.get(conf.outputPath)

@@ -17,14 +17,10 @@
   */
 package uk.ac.ncl.la.soar
 
-/** Instances of this class contain the [[uk.ac.ncl.la.soar.ModuleScore]]s for an entire cohort of students and a
-  * given module.
+/** Description of Class
   *
   * @author hugofirth
   */
-final case class ModuleRecord(module: ModuleCode, scores: List[ModuleScore], cohort: String = "") {
+trait Anonymise {
 
-  //TODO: define quartile method - or Record typeclass so quartile is shared between this and StudentRecord
 }
-
-

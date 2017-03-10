@@ -18,6 +18,7 @@
 package uk.ac.ncl.la.soar
 
 import org.apache.spark.mllib.recommendation.Rating
+import uk.ac.ncl.la.soar.data.ModuleScore
 
 /** Package object containing various needed implicit enrichment
   *

@@ -27,7 +27,7 @@ import org.apache.spark.mllib.recommendation.{ALS, MatrixFactorizationModel, Rat
 import org.apache.spark.rdd.RDD
 import org.apache.spark.{SparkConf, SparkContext}
 import resource._
-import uk.ac.ncl.la.soar.{ModuleScore}
+import uk.ac.ncl.la.soar.data.ModuleScore
 
 /** Simple singleton entry point to Spark job
   *

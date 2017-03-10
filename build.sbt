@@ -7,7 +7,8 @@ scalaVersion in ThisBuild := "2.11.8"
 lazy val langFixes = Seq(
   "com.github.mpilquist" %% "simulacrum" % "0.10.0",
   "org.typelevel" %% "machinist" % "0.6.1",
-  compilerPlugin("org.spire-math" %% "kind-projector" % "0.9.3")
+  compilerPlugin("org.spire-math" %% "kind-projector" % "0.9.3"),
+  compilerPlugin("org.scalamacros" % "paradise" % "2.1.0" cross CrossVersion.full)
 )
 
 lazy val testingDependencies = Seq(
@@ -42,6 +43,7 @@ def SoarProject(name: String): Project = {
       "-language:existentials",
       "-language:higherKinds",
       "-language:implicitConversions",
+      "-language:experimental.macros",
       "-unchecked",
       "-Xfatal-warnings",
       "-Xlint",

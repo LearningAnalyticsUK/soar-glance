@@ -15,11 +15,12 @@
   * See the License for the specific language governing permissions and
   * limitations under the License.
   */
-package uk.ac.ncl.la.soar
+package uk.ac.ncl.la.soar.data
+
+import cats.implicits._
+import uk.ac.ncl.la.soar.{ModuleCode, StudentNumber}
 
 import scala.util.control.Exception._
-import cats._
-import cats.implicits._
 
 /** General purpose Record Struct */
 final class ModuleScore private(val student: StudentNumber, val module: ModuleCode, val score: Double)

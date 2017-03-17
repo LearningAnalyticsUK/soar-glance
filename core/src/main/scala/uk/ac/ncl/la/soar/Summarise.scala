@@ -22,42 +22,51 @@ import cats.implicits._
 
 /** Simple typeclass to provide basic summary statistics over a record instance
   *
+  * TODO: Any good reason this extends Record - seems like it could be foldable?
+  *
   * @author hugofirth
   */
-//trait Summarise[F[_[_, _], _, _]] extends Record[F] { self =>
-//
-//  import Summarise._
-//
-//  /** Return quartile bounds for a Record */
-//  def quartiles[C[_, _], A, B: Order](r: F[C, A, B])(implicit ev: Foldable[C[A, ?]]): Option[(B, B, B)] = {
-//    //TODO: Investigate if Vector is the right choice here?
-//    //Get the entries, then convert then to a list and sort by B's Order
-//    val es = self.toList(r).sortBy(_._2)(Order[B].toOrdering)
-//    //Group the list of entries into 4, find the heads
-//    val qb = es.grouped(4).map(_.headOption).toList
-//    //Sequence List of Option[C] to get an Option[List[(A, B)]] to represent < 4 entries
-//    qb.sequence.collect { case _ :: q1 :: q2 :: q3 :: Nil => (q1._2, q2._2, q3._2) }
-//  }
-//
-//  /** Return the quartile of a given `E`
-//    *
-//    * Note that the `E` parameter does not necessarily need to pre-exist in the record.
-//    */
-//  def quartile[C[_, _], A, B: Order](r: F[C, A, B], e: (A, B))(implicit ev: Foldable[C[A, ?]]): Option[Quartile] =
-//    self.quartiles(r).map {
-//      case (q1, _, _) if e._2 <= q1 => Q1
-//      case (_, q2, _) if e._2 <= q2 => Q2
-//      case (_, _, q3) if e._2 <= q3 => Q3
-//      case _ => Q4
-//    }
-//}
-//
-//object Summarise {
-//
-//  /** Quartile ADT for records - simple enum essentially. */
-//  sealed trait Quartile { def toInt: Int }
-//  case object Q1 extends Quartile { val toInt = 1 }
-//  case object Q2 extends Quartile { val toInt = 2 }
-//  case object Q3 extends Quartile { val toInt = 3 }
-//  case object Q4 extends Quartile { val toInt = 4 }
-//}
+trait Summarise[F[_, _]] extends Any with Serializable { self =>
+
+  /** Import companion object */
+  import Summarise._
+
+  /** Any Summarise must be a Record */
+  def record: Record[F]
+
+  /** Return quartile bounds for a Record */
+  def quartiles[A, B: Order](r: F[A, B])(implicit ev: Foldable[F[A, ?]]): Option[(B, B, B)] = {
+    //TODO: Investigate if Vector is the right choice here? Or Array? Look at grouped implementation over large indexed seqs
+    //Get the entries, then convert then to a list and sort by B's Order
+    val es = self.record.toList(r).sortBy(_._2)(Order[B].toOrdering)
+    //Group the list of entries into 4, find the heads
+    val qb = es.grouped(4).map(_.headOption).toList
+    //Sequence List of Option[C] to get an Option[List[(A, B)]] to represent < 4 entries
+    qb.sequence.collect { case _ :: q1 :: q2 :: q3 :: Nil => (q1._2, q2._2, q3._2) }
+  }
+
+  /** Return the quartile of a given `E`
+    *
+    * Note that the `E` parameter does not necessarily need to pre-exist in the record.
+    */
+  def quartile[A, B: Order](r: F[A, B], e: (A, B))(implicit ev: Foldable[F[A, ?]]): Option[Quartile] =
+    self.quartiles(r).map {
+      case (q1, _, _) if e._2 <= q1 => Q1
+      case (_, q2, _) if e._2 <= q2 => Q2
+      case (_, _, q3) if e._2 <= q3 => Q3
+      case _ => Q4
+    }
+}
+
+object Summarise {
+
+  /** Summarise instance for any type which has a Record */
+
+
+  /** Quartile ADT for records - simple enum essentially. */
+  sealed trait Quartile { def toInt: Int }
+  case object Q1 extends Quartile { val toInt = 1 }
+  case object Q2 extends Quartile { val toInt = 2 }
+  case object Q3 extends Quartile { val toInt = 3 }
+  case object Q4 extends Quartile { val toInt = 4 }
+}

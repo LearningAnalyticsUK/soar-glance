@@ -17,6 +17,8 @@
   */
 package uk.ac.ncl.la.soar
 
+import scala.collection.immutable.SortedMap
+
 /** Plain filter marker typeclass without any default implementations.
   *
   * Included because there are types which may be reasonably filtered which do not form proper `Functor`s
@@ -36,7 +38,7 @@ trait Filter[F[_]] extends Any with Serializable {
 
 }
 
-object Filter {
+object Filter extends FilterInstances {
 
   /** Summon Filter instances through apply */
   @inline final def apply[F[_]](implicit ev: Filter[F]): Filter[F] = ev
@@ -45,4 +47,24 @@ object Filter {
   final implicit class FilterOps[F[_], A](val fa: F[A]) extends AnyVal {
     def filter(f: A => Boolean)(implicit ev: Filter[F]) = ev.filter(fa)(f)
   }
+
+} 
+
+sealed abstract class FilterInstances extends LowPriorityFilterInstances {
+
+  //Define Filter instance for SortedMap
+  implicit def sortedMapKeyFilter[V]: Filter[SortedMap[?, V]] = new Filter[SortedMap[?, V]] {
+
+    override def filter[A](fa: SortedMap[A, V])(f: (A) => Boolean): SortedMap[A, V] = fa.filterKeys(f)
+  }
 }
+
+sealed abstract class LowPriorityFilterInstances {
+
+  //Define lower priority Filter instance for any Traversable, might be a bad idea?
+  implicit val traversableFilter: Filter[Traversable] = new Filter[Traversable] {
+    
+    override def filter[A](fa: Traversable[A])(f: (A) => Boolean): Traversable[A] = fa.filter(f)
+  }
+}
+

@@ -34,22 +34,41 @@ sealed trait Records[F[_, _], A, B] { self =>
   def record: F[A, B]
 
   /** Produce a CSV string from a record instance */
+  //TODO: Convert this to another (lower priority) show instance. Could do away with meta columns too
   def toCSV[M <: Records[F, A, B]](metaColumns: List[M => String], keyColumns: List[A], sep: String = ","): String = {
     val recMap = record.toMap
     val es = keyColumns.map { c => recMap.get(c).fold(" ")(_.toString) }
     (metaColumns.map(mf => mf(self.asInstanceOf[M])) ::: es).mkString(sep)
   }
 
+  override def toString: String = {
+    val entries = self.record.toList.map({ case (k,v) => s""""$k": $v%""" })
+      .intercalate(s",${sys.props("line.separator")}")
+
+    val (typeName, entryName, idName, id) = self match {
+      case StudentRecords(number, _) => ("Student", "modules", "number", number)
+      case ModuleRecords(code, _) => ("Module", "students", "code", code)
+    }
+
+    s"""
+       |$typeName {
+       |  $idName: $id,
+       |  $entryName: {
+       |    $entries
+       |  }
+       |}
+    """.stripMargin
+  }
 }
 
 /** Associates a student number with a map of student records, whose keys provide an ordering
   *
   * @author hugofirth
   */
-final case class StudentRecords[F[_, _]](number: StudentNumber,
-                                         record: F[ModuleCode, Double])
+final case class StudentRecords[F[_, _], A, B](number: StudentNumber,
+                                         record: F[A, B])
                                         (implicit val F: Record[F],
-                                         val A: Order[ModuleCode]) extends Records[F, ModuleCode, Double]
+                                         val A: Order[A]) extends Records[F, A, B]
 
 
 /** Instances of this class contain the [[ModuleScore]]s for an entire cohort of students and a
@@ -57,34 +76,13 @@ final case class StudentRecords[F[_, _]](number: StudentNumber,
   *
   * @author hugofirth
   */
-final case class ModuleRecords[F[_, _]](module: ModuleCode, record: F[StudentNumber, Double])
+final case class ModuleRecords[F[_, _], A, B](module: ModuleCode, record: F[A, B])
                                       (implicit val F: Record[F],
-                                       val A: Order[StudentNumber]) extends Records[F, StudentNumber, Double]
+                                       val A: Order[A]) extends Records[F, A, B]
 
 object Records {
 
   /** Typeclass instances for StudentRecord */
-//  implicit def studentRecordShow[F[_, _]: Record, A, B: Order]: Show[Records[F, A, B]] =
-//    new Show[Records[F, A, B]] {
-//
-//      override def show(f: Records[F, A, B]): String = {
-//        val entries = f.record.map({ case (k,v) => s""""$k": $v%""" })
-//          .intercalate(s",${sys.props("line.separator")}")
-//
-//        val (typeName, entryName, idName, id) = f match {
-//          case StudentRecords(number, _) => ("Student", "modules", "number", number)
-//          case ModuleRecords(code, _) => ("Module", "students", "code", code)
-//        }
-//
-//        s"""
-//           |$typeName {
-//           |  $idName: $id,
-//           |  $entryName: {
-//           |    $entries
-//           |  }
-//           |}
-//        """.stripMargin
-//      }
-//    }
+  implicit def recordShow[F[_, _]: Record, A, B: Order]: Show[Records[F, A, B]] = Show.fromToString
 
 }

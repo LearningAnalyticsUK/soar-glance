@@ -17,26 +17,22 @@
   */
 package uk.ac.ncl.la.soar.eval
 
-/** Entry point to the Eval script
-  *
-  * @author hugofirth
-  */
-object Main {
+/**
+  * Job which reads in the completed survey csvs created earlier using [[Generator]].
+  */ 
+object Assessor extends Job {
 
-  def main(args: Array[String]): Unit = {
-    //Set up the logger
-//    val log = LogManager.getRootLogger
-//    log.setLevel(Level.WARN)
+  def run(args: Array[String]): Either[Throwable, Unit] = {
+    //Create a config object from the command line arguments provided
+    //TODO: Add string apply to Config object to pick correct parser and parse based on head argument
+    //Either that or look into scopt commands
+    val parseCli = Config.generatorParser.parse(args, GeneratorConfig()).fold {
+      Left(new IllegalArgumentException("Failed to correctly parse command line arguments!")): Either[Throwable, GeneratorConfig]
+    } { Right(_) }
 
-    Generator.run(args) match {
-      case Left(e) =>
-        //In the event of an error, log and crash out.
-        System.err.println(e.toString)
-        sys.exit(1)
-      case Right(_) =>
-        //In the event of a successful job, log and finish
-        println("Job finished.")
-    }
+    for {
+      conf <- parseCli
+    } yield ()
   }
-
 }
+

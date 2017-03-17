@@ -17,26 +17,12 @@
   */
 package uk.ac.ncl.la.soar.eval
 
-/** Entry point to the Eval script
-  *
-  * @author hugofirth
-  */
-object Main {
+trait Job {
 
-  def main(args: Array[String]): Unit = {
-    //Set up the logger
-//    val log = LogManager.getRootLogger
-//    log.setLevel(Level.WARN)
-
-    Generator.run(args) match {
-      case Left(e) =>
-        //In the event of an error, log and crash out.
-        System.err.println(e.toString)
-        sys.exit(1)
-      case Right(_) =>
-        //In the event of a successful job, log and finish
-        println("Job finished.")
-    }
-  }
-
+  /** The "Main" method of a `Job`. Returns either an exception, or Unit to indicate success.
+   *
+   * TODO: Check that Either is actually any better than Try when used with Throwable in this way? Other than a general
+   * "I don't like Try" I've slightly lost track of why I'm doing things this way.
+   */
+  def run(args: Array[String]): Either[Throwable, Unit]
 }

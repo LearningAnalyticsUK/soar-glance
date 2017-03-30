@@ -17,6 +17,11 @@
   */
 package uk.ac.ncl.la.soar.eval
 
+import org.apache.log4j.{LogManager, Level}
+import cats._
+import cats.implicits._
+
+
 /** Entry point to the Eval script
   *
   * @author hugofirth
@@ -25,10 +30,20 @@ object Main {
 
   def main(args: Array[String]): Unit = {
     //Set up the logger
-//    val log = LogManager.getRootLogger
-//    log.setLevel(Level.WARN)
+    val log = LogManager.getRootLogger
+    log.setLevel(Level.WARN)
 
-    Generator.run(args) match {
+    //Bring in Args - pass to Config factory
+    val conf = Config(args).toRight {
+      throw new IllegalArgumentException("Failed to parse command line arguments! " +
+        "Format: ./submit.sh [command] --options")
+    }
+
+    //TODO: Fix the horrible pattern match anon function below. Uses type annotations....
+    conf.flatMap {
+      case a: GeneratorConfig => Generator.run(a)
+      case a: AssessorConfig => Assessor.run(a)
+    } match {
       case Left(e) =>
         //In the event of an error, log and crash out.
         System.err.println(e.toString)

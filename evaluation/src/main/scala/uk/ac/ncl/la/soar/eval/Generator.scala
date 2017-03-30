@@ -21,11 +21,9 @@ import java.nio.charset.StandardCharsets
 import java.nio.file.{Files, Path, Paths, StandardOpenOption}
 
 import scala.io.Source
-import scala.collection.mutable
 import scopt._
 import cats._
 import cats.implicits._
-import org.apache.log4j.{Level, LogManager}
 import resource._
 import uk.ac.ncl.la.soar.{Record, ModuleCode}
 import uk.ac.ncl.la.soar.data.{ModuleScore, StudentRecords}
@@ -38,19 +36,12 @@ import scala.util.{Properties, Random}
   * Job which generates csv based "surveys" which present student module scores in a table and elides certain results
   * so that they may be filled in (predicted) later by domain experts (module leaders).
   */ 
-object Generator extends Job {
+object Generator extends Job[GeneratorConfig] {
 
-  def run(args: Array[String]): Either[Throwable, Unit] = {
-    //Create a config object from the command line arguments provided
-    //TODO: Add string apply to Config object to pick correct parser and parse based on head argument
-    //Either that or look into scopt commands
-    val parseCli = Config.generatorParser.parse(args, GeneratorConfig()).fold {
-      Left(new IllegalArgumentException("Failed to correctly parse command line arguments!")): Either[Throwable, GeneratorConfig]
-    } { Right(_) }
+  def run(conf: GeneratorConfig): Either[Throwable, Unit] = {
 
     //TODO: Write out meta data file saying which modules have been dropped and which seed was used to generate.
     for {
-      conf <- parseCli
       scores <- parseScores(conf.recordsPath)
       records <- Either.right(groupByStudents(scores))
       surveys <- sample(records, conf)

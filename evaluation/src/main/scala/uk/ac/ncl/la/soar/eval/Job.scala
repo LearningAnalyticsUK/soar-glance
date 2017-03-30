@@ -17,12 +17,12 @@
   */
 package uk.ac.ncl.la.soar.eval
 
-trait Job {
+trait Job[A <: Config] {
 
   /** The "Main" method of a `Job`. Returns either an exception, or Unit to indicate success.
    *
    * TODO: Check that Either is actually any better than Try when used with Throwable in this way? Other than a general
    * "I don't like Try" I've slightly lost track of why I'm doing things this way.
    */
-  def run(args: Array[String]): Either[Throwable, Unit]
+  def run(conf: A): Either[Throwable, Unit]
 }

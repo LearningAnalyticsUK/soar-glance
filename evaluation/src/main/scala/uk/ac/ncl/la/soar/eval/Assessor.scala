@@ -69,45 +69,27 @@ object Assessor extends Job[AssessorConfig] {
     ???
   }
 
+  /**
+    * Given the path to a sub-directory corresponding to a single survey, parse the contents and produce an error
+    * message or a Survey object
+    */
   private def parseSurvey(surveyPath: String): Either[String, Survey] = {
     //Read in Survey csv
     val lines = Source.fromFile(surveyPath).getLines()
-    //Split off headers
-    val (header, entries) =
-      if (lines.hasNext)
-        (Option(lines.next()), lines)
-      else
-        (None, Iterator.empty)
-    //If the csv is not empty, parse the header
-//    val columns = header.toRight("Incorrectly formatted survey csv. The survey csv is empty!").flatMap(parseHeader)
-//    //For each line - parse a list of module scores.
-//    val scores = entries.toList.traverse(parseModuleScore(columns, _))
-//    //Map the right hand side of scores to StudentRecords
-//    val records = scores.map { es =>
-//      es.map(scoresToStudentRecord(_:_*))
-//    }
-//    //Map the right hand side of scores to a Survey
-//    for {
-//      //Get the set of Modules from columns
-//      modules <- columns.map(_.toSet)
-//      //TODO: Parse map of queries from meta.json - below is a filler
-//      queries <- Either.right(Map.empty[StudentNumber, ModuleCode])
-//      //Get the score
-//    } yield ()
-
+    val entries = lines.toList
 
     for {
       //If the csv is not empty, parse the header
-      hd <- header.toRight("Incorrectly formatted survey csv. The survey csv is empty!")
+      hd <- entries.headOption.toRight("Incorrectly formatted survey csv. The survey csv is empty!")
       columns <- parseHeader(hd)
       //For each line - parse a list of module scores.
-      scores <- entries.toList.traverse(parseModuleScore(columns, _))
+      scores <- entries.tail.traverse(parseModuleScore(columns, _))
       //Map the right hand side of scores to StudentRecords
       records <- scores.traverse(scoresToStudentRecord(_:_*)).toRight("Incorrectly formatted survey csv. Empty entry!")
       //Map the right hand side of scores to a Survey
+      //TODO: Parse map of queries from meta.json - below is a filler
       queries <- Either.right(Map.empty[StudentNumber, ModuleCode])
     } yield Survey(columns.toSet, queries, records)
-    ???
   }
 
   /** Converts a list fo ModuleScores to a StudentRecord - be aware that this student record uses the student id
@@ -122,32 +104,38 @@ object Assessor extends Job[AssessorConfig] {
     student.map(StudentRecords(_, bldr.result()))
   }
 
-  //TODO: Switch to option
+  /**
+    * Given a sequence of module codes in column order, parse a sequence of module scores, or produce an error message
+    *
+    * Column order is the order in which module codes appear in a survey csv's header.
+    */
   private def parseModuleScore(moduleCodes: Seq[ModuleCode], entry: String): Either[String, Seq[ModuleScore]] = {
     //Split on comma and trim
-    val cleaned = entry.split(',').map(_.trim)
+    val cleaned = entry.split(',').map(_.trim).toList
     val scores = cleaned.tail
     //Convert blank score strings to -1.0 as these are valid doubles but will get dropped by flatMap(ModuleScore) later,
     // taking their associated module codes with them. Perhaps a bit yucky, but given that we don't zip with the module
     // codes until later I can't think of a better way right now.
-    val doubleScores = scores.toList.traverse {
+    val doubleScores = scores.traverse {
       case "" => Either.right[NumberFormatException, Double](-1.0)
       case a => Either.catchOnly[NumberFormatException](a.toDouble)
     }
-    //Get the student number
-    val stNo = cleaned.headOption.toRight("The entry was malformatted! Expected e.g. 100937864, 68.5, 48.0, ...")
 
     //Using the student (cleaned head), flatMap to create Modulescores
     for {
-      student <- stNo
+      //Get the student number
+      student <- cleaned.headOption.toRight("The entry was malformatted! Expected e.g. 100937864, 68.5, 48.0, ...")
       sc <- doubleScores.leftMap(_ => "The entry was malformatted! One of the scores was not a valid double.")
       //Take doubleScores and zip with module
-      pairs <- moduleCodes.map(_.zip(sc))
+      pairs <- Either.cond(moduleCodes.nonEmpty, moduleCodes.zip(sc), "Incorrectly formatted survey csv!")
       //And finally - if all the above works, pass the values to the option returning ModuleScore factory
     } yield pairs.flatMap(p => ModuleScore(student, p._1, p._2))
   }
 
-  //TODO: Seq ok here?
+  /**
+    * Given the header of a csv, return all the column headers except the first.
+    * These are the module codes in the survey
+    */
   private def parseHeader(header: String): Either[String, Seq[ModuleCode]] =  {
     //Parse out "Student Number" and the module codes as an indexed vector
     val columns = header.split(',').map(_.trim)

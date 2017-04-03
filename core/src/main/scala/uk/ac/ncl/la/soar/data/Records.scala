@@ -70,7 +70,6 @@ final case class StudentRecords[F[_, _], A, B](number: StudentNumber,
                                         (implicit val F: Record[F],
                                          val A: Order[A]) extends Records[F, A, B]
 
-
 /** Instances of this class contain the [[ModuleScore]]s for an entire cohort of students and a
   * given module.
   *
@@ -86,3 +85,4 @@ object Records {
   implicit def recordShow[F[_, _]: Record, A, B: Order]: Show[Records[F, A, B]] = Show.fromToString
 
 }
+

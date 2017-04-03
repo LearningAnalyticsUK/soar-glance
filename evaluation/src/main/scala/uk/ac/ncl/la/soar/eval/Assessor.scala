@@ -20,7 +20,7 @@ package uk.ac.ncl.la.soar.eval
 import cats._
 import cats.implicits._
 import uk.ac.ncl.la.soar.{ModuleCode, StudentNumber}
-import uk.ac.ncl.la.soar.data.{ModuleScore, StudentRecords}
+import uk.ac.ncl.la.soar.data.{ModuleScore, Records, StudentRecords}
 
 import scala.io.Source
 
@@ -79,16 +79,51 @@ object Assessor extends Job[AssessorConfig] {
       else
         (None, Iterator.empty)
     //If the csv is not empty, parse the header
-    val columns = header.toRight("Incorrectly formatted survey csv. The survey csv is empty!").flatMap(parseHeader)
-    //For each line - parse a list of module scores.
-    entries.map(parseModuleScore(columns, _))
+//    val columns = header.toRight("Incorrectly formatted survey csv. The survey csv is empty!").flatMap(parseHeader)
+//    //For each line - parse a list of module scores.
+//    val scores = entries.toList.traverse(parseModuleScore(columns, _))
+//    //Map the right hand side of scores to StudentRecords
+//    val records = scores.map { es =>
+//      es.map(scoresToStudentRecord(_:_*))
+//    }
+//    //Map the right hand side of scores to a Survey
+//    for {
+//      //Get the set of Modules from columns
+//      modules <- columns.map(_.toSet)
+//      //TODO: Parse map of queries from meta.json - below is a filler
+//      queries <- Either.right(Map.empty[StudentNumber, ModuleCode])
+//      //Get the score
+//    } yield ()
 
-    //Take tail and zip with columns. Map the resulting (Code, Score) pairs to ModuleScore objects
-    //  Create student record
 
+    for {
+      //If the csv is not empty, parse the header
+      hd <- header.toRight("Incorrectly formatted survey csv. The survey csv is empty!")
+      columns <- parseHeader(hd)
+      //For each line - parse a list of module scores.
+      scores <- entries.toList.traverse(parseModuleScore(columns, _))
+      //Map the right hand side of scores to StudentRecords
+      records <- scores.traverse(scoresToStudentRecord(_:_*)).toRight("Incorrectly formatted survey csv. Empty entry!")
+      //Map the right hand side of scores to a Survey
+      queries <- Either.right(Map.empty[StudentNumber, ModuleCode])
+    } yield Survey(columns.toSet, queries, records)
+    ???
   }
 
-  private def parseModuleScore(moduleCodes: Either[String, Seq[ModuleCode]], entry: String): Either[String, Seq[ModuleScore]] = {
+  /** Converts a list fo ModuleScores to a StudentRecord - be aware that this student record uses the student id
+    * associated with the first modulescore in the varargs.
+    */
+  private def scoresToStudentRecord(scores: ModuleScore*): Option[StudentRecords[Map, ModuleCode, Double]] = {
+    val student = scores.headOption.map(_.student)
+    val bldr = Map.newBuilder[ModuleCode, Double]
+    for (score <- scores) {
+      bldr += (score.module -> score.score)
+    }
+    student.map(StudentRecords(_, bldr.result()))
+  }
+
+  //TODO: Switch to option
+  private def parseModuleScore(moduleCodes: Seq[ModuleCode], entry: String): Either[String, Seq[ModuleScore]] = {
     //Split on comma and trim
     val cleaned = entry.split(',').map(_.trim)
     val scores = cleaned.tail

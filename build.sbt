@@ -69,6 +69,13 @@ lazy val commonSparkBatch = Seq(
   "com.github.scopt" %% "scopt" % "3.5.0"
 )
 
+//Lazy vals defining dependencies common to modules containing web servers
+lazy val commonServer = Seq(
+  "com.github.finagle" %% "finch-core" % "0.14.0",
+  "com.github.finagle" %% "finch-circe" % "0.14.0",
+  "io.circe" %% "circe-generic" % "0.7.0"
+)
+
 //Method defining common merge strategy for duplicate files when constructing executable jars using assembly
 def commonAssembly(main: String, jar: String) = Seq(
   mainClass in assembly := Some(main),
@@ -112,9 +119,25 @@ lazy val evaluation = SoarProject("evaluation")
   .dependsOn(core)
   .settings(
     name := "Soar Evaluation",
-    moduleName := "soar-eval",
+    moduleName := "soar-eval"
+  )
+
+lazy val evaluation-cli = SoarProject("evaluation-cli")
+  .dependsOn(core, evaluation)
+  .settings(
+    name := "Soar Evaluation CLI",
+    moduleName := "soar-eval-cli",
     libraryDependencies ++= commonSparkBatch,
-    commonAssembly("uk.ac.ncl.la.soar.eval.Main", "soar-eval.jar")
+    commonAssembly("uk.ac.ncl.la.soar.eval.cli.Main", "soar-eval-cli.jar")
+  )
+
+lazy val evaluation-server = SoarProject("evaluation-server")
+  .dependsOn(core, evaluation)
+  .settings(
+    name := "Soar Evaluation Server",
+    moduleName := "soar-eval-server",
+    libraryDependencies ++= commonServer,
+    commonAssembly("uk.ac.ncl.la.soar.eval.server.Main", "soar-eval-server.jar")
   )
 
 //Add some command aliases for testing/compiling all modules, rather than aggregating tasks from root indiscriminately

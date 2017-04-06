@@ -122,7 +122,7 @@ lazy val evaluation = SoarProject("evaluation")
     moduleName := "soar-eval"
   )
 
-lazy val evaluation-cli = SoarProject("evaluation-cli")
+lazy val evaluationCli = SoarProject("evaluation-cli")
   .dependsOn(core, evaluation)
   .settings(
     name := "Soar Evaluation CLI",
@@ -131,7 +131,7 @@ lazy val evaluation-cli = SoarProject("evaluation-cli")
     commonAssembly("uk.ac.ncl.la.soar.eval.cli.Main", "soar-eval-cli.jar")
   )
 
-lazy val evaluation-server = SoarProject("evaluation-server")
+lazy val evaluationServer = SoarProject("evaluation-server")
   .dependsOn(core, evaluation)
   .settings(
     name := "Soar Evaluation Server",

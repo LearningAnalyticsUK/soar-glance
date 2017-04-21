@@ -17,6 +17,8 @@
   */
 package uk.ac.ncl.la.soar.eval.cli
 
+import cats.MonadError
+
 /**
   * Non-sealed trait which defines a structure for creating cli commands.
   *

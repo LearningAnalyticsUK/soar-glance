@@ -15,7 +15,7 @@
   * See the License for the specific language governing permissions and
   * limitations under the License.
   */
-package uk.ac.ncl.la.soar.eval
+package uk.ac.ncl.la.soar.eval.cli
 
 import cats._
 import cats.implicits._
@@ -37,8 +37,8 @@ import scala.io.Source
   * errors. I.e. the 4-500 divide in http servers. In particular this comment by /u/m50d is interesting:
   *
   * https://www.reddit.com/r/scala/comments/5clxku/scalaz_task_taska_versus_taskeithera_b/
-  */ 
-object Assessor extends Job[AssessorConfig] {
+  */
+object Assessor extends Command[AssessorConfig, Unit] {
 
   /** Simple struct to represent a survey ... TODO: explain more about what a survey is here */
   case class Survey(modules: Set[ModuleCode], queries: Map[StudentNumber, ModuleCode],
@@ -53,7 +53,7 @@ object Assessor extends Job[AssessorConfig] {
 
   /**
     * Method takes the path of a directory which contains several sub-directories, where each sub-directory corresponds
-    * to a survey. The name of each sub-directory is taken to be 
+    * to a survey. The name of each sub-directory is taken to be
     *
     */
   private def parseSurveys(inputPath: String): Either[String, List[Survey]] = {
@@ -79,7 +79,7 @@ object Assessor extends Job[AssessorConfig] {
     val entries = lines.toList
 
     for {
-      //If the csv is not empty, parse the header
+    //If the csv is not empty, parse the header
       hd <- entries.headOption.toRight("Incorrectly formatted survey csv. The survey csv is empty!")
       columns <- parseHeader(hd)
       //For each line - parse a list of module scores.
@@ -123,12 +123,12 @@ object Assessor extends Job[AssessorConfig] {
 
     //Using the student (cleaned head), flatMap to create Modulescores
     for {
-      //Get the student number
+    //Get the student number
       student <- cleaned.headOption.toRight("The entry was malformatted! Expected e.g. 100937864, 68.5, 48.0, ...")
       sc <- doubleScores.leftMap(_ => "The entry was malformatted! One of the scores was not a valid double.")
       //Take doubleScores and zip with module
       pairs <- Either.cond(moduleCodes.nonEmpty, moduleCodes.zip(sc), "Incorrectly formatted survey csv!")
-      //And finally - if all the above works, pass the values to the option returning ModuleScore factory
+    //And finally - if all the above works, pass the values to the option returning ModuleScore factory
     } yield pairs.flatMap(p => ModuleScore(student, p._1, p._2))
   }
 

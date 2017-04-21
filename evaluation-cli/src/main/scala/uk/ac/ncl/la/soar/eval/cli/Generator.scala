@@ -15,7 +15,7 @@
   * See the License for the specific language governing permissions and
   * limitations under the License.
   */
-package uk.ac.ncl.la.soar.eval
+package uk.ac.ncl.la.soar.eval.cli
 
 import java.nio.charset.StandardCharsets
 import java.nio.file.{Files, Path, Paths, StandardOpenOption}
@@ -35,8 +35,8 @@ import scala.util.{Properties, Random}
 /**
   * Job which generates csv based "surveys" which present student module scores in a table and elides certain results
   * so that they may be filled in (predicted) later by domain experts (module leaders).
-  */ 
-object Generator extends Job[GeneratorConfig] {
+  */
+object Generator extends Command[GeneratorConfig, Unit] {
 
   def run(conf: GeneratorConfig): Either[Throwable, Unit] = {
 
@@ -48,7 +48,7 @@ object Generator extends Job[GeneratorConfig] {
       _ <- writeOut(getAllModules(scores), surveys, conf)
     } yield ()
   }
-  
+
   /** Retrieve and parse all ModuleScores from provided file if possible */
   private def parseScores(recordsPath: String): Either[Throwable, List[ModuleScore]] = Either.catchNonFatal {
 
@@ -105,7 +105,7 @@ object Generator extends Job[GeneratorConfig] {
 
       //Combine training, common and a survey chunk to produce a survey of records, sorted by studentNumber.
       chunksNoCommon.mapValues(c => (t ::: commonChunk ::: c).sortWith(_.number < _.number))
-  }
+    }
 
   private def writeOut(modules: List[ModuleCode],
                        chunks: Map[ModuleCode, List[StudentRecords[SortedMap, ModuleCode, Double]]],
@@ -140,4 +140,5 @@ object Generator extends Job[GeneratorConfig] {
     subPaths.foreach { case (k,v) => write(k, csvs, v) }
   }
 }
+
 

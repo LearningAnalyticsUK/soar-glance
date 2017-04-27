@@ -31,12 +31,23 @@ import scala.util.Random
 /**
   * Survey ADT, surveys may be empty, or contain responses.
   */
-sealed trait Survey {
+sealed trait Survey { self =>
 
   /** Hase the survey been completed or not yet? Default answer is no */
-  def completed: Boolean
+  def completed: Boolean = self.responses.size == self.queries.size
 
-  //TODO: Factor out common getter methods as defs. Will involve re-reifying elements as Suvery
+  /** The set of identifying strings for Modules whose scores appear in the survey entries. */
+  def modules: Set[ModuleCode]
+
+  /** The entry rows in a given survey (i.e. module scores/attainments grouped by student). */
+  def entries: List[StudentRecords[Map, ModuleCode, Double]]
+
+  /** The queries in a given survey (i.e the `StudentNumber`/`ModuleCode` pairs whose score should be predicted. */
+  def queries: Map[StudentNumber, ModuleCode]
+
+  /** The responses for a given survey */
+  def responses: Map[StudentNumber, ModuleScore]
+
 }
 
 /**
@@ -45,7 +56,9 @@ sealed trait Survey {
 case class EmptySurvey(modules: Set[ModuleCode], queries: Map[StudentNumber, ModuleCode],
                   entries: List[StudentRecords[Map, ModuleCode, Double]]) extends Survey {
 
-  val completed = false
+  override val completed = false
+
+  val responses = Map.empty[StudentNumber, ModuleScore]
 }
 
 //From records by line
@@ -55,12 +68,8 @@ case class EmptySurvey(modules: Set[ModuleCode], queries: Map[StudentNumber, Mod
   * Case class representing an a partially answered survey which is being completed by a member of staff.
   */
 case class SurveyResponse(modules: Set[ModuleCode], queries: Map[StudentNumber, ModuleCode],
-                          response: Map[StudentNumber, ModuleScore], respondent: String,
-                          entries: List[StudentRecords[Map, ModuleCode, Double]]) extends Survey {
-
-  def completed = queries.size == response.size
-}
-
+                          responses: Map[StudentNumber, ModuleScore], respondent: String,
+                          entries: List[StudentRecords[Map, ModuleCode, Double]]) extends Survey
 
 /**
   * Case class representing a completed survey.
@@ -68,7 +77,9 @@ case class SurveyResponse(modules: Set[ModuleCode], queries: Map[StudentNumber, 
 case class CompletedSurvey(modules: Set[ModuleCode], responses: Map[StudentNumber, ModuleScore], respondent: String,
                            entries: List[StudentRecords[Map, ModuleCode, Double]]) extends Survey {
 
-  val completed = true
+  val queries: Map[StudentNumber, ModuleCode] = responses.mapValues(_.module)
+
+  override val completed = true
 }
 
 object Survey {
@@ -76,7 +87,7 @@ object Survey {
   /**
     * Factory method for `EmptySurvey`s.
     */
-  def generate(records: List[ModuleScore], elided: Int, modules: Seq[ModuleCode], common: Option[String],
+  def generate(records: List[ModuleScore], elided: Int, modules: Seq[ModuleCode], common: Option[ModuleCode],
                seed: Int): List[Survey] = {
     val stRecords = groupByStudents(records)
 
@@ -113,19 +124,20 @@ object Survey {
       val rand = new Random(seed)
       //Shuffle the records list using Random
       val shuffled = rand.shuffle(records)
+      //TODO: Remove this magically derived number (elided*2) and replace with a config option of some kind.
       //First take the "training data" which is a fixed n student records, where n = elided * 2
-      val (t, s) = shuffled.splitAt(elided*2) match {
+      val (training, students) = shuffled.splitAt(elided*2) match {
         case (_, Nil) => throw new IllegalArgumentException("The number of students for which you have records must be " +
           s"greater than the formula (elided * #modules) + (elided * 2). You provided elided:$elided, #modules: " +
           s"${modules.size} and students: ${shuffled.size}.")
         case a => a
       }
 
-      //Then chunk s into segments the size of elided, then drop modules from each chunk to create survey pieces
-      val surveyChunks = modules.distinct.iterator.zip(s.grouped(elided)).map({ case (module, students) =>
-        module -> students.map { s =>
-          val truncated = s.record.toKey(module).updated(module, -1.0)
-          s.copy(record = truncated)
+      //Then chunk students into segments the size of elided, then drop modules from each chunk to create survey pieces
+      val surveyChunks = modules.distinct.iterator.zip(students.grouped(elided)).map({ case (module, studentChunk) =>
+        module -> studentChunk.map { student =>
+          val truncated = student.record.toKey(module).updated(module, -1.0)
+          student.copy(record = truncated)
         }
       }).toMap
 
@@ -134,9 +146,38 @@ object Survey {
       val chunksNoCommon = common.fold(surveyChunks)(surveyChunks - _)
 
       //Combine training, common and a survey chunk to produce a survey of records, sorted by studentNumber.
-      chunksNoCommon.mapValues(c => (t ::: commonChunk ::: c).sortWith(_.number < _.number))
+      chunksNoCommon.mapValues(c => (training ::: commonChunk ::: c).sortWith(_.number < _.number))
   }
 
-  /** Get the list of distinct ModuleCodes, sorted alphanumerically (therefore chronologically) */
+  /**
+    * Second take on the sample method as the existing one confuses me enough that I don't want to undertake a refactor
+    */
+  private def sampleQueries(studentRecords: List[StudentRecords[SortedMap, ModuleCode, Double]],
+                      trainingData: Int,
+                      numQueries: Int,
+                      queryModules: Set[ModuleCode],
+                      seed: Int): Map[ModuleCode, List[StudentNumber]] = {
+
+    //Take the list of students, shuffle then split off the training data from the head.
+    //Create the rng with provided seed
+    val rand = new Random(seed)
+    //Map student records to simple student numbers then shuffle with the rng
+    val shuffled = rand.shuffle(studentRecords.map(_.number))
+    //First take the "training data" which is a fixed n student records
+    val (trainingStudents, queryStudents) = shuffled.splitAt(trainingData) match {
+      case (_, Nil) => throw new IllegalArgumentException("The number of students for which you have records must be " +
+        "greater than the formula (Number of queries * number of modules) + (Number of training records). Instead, " +
+        s"you provided #queries:$numQueries, #modules: ${queryModules.size}, #training: $trainingData and " +
+        s"students: ${studentRecords.size}.")
+      case a => a
+    }
+
+    //Take students to be used for queries (queryStudents) and group them into chunks the size of queriesPerModule
+    val queryStudentChunks = queryStudents.grouped(numQueries)
+    //Assign each of these chunks of students to one of the module codes for which we need queries and return the map
+    queryModules.iterator.zip(queryStudentChunks).toMap
+  }
+
+  /** get the list of distinct modulecodes, sorted alphanumerically (therefore chronologically) */
   private def getAllModules(scores: List[ModuleScore]): List[ModuleCode] = scores.map(_.module).sortWith(_ < _).distinct
 }

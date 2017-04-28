@@ -17,7 +17,6 @@
   */
 package uk.ac.ncl.la.soar.eval
 
-
 import cats._
 import cats.implicits._
 import uk.ac.ncl.la.soar._
@@ -30,6 +29,11 @@ import scala.util.Random
 
 /**
   * Survey ADT, surveys may be empty, or contain responses.
+  *
+  * TODO: provide an assess method on the trait which calculates RMSE between response and actual
+  * TODO: provide helper methods like: trainingRecords, groundTruth etc...
+  * TODO: Write some simple tests.
+  * TODO: Clean up with a type alias
   */
 sealed trait Survey { self =>
 
@@ -40,7 +44,7 @@ sealed trait Survey { self =>
   def modules: Set[ModuleCode]
 
   /** The entry rows in a given survey (i.e. module scores/attainments grouped by student). */
-  def entries: List[StudentRecords[Map, ModuleCode, Double]]
+  def entries: List[StudentRecords[SortedMap, ModuleCode, Double]]
 
   /** The queries in a given survey (i.e the `StudentNumber`/`ModuleCode` pairs whose score should be predicted. */
   def queries: Map[StudentNumber, ModuleCode]
@@ -48,13 +52,16 @@ sealed trait Survey { self =>
   /** The responses for a given survey */
   def responses: Map[StudentNumber, ModuleScore]
 
+  /** Method for returning training records by filtering out queries */
+  def training: List[StudentRecords[SortedMap, ModuleCode, Double]] = entries.filterNot(s => queries.contains(s.number))
+
 }
 
 /**
   * Case class representing an unanswered survey which will be presented to members of staff to fill out.
   */
 case class EmptySurvey(modules: Set[ModuleCode], queries: Map[StudentNumber, ModuleCode],
-                  entries: List[StudentRecords[Map, ModuleCode, Double]]) extends Survey {
+                  entries: List[StudentRecords[SortedMap, ModuleCode, Double]]) extends Survey {
 
   override val completed = false
 
@@ -69,13 +76,13 @@ case class EmptySurvey(modules: Set[ModuleCode], queries: Map[StudentNumber, Mod
   */
 case class SurveyResponse(modules: Set[ModuleCode], queries: Map[StudentNumber, ModuleCode],
                           responses: Map[StudentNumber, ModuleScore], respondent: String,
-                          entries: List[StudentRecords[Map, ModuleCode, Double]]) extends Survey
+                          entries: List[StudentRecords[SortedMap, ModuleCode, Double]]) extends Survey
 
 /**
   * Case class representing a completed survey.
   */
 case class CompletedSurvey(modules: Set[ModuleCode], responses: Map[StudentNumber, ModuleScore], respondent: String,
-                           entries: List[StudentRecords[Map, ModuleCode, Double]]) extends Survey {
+                           entries: List[StudentRecords[SortedMap, ModuleCode, Double]]) extends Survey {
 
   val queries: Map[StudentNumber, ModuleCode] = responses.mapValues(_.module)
 
@@ -87,14 +94,26 @@ object Survey {
   /**
     * Factory method for `EmptySurvey`s.
     */
-  def generate(records: List[ModuleScore], elided: Int, modules: Seq[ModuleCode], common: Option[ModuleCode],
-               seed: Int): List[Survey] = {
+  def generate(records: List[ModuleScore], numQueries: Int, queryModules: Seq[ModuleCode],
+               commonQuery: Option[ModuleCode], seed: Int): List[Survey] = {
+    //Group the records by student and turn them into StudentRecords objects
     val stRecords = groupByStudents(records)
-
-    // TODO: refactor sample to return a candidate set of queries only. Can be elided later on.
-    // TODO: provide an assess method on the trait which calculates RMSE between response and actual
-    // TODO: provide helper methods like: trainingRecords, groundTruth etc...
-    // TODO: Write some simple tests.
+    //Build the set of modules across all entries.
+    val allModules = records.iterator.map(_.module).toSet
+    //Add the common module to moduleSet
+    val queryModuleSet = (queryModules ++ commonQuery).toSet
+    //Pass the StudentRecords objects to generate a set of queries
+    //TODO: provide a config parameter for training rather than magically deriving it
+    val queries = sampleQueries(stRecords, numQueries*2, numQueries, queryModuleSet, seed)
+    //Get common queries if they exist and convert to a list (Nil if None)
+    val cmnQ = commonQuery.flatMap(queries.get).getOrElse(List.empty[StudentNumber])
+    //Trim the common query set from the map of query sets, then add the common queries to each set.
+    val blendedQ = (queries -- commonQuery).mapValues(cmnQ ::: _)
+    //Each entry in blendedQ represents the query set for one survey. Split them out and and make surveys
+    blendedQ.iterator.map { case (module, students) =>
+        val queryMap = students.map(_ -> module).toMap
+        EmptySurvey(allModules, queryMap, stRecords)
+    }.toList
   }
 
 

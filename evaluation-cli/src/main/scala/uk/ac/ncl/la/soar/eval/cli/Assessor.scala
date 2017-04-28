@@ -94,6 +94,8 @@ object Assessor extends Command[AssessorConfig, Unit] {
 
   /** Converts a list fo ModuleScores to a StudentRecord - be aware that this student record uses the student id
     * associated with the first modulescore in the varargs.
+    *
+    * TODO: Map vs SortedMap here?
     */
   private def scoresToStudentRecord(scores: ModuleScore*): Option[StudentRecords[Map, ModuleCode, Double]] = {
     val student = scores.headOption.map(_.student)

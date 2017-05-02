@@ -21,6 +21,7 @@ import cats._
 import cats.implicits._
 import uk.ac.ncl.la.soar.{ModuleCode, StudentNumber}
 import uk.ac.ncl.la.soar.data.{ModuleScore, Records, StudentRecords}
+import uk.ac.ncl.la.soar.eval.Survey
 
 import scala.io.Source
 
@@ -39,10 +40,6 @@ import scala.io.Source
   * https://www.reddit.com/r/scala/comments/5clxku/scalaz_task_taska_versus_taskeithera_b/
   */
 object Assessor extends Command[AssessorConfig, Unit] {
-
-  /** Simple struct to represent a survey ... TODO: explain more about what a survey is here */
-  case class Survey(modules: Set[ModuleCode], queries: Map[StudentNumber, ModuleCode],
-                    entries: List[StudentRecords[Map, ModuleCode, Double]])
 
   //TODO: Make a Meta struct (or Type Alias to Map) which will be populated from the meta.json file which is going to
   // have to be generated for each survey folder.

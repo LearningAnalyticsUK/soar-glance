@@ -154,6 +154,8 @@ def commonAssembly(main: String, jar: String) = Seq(
 
 /**
   * Definition of modules
+  *
+  * TODO: Add back project names - want to be able to compile individual sub-modules.
   */
 
 //Core module of the project - any commonly depended code will be placed here.
@@ -168,10 +170,11 @@ lazy val coreJVM = core.jvm
 //Module which creates the model training spark job when built
 //This Module is JVM only - does this mean it should depend on the JVM version of the core module?
 lazy val model = project.in(file("model"))
-  .dependsOn(core)
+  .dependsOn(coreJVM)
   .settings(
     name := "Soar Model Generator",
     moduleName := "soar-model",
+    libraryDependencies += "com.jsuereth" %% "scala-arm" % "2.0",
     commonAssembly("uk.ac.ncl.la.soar.model.ScorePredictor", "model.jar"))
   .settings(soarSettings:_*)
   .settings(commonSparkBatch:_*)
@@ -185,43 +188,58 @@ lazy val glanceCore = crossProject.crossType(CrossType.Pure)
     moduleName := "soar-glance-core")
   .settings(soarSettings:_*)
 
-lazy val glanceJS = glance.js
-lazy val glanceJVM = glance.jvm
+lazy val glanceCoreJS = glanceCore.js
+lazy val glanceCoreJVM = glanceCore.jvm
 
 //Also JVM only module. Depend on coreJVM and glanceJVM?
-lazy val glanceCli = SoarProject("glance-cli")
-  .dependsOn(core, glance)
+lazy val glanceCli = project.in(file("glance-cli"))
+  .dependsOn(coreJVM, glanceCoreJVM)
   .settings(
     name := "Soar Glance CLI",
     moduleName := "soar-glance-cli",
+    libraryDependencies += "com.jsuereth" %% "scala-arm" % "2.0",
     commonAssembly("uk.ac.ncl.la.soar.glance.cli.Main", "soar-glance-cli.jar"))
   .settings(soarSettings:_*)
   .settings(commonSparkBatch:_*)
 
-lazy val glanceWeb = SoarProject("glance-web")
-  .dependsOn(core, evaluation)
+lazy val glanceWeb = crossProject.crossType(CrossType.Pure).in(file("glance-web"))
+  .dependsOn(core, glanceCore)
   .settings(
     name := "Soar Glance Web",
     moduleName := "soar-glance-web",
-    commonAssembly("uk.ac.ncl.la.soar.glance.server.Main", "soar-glance-web.jar"))
-  .settings(commonServer:_*)
+    unmanagedSourceDirectories in Compile += baseDirectory.value / "shared" / "main" / "scala")
+  .settings(commonAssembly("uk.ac.ncl.la.soar.glance.server.Main", "soar-glance-web.jar"))
+  .settings(soarSettings:_*)
   .settings(commonCirce:_*)
-
-//Cannot factor out common scalajs dependencies because we only enable the ScalaJS plugin local to each project. Problem?
-lazy val evaluationWeb = SoarProject("evaluation-web")
-  .dependsOn(core, evaluation)
-  .settings(
-    name := "Soar Evaluation Front-end",
-    moduleName := "soar-eval-web",
+  .jvmSettings(commonServer:_*)
+  .jsSettings(
     libraryDependencies ++= Seq (
       "org.scala-js" %%% "scalajs-dom" % "0.9.1",
-      "org.singlespaced" %%% "scalajs-d3" % "0.3.4"
+      "org.singlespaced" %%% "scalajs-d3" % "0.3.4",
+      "org.webjars" % "bootstrap" % "3.3.7-1"
     ),
     scalaJSUseMainModuleInitializer := true)
-  .settings(soarSettings:_*)
   .enablePlugins(ScalaJSPlugin)
+
+lazy val glanceWebJS = glanceWeb.js
+lazy val glanceWebJVM = glanceWeb.jvm
+
+
+//Cannot factor out common scalajs dependencies because we only enable the ScalaJS plugin local to each project. Problem?
+//lazy val evaluationWeb = SoarProject("evaluation-web")
+//  .dependsOn(core, evaluation)
+//  .settings(
+//    name := "Soar Evaluation Front-end",
+//    moduleName := "soar-eval-web",
+//    libraryDependencies ++= Seq (
+//      "org.scala-js" %%% "scalajs-dom" % "0.9.1",
+//      "org.singlespaced" %%% "scalajs-d3" % "0.3.4"
+//    ),
+//    scalaJSUseMainModuleInitializer := true)
+//  .settings(soarSettings:_*)
+//  .enablePlugins(ScalaJSPlugin)
 
 
 //Add some command aliases for testing/compiling all modules, rather than aggregating tasks from root indiscriminately
-addCommandAlias("testAll", "; core/test; model/test; evaluation/test")
-addCommandAlias("compileAll", ";core/compile; model/compile; evaluation/compile")
+addCommandAlias("testAll", "; core/test; model/test; glance-core/test")
+addCommandAlias("compileAll", ";core/compile; model/compile; glance-core/compile")

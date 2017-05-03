@@ -1,5 +1,5 @@
 import sbtassembly.MergeStrategy
-
+import org.scalajs.sbtplugin.cross.CrossProject
 
 /**
   * Build wide settings
@@ -36,6 +36,8 @@ lazy val altStdLib = Seq(
   libraryDependencies += "io.monix" %%% "monix-cats" % "2.2.1"
 )
 
+lazy val commonDependencies = langFixes ++ testingDependencies ++ altStdLib
+
 
 //Lazy val defining dependencies common to modules containing spark batch jobs
 lazy val commonSparkBatch = Seq(
@@ -55,43 +57,72 @@ lazy val commonCirce = Seq(
 lazy val commonServer = Seq(
   libraryDependencies += "com.github.finagle" %% "finch-core" % "0.14.0",
   libraryDependencies += "com.github.finagle" %% "finch-circe" % "0.14.0"
-) ++ commonCirce
+)
 
 /**
   * Common helper methods factoring out project definition boilerplate
   */
 
 //Template of common settings shared by all modules
-def SoarProject(name: String): Project = {
-  Project(name, file(name)).settings(
-    version := "0.1-SNAPSHOT",
-    organization := "uk.ac.ncl.la",
-    resolvers ++= Seq(
-      Resolver.sonatypeRepo("releases"),
-      Resolver.sonatypeRepo("snapshots")
-    ),
-    fork in test := true,
-    parallelExecution in Test := false,
-    scalacOptions ++= Seq(
-      "-deprecation",
-      "-encoding", "UTF-8",
-      "-feature",
-      "-language:existentials",
-      "-language:higherKinds",
-      "-language:implicitConversions",
-      "-language:experimental.macros",
-      "-unchecked",
-      "-Xfatal-warnings",
-      "-Xlint",
-      "-Yno-adapted-args",
-      "-Ywarn-dead-code",
-      "-Ywarn-numeric-widen",
-      "-Ywarn-value-discard",
-      "-Ypartial-unification",
-      "-Xfuture"
-    ))
-    .settings((langFixes ++ testingDependencies ++ altStdLib):_*)
-}
+//def SoarProject(name: String): Project = {
+//  Project(name, file(name)).settings(
+//    version := "0.1-SNAPSHOT",
+//    organization := "uk.ac.ncl.la",
+//    resolvers ++= Seq(
+//      Resolver.sonatypeRepo("releases"),
+//      Resolver.sonatypeRepo("snapshots")
+//    ),
+//    fork in test := true,
+//    parallelExecution in Test := false,
+//    scalacOptions ++= Seq(
+//      "-deprecation",
+//      "-encoding", "UTF-8",
+//      "-feature",
+//      "-language:existentials",
+//      "-language:higherKinds",
+//      "-language:implicitConversions",
+//      "-language:experimental.macros",
+//      "-unchecked",
+//      "-Xfatal-warnings",
+//      "-Xlint",
+//      "-Yno-adapted-args",
+//      "-Ywarn-dead-code",
+//      "-Ywarn-numeric-widen",
+//      "-Ywarn-value-discard",
+//      "-Ypartial-unification",
+//      "-Xfuture"
+//    ))
+//    .settings(commonDependencies:_*)
+//}
+
+lazy val soarSettings = Seq(
+  version := "0.1-SNAPSHOT",
+  organization := "uk.ac.ncl.la",
+  resolvers ++= Seq(
+    Resolver.sonatypeRepo("releases"),
+    Resolver.sonatypeRepo("snapshots")
+  ),
+  fork in test := true,
+  parallelExecution in Test := false,
+  scalacOptions ++= Seq(
+    "-deprecation",
+    "-encoding", "UTF-8",
+    "-feature",
+    "-language:existentials",
+    "-language:higherKinds",
+    "-language:implicitConversions",
+    "-language:experimental.macros",
+    "-unchecked",
+    "-Xfatal-warnings",
+    "-Xlint",
+    "-Yno-adapted-args",
+    "-Ywarn-dead-code",
+    "-Ywarn-numeric-widen",
+    "-Ywarn-value-discard",
+    "-Ypartial-unification",
+    "-Xfuture"
+  )
+) ++ commonDependencies
 
 //Method defining common merge strategy for duplicate files when constructing executable jars using assembly
 def commonAssembly(main: String, jar: String) = Seq(
@@ -126,46 +157,59 @@ def commonAssembly(main: String, jar: String) = Seq(
   */
 
 //Core module of the project - any commonly depended code will be placed here.
-lazy val core = SoarProject("core")
+lazy val core = crossProject.crossType(CrossType.Pure)
+  .in(file("core"))
   .settings(name := "Soar Core", moduleName := "soar-core")
+  .settings(soarSettings:_*)
+
+lazy val coreJS = core.js
+lazy val coreJVM = core.jvm
 
 //Module which creates the model training spark job when built
-lazy val model = SoarProject("model")
+//This Module is JVM only - does this mean it should depend on the JVM version of the core module?
+lazy val model = project.in(file("model"))
   .dependsOn(core)
   .settings(
     name := "Soar Model Generator",
     moduleName := "soar-model",
     commonAssembly("uk.ac.ncl.la.soar.model.ScorePredictor", "model.jar"))
+  .settings(soarSettings:_*)
   .settings(commonSparkBatch:_*)
 
 //Module which contains code for the empirical evaluation of Soar, and an explanation of its methodology
-lazy val evaluation = SoarProject("evaluation")
+lazy val glanceCore = crossProject.crossType(CrossType.Pure)
+  .in(file("glance-core"))
   .dependsOn(core)
   .settings(
-    name := "Soar Evaluation",
-    moduleName := "soar-eval")
+    name := "Soar Glance Core",
+    moduleName := "soar-glance-core")
+  .settings(soarSettings:_*)
 
+lazy val glanceJS = glance.js
+lazy val glanceJVM = glance.jvm
 
-lazy val evaluationCli = SoarProject("evaluation-cli")
-  .dependsOn(core, evaluation)
+//Also JVM only module. Depend on coreJVM and glanceJVM?
+lazy val glanceCli = SoarProject("glance-cli")
+  .dependsOn(core, glance)
   .settings(
-    name := "Soar Evaluation CLI",
-    moduleName := "soar-eval-cli",
-    commonAssembly("uk.ac.ncl.la.soar.eval.cli.Main", "soar-eval-cli.jar"))
+    name := "Soar Glance CLI",
+    moduleName := "soar-glance-cli",
+    commonAssembly("uk.ac.ncl.la.soar.glance.cli.Main", "soar-glance-cli.jar"))
+  .settings(soarSettings:_*)
   .settings(commonSparkBatch:_*)
 
-lazy val evaluationServer = SoarProject("evaluation-server")
+lazy val glanceWeb = SoarProject("glance-web")
   .dependsOn(core, evaluation)
   .settings(
-    name := "Soar Evaluation Server",
-    moduleName := "soar-eval-server",
-    commonAssembly("uk.ac.ncl.la.soar.eval.server.Main", "soar-eval-server.jar"))
+    name := "Soar Glance Web",
+    moduleName := "soar-glance-web",
+    commonAssembly("uk.ac.ncl.la.soar.glance.server.Main", "soar-glance-web.jar"))
   .settings(commonServer:_*)
+  .settings(commonCirce:_*)
 
 //Cannot factor out common scalajs dependencies because we only enable the ScalaJS plugin local to each project. Problem?
 lazy val evaluationWeb = SoarProject("evaluation-web")
   .dependsOn(core, evaluation)
-  .enablePlugins(ScalaJSPlugin)
   .settings(
     name := "Soar Evaluation Front-end",
     moduleName := "soar-eval-web",
@@ -174,6 +218,8 @@ lazy val evaluationWeb = SoarProject("evaluation-web")
       "org.singlespaced" %%% "scalajs-d3" % "0.3.4"
     ),
     scalaJSUseMainModuleInitializer := true)
+  .settings(soarSettings:_*)
+  .enablePlugins(ScalaJSPlugin)
 
 
 //Add some command aliases for testing/compiling all modules, rather than aggregating tasks from root indiscriminately

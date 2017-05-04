@@ -1,5 +1,5 @@
 import sbtassembly.MergeStrategy
-import org.scalajs.sbtplugin.cross.CrossProject
+import org.scalajs.sbtplugin.cross.{CrossProject, CrossType}
 
 /**
   * Build wide settings
@@ -37,7 +37,6 @@ lazy val altStdLib = Seq(
 )
 
 lazy val commonDependencies = langFixes ++ testingDependencies ++ altStdLib
-
 
 //Lazy val defining dependencies common to modules containing spark batch jobs
 lazy val commonSparkBatch = Seq(
@@ -100,8 +99,8 @@ def soarProject(name: String): Project = {
     .settings(commonDependencies:_*)
 }
 
-def soarCrossProject(name: String): CrossProject = {
-  CrossProject(name, file(name), CrossType.Full)
+def soarCrossProject(name: String, tpe: CrossType): CrossProject = {
+  CrossProject(name, file(name), tpe)
     .settings(soarSettings:_*)
     .settings(commonDependencies:_*)
 }
@@ -139,7 +138,7 @@ def commonAssembly(main: String, jar: String) = Seq(
   */
 
 //Core module of the project - any commonly depended code will be placed here.
-lazy val core = soarCrossProject("core")
+lazy val core = soarCrossProject("core", CrossType.Pure)
   .settings(name := "Soar Core", moduleName := "soar-core")
 
 lazy val coreJS = core.js
@@ -157,7 +156,7 @@ lazy val model = soarProject("model")
   .settings(commonSparkBatch:_*)
 
 //Module which contains code for the empirical evaluation of Soar, and an explanation of its methodology
-lazy val glanceCore = soarCrossProject("glance-core")
+lazy val glanceCore = soarCrossProject("glance-core", CrossType.Pure)
   .dependsOn(core)
   .settings(
     name := "Soar Glance Core",
@@ -176,7 +175,7 @@ lazy val glanceCli = soarProject("glance-cli")
     commonAssembly("uk.ac.ncl.la.soar.glance.cli.Main", "soar-glance-cli.jar"))
   .settings(commonSparkBatch:_*)
 
-lazy val glanceWeb = soarCrossProject("glance-web")
+lazy val glanceWeb = soarCrossProject("glance-web", CrossType.Full)
   .dependsOn(core, glanceCore)
   .settings(
     name := "Soar Glance Web",

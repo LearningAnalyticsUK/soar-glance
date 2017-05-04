@@ -15,7 +15,7 @@
   * See the License for the specific language governing permissions and
   * limitations under the License.
   */
-package uk.ac.ncl.la.soar.eval.cli
+package uk.ac.ncl.la.soar.glance.cli
 
 import cats._
 import cats.implicits._
@@ -74,6 +74,8 @@ object Assessor extends Command[AssessorConfig, Unit] {
     //Read in Survey csv
     val lines = Source.fromFile(surveyPath).getLines()
     val entries = lines.toList
+
+    //TODO: Simplify and refactor the below
 
     for {
     //If the csv is not empty, parse the header

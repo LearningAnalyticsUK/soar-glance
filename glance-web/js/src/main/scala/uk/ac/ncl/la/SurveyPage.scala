@@ -15,14 +15,14 @@
   * See the License for the specific language governing permissions and
   * limitations under the License.
   */
-package example
+package uk.ac.ncl.la
 
 import org.singlespaced.d3js.Ops._
 import org.singlespaced.d3js.d3
 
 import scala.scalajs.js
 
-object ScalaJSExample extends js.JSApp {
+object SurveyPage extends js.JSApp {
 
   def main(): Unit = {
     /**

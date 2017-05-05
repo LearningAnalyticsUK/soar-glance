@@ -32,8 +32,8 @@ lazy val testingDependencies = Seq(
 
 lazy val altStdLib = Seq(
   libraryDependencies += "org.typelevel" %%% "cats" % "0.9.0",
-  libraryDependencies += "io.monix" %%% "monix" % "2.2.1",
-  libraryDependencies += "io.monix" %%% "monix-cats" % "2.2.1"
+  libraryDependencies += "io.monix" %%% "monix-eval" % "2.3.0",
+  libraryDependencies += "io.monix" %%% "monix-cats" % "2.3.0"
 )
 
 lazy val commonDependencies = langFixes ++ testingDependencies ++ altStdLib
@@ -51,6 +51,12 @@ lazy val commonCirce = Seq(
   libraryDependencies += "io.circe" %%% "circe-generic" % "0.7.0",
   libraryDependencies += "io.circe" %%% "circe-core" % "0.7.0",
   libraryDependencies += "io.circe" %%% "circe-parser" % "0.7.0"
+)
+
+lazy val commonDoobie = Seq(
+  libraryDependencies += "org.tpolecat" %% "doobie-core-cats" % "0.4.1",
+  libraryDependencies += "org.tpolecat" %% "doobie-postgres-cats" % "0.4.1",
+  libraryDependencies += "org.tpolecat" %% "doobie-scalatest-cats" % "0.4.1"
 )
 
 lazy val commonServer = Seq(
@@ -161,6 +167,7 @@ lazy val glanceCore = soarCrossProject("glance-core", CrossType.Pure)
   .settings(
     name := "Soar Glance Core",
     moduleName := "soar-glance-core")
+  .settings(commonDoobie:_*)
 
 lazy val glanceCoreJS = glanceCore.js
 lazy val glanceCoreJVM = glanceCore.jvm

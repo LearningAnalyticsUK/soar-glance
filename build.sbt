@@ -25,7 +25,7 @@ lazy val langFixes = Seq(
 )
 
 lazy val testingDependencies = Seq(
-  libraryDependencies += "org.scalatest" %%% "scalatest" % "3.0.0" % "test",
+  libraryDependencies += "org.scalatest" %%% "scalatest" % "3.0.1" % "test",
   libraryDependencies += "org.scalacheck" %%% "scalacheck" % "1.13.4" % "test",
   libraryDependencies += "org.typelevel" %%% "discipline" % "0.7.2" % "test"
 )

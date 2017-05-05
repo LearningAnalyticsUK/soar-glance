@@ -20,11 +20,13 @@ package uk.ac.ncl.la.soar.glance
 import monix.execution.Scheduler.Implicits.global
 import monix.eval.Task
 import doobie.imports._
-
 import java.util.UUID
+
+import uk.ac.ncl.la.soar.StudentNumber
 
 /**
   * Repository trait for retrieving objects from the [[Survey]] ADT from a database
+  * TODO: Move to a JVM folder
   */
 sealed trait Repository[+A] {
   val init: Task[Unit]
@@ -51,7 +53,7 @@ object Repository {
   }
 }
 
-class SurveyDb(xa: Transactor[Task]) extends Repository[EmptySurvey] {
+class SurveyDb private (xa: Transactor[Task]) extends Repository[EmptySurvey] {
 
   implicit val uuidMeta: Meta[UUID] = Meta[String].nxmap(UUID.fromString, _.toString)
 
@@ -66,12 +68,12 @@ class SurveyDb(xa: Transactor[Task]) extends Repository[EmptySurvey] {
     sql"""
       CREATE TABLE surveys (
         id VARCHAR PRIMARY KEY,
-        module VARCHAR NOT NULL,
-        common VARCHAR
+        module VARCHAR(6) NOT NULL,
+        common VARCHAR(6)
       );
 
       CREATE TABLE students (
-        number VARCHAR PRIMARY KEY
+        number VARCHAR(10) PRIMARY KEY
       );
 
       CREATE TABLE surveys_students (
@@ -84,28 +86,43 @@ class SurveyDb(xa: Transactor[Task]) extends Repository[EmptySurvey] {
         id VARCHAR PRIMARY KEY,
         survey_id VARCHAR REFERENCES surveys(id),
         student_number VARCHAR REFERENCES students(number),
-        module VARCHAR NOT NULL
+        module VARCHAR(80) NOT NULL
       );
 
       CREATE TABLE module_score (
         id VARCHAR PRIMARY KEY,
-        student_number VARCHAR REFERENCES students(number),
+        student_number VARCHAR REFERENCES students(number) ON DELETE CASCADE,
         score DECIMAL(5,2) NOT NULL,
         CHECK (score > 0.00),
         CHECK (score < 100.00),
-        module VARCHAR NOT NULL
+        module VARCHAR(80) NOT NULL
       );
     """.update.run
 
   override val init: Task[Unit] = createTableQuery.map(_ => ()).transact(xa)
 
-  override val list: Task[List[EmptySurvey]] = _
+  override val list: Task[List[EmptySurvey]] = 
 
   override def find(id: UUID): Task[Option[EmptySurvey]] = ???
+
+  private def findSurveyStudents(id: UUID): Task[List[StudentNumber]] = {
+    val query =
+      sql"""
+        SELECT surveys_students.student_number
+        FROM surveys, surveys_students
+        WHERE survery_students.survey_id = $id""".query[StudentNumber].list
+    ???
+  }
 
   override def save[B >: EmptySurvey](entry: B): Task[EmptySurvey] = ???
 
   override def delete(id: UUID): Task[Boolean] = ???
 
   override def sync[B >: EmptySurvey](entries: List[B]): Task[List[EmptySurvey]] = ???
+
+  //Why lazy
+  private lazy val listQuery: ConnectionIO[List[EmptySurvey]] =
+    sql"""SELECT """
 }
+
+

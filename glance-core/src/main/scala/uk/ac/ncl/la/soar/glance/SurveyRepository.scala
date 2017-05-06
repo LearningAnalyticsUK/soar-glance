@@ -17,12 +17,12 @@
   */
 package uk.ac.ncl.la.soar.glance
 
-import monix.execution.Scheduler.Implicits.global
-import monix.eval.Task
 import doobie.imports._
 import java.util.UUID
 
-import uk.ac.ncl.la.soar.StudentNumber
+import fs2.Task
+import uk.ac.ncl.la.soar.{ModuleCode, StudentNumber}
+import uk.ac.ncl.la.soar.data.ModuleScore
 
 /**
   * Repository trait for retrieving objects from the [[Survey]] ADT from a database
@@ -53,7 +53,7 @@ object Repository {
   }
 }
 
-class SurveyDb private (xa: Transactor[Task]) extends Repository[EmptySurvey] {
+class SurveyDb private[glance] (xa: Transactor[Task]) extends Repository[EmptySurvey] {
 
   implicit val uuidMeta: Meta[UUID] = Meta[String].nxmap(UUID.fromString, _.toString)
 
@@ -101,18 +101,25 @@ class SurveyDb private (xa: Transactor[Task]) extends Repository[EmptySurvey] {
 
   override val init: Task[Unit] = createTableQuery.map(_ => ()).transact(xa)
 
-  override val list: Task[List[EmptySurvey]] = 
+  override val list: Task[List[EmptySurvey]] = Task.now(List.empty[EmptySurvey])
 
   override def find(id: UUID): Task[Option[EmptySurvey]] = ???
 
-  private def findSurveyStudents(id: UUID): Task[List[StudentNumber]] = {
+  private def findSurveyScores(id: UUID): Task[List[ModuleScore]] = {
     val query =
       sql"""
-        SELECT surveys_students.student_number
-        FROM surveys, surveys_students
-        WHERE survery_students.survey_id = $id""".query[StudentNumber].list
-    ???
+        SELECT surveys_students.student_number, module_score.module, module_score.score
+        FROM surveys_students, module_score
+        WHERE survery_students.survey_id = $id
+        AND module_score.student_number = surveys_students.student_number
+      """.query[ModuleScore].list
+
+    query.transact(xa)
   }
+
+  private def findSurveyQueries(id: UUID): Task[Map[StudentNumber, ModuleCode]] = ???
+
+  private def find
 
   override def save[B >: EmptySurvey](entry: B): Task[EmptySurvey] = ???
 
@@ -121,8 +128,18 @@ class SurveyDb private (xa: Transactor[Task]) extends Repository[EmptySurvey] {
   override def sync[B >: EmptySurvey](entries: List[B]): Task[List[EmptySurvey]] = ???
 
   //Why lazy
-  private lazy val listQuery: ConnectionIO[List[EmptySurvey]] =
-    sql"""SELECT """
+  private def listScoresForSurvey(id: UUID): ConnectionIO[List[ModuleScore]] =
+    sql"""
+        SELECT surveys_students.student_number, module_score.module, module_score.score
+        FROM surveys_students, module_score
+        WHERE survery_students.survey_id = $id
+        AND module_score.student_number = surveys_students.student_number
+      """.query[ModuleScore].list
+
+  private def listQueriesForSurvey(id: UUID): ConnectionIO[List[Map[StudentNumber, ModuleCode]]] =
+    sql"""
+      SELECT
+    """
 }
 
 

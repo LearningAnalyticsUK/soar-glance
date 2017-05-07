@@ -17,12 +17,13 @@
   */
 package uk.ac.ncl.la.soar.glance
 
-import doobie.imports._
 import java.util.UUID
 
-import fs2.{Stream, Task}, fs2.interop.cats._
-import cats._, cats.implicits._
-import uk.ac.ncl.la.soar.{ModuleCode, StudentNumber}, uk.ac.ncl.la.soar.data.ModuleScore
+import cats.implicits._
+import doobie.imports._
+import fs2.Task
+import uk.ac.ncl.la.soar.data.ModuleScore
+import uk.ac.ncl.la.soar.{ModuleCode, StudentNumber}
 
 /**
   * Repository trait for retrieving objects from the [[Survey]] ADT from a database

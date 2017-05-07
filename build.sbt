@@ -163,11 +163,12 @@ lazy val model = soarProject("model")
   .settings(commonSparkBatch:_*)
 
 //Module which contains code for the empirical evaluation of Soar, and an explanation of its methodology
-lazy val glanceCore = soarCrossProject("glance-core", CrossType.Pure)
+lazy val glanceCore = soarCrossProject("glance-core", CrossType.Full)
   .dependsOn(core)
   .settings(
     name := "Soar Glance Core",
-    moduleName := "soar-glance-core")
+    moduleName := "soar-glance-core",
+    unmanagedSourceDirectories in Compile += baseDirectory.value / "shared" / "main" / "scala")
   .settings(commonDoobie:_*)
 
 lazy val glanceCoreJS = glanceCore.js

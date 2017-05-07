@@ -17,6 +17,8 @@
   */
 package uk.ac.ncl.la.soar.glance
 
+import java.util.UUID
+
 import cats._
 import cats.implicits._
 import uk.ac.ncl.la.soar._
@@ -62,7 +64,8 @@ sealed trait Survey { self =>
   * Case class representing an unanswered survey which will be presented to members of staff to fill out.
   */
 case class EmptySurvey(modules: Set[ModuleCode], queries: Map[StudentNumber, ModuleCode],
-                  entries: List[StudentRecords[SortedMap, ModuleCode, Double]]) extends Survey {
+                       entries: List[StudentRecords[SortedMap, ModuleCode, Double]],
+                       id: UUID = UUID.randomUUID) extends Survey {
 
   override val completed = false
 
@@ -77,13 +80,13 @@ case class EmptySurvey(modules: Set[ModuleCode], queries: Map[StudentNumber, Mod
   */
 case class SurveyResponse(modules: Set[ModuleCode], queries: Map[StudentNumber, ModuleCode],
                           responses: Map[StudentNumber, ModuleScore], respondent: String,
-                          entries: List[StudentRecords[SortedMap, ModuleCode, Double]]) extends Survey
+                          entries: List[StudentRecords[SortedMap, ModuleCode, Double]], id: UUID) extends Survey
 
 /**
   * Case class representing a completed survey.
   */
 case class CompletedSurvey(modules: Set[ModuleCode], responses: Map[StudentNumber, ModuleScore], respondent: String,
-                           entries: List[StudentRecords[SortedMap, ModuleCode, Double]]) extends Survey {
+                           entries: List[StudentRecords[SortedMap, ModuleCode, Double]], id: UUID) extends Survey {
 
   val queries: Map[StudentNumber, ModuleCode] = responses.mapValues(_.module)
 

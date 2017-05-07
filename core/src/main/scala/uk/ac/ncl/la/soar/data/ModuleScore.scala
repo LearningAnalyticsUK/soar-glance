@@ -35,6 +35,9 @@ object ModuleScore {
     else None
   }
 
+  def unapply(arg: ModuleScore): Option[(StudentNumber, ModuleCode, Double)] =
+    Some((arg.student, arg.module, arg.score))
+
   def parse(lines: Iterator[String], sep: Char): Iterator[ModuleScore] = lines.flatMap(parseLine(_, sep))
 
   def parseStrict[E](lines: Iterator[String], sep: Char, err: (String, Int) => E): Either[E, List[ModuleScore]] = {

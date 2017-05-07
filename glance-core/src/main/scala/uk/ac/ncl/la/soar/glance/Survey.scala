@@ -34,6 +34,7 @@ import scala.util.Random
   * TODO: provide helper methods like: trainingRecords, groundTruth etc...
   * TODO: Write some simple tests.
   * TODO: Clean up with a type alias
+  * TODO: Explicitly represent common modules?
   */
 sealed trait Survey { self =>
 
@@ -118,7 +119,7 @@ object Survey {
 
 
   /** Group module scores by studnet numbers and construct StudentRecords */
-  private def groupByStudents(scores: List[ModuleScore]): List[StudentRecords[SortedMap, ModuleCode, Double]] = {
+  private[glance] def groupByStudents(scores: List[ModuleScore]): List[StudentRecords[SortedMap, ModuleCode, Double]] = {
     //Group by studentNumber and construct records
     val fullRecords = scores.groupBy(_.student).map { case (stud, studScores) =>
       val full = SortedMap.newBuilder[ModuleCode, Double] ++= studScores.iterator.map(s => s.module -> s.score)

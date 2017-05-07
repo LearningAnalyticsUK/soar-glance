@@ -20,7 +20,7 @@ package uk.ac.ncl.la.soar.glance
 import doobie.imports._
 import java.util.UUID
 
-import fs2.Task
+import fs2.{Task, Stream}
 import uk.ac.ncl.la.soar.{ModuleCode, StudentNumber}
 import uk.ac.ncl.la.soar.data.ModuleScore
 
@@ -57,7 +57,7 @@ class SurveyDb private[glance] (xa: Transactor[Task]) extends Repository[EmptySu
 
   implicit val uuidMeta: Meta[UUID] = Meta[String].nxmap(UUID.fromString, _.toString)
 
-  //Survey: pk varchar id, string module, string common
+  //Survey: pk varchar id, string module, string common - nope, unary type for now.
   //SurveyEntry: pk varchar id, fk varchar SurveyId, fk varchar StudentNumber
   //SurveyResponse: pk varchar id, varchar respondent, ? date, int type
   //Query: pk varchar id, fk varchar SurveyId, fk varchar StudentNumber, varchar ModuleCode
@@ -66,30 +66,28 @@ class SurveyDb private[glance] (xa: Transactor[Task]) extends Repository[EmptySu
   //ModuleScore: pk varchar id, fk varchar StudentNumber, int score not null, varchar ModuleCode
   private lazy val createTableQuery: ConnectionIO[Int] =
     sql"""
-      CREATE TABLE surveys (
-        id VARCHAR PRIMARY KEY,
-        module VARCHAR(6) NOT NULL,
-        common VARCHAR(6)
+      CREATE TABLE IF NOT EXISTS surveys (
+        id VARCHAR PRIMARY KEY
       );
 
-      CREATE TABLE students (
+      CREATE TABLE IF NOT EXISTS students (
         number VARCHAR(10) PRIMARY KEY
       );
 
-      CREATE TABLE surveys_students (
+      CREATE TABLE IF NOT EXISTS surveys_students (
         id VARCHAR PRIMARY KEY,
         survey_id VARCHAR REFERENCES surveys(id),
         student_number VARCHAR REFERENCES students(number)
       );
 
-      CREATE TABLE survey_queries (
+      CREATE TABLE IF NOT EXISTS survey_queries (
         id VARCHAR PRIMARY KEY,
         survey_id VARCHAR REFERENCES surveys(id),
         student_number VARCHAR REFERENCES students(number),
         module VARCHAR(80) NOT NULL
       );
 
-      CREATE TABLE module_score (
+      CREATE TABLE IF NOT EXISTS module_score (
         id VARCHAR PRIMARY KEY,
         student_number VARCHAR REFERENCES students(number) ON DELETE CASCADE,
         score DECIMAL(5,2) NOT NULL,
@@ -99,27 +97,29 @@ class SurveyDb private[glance] (xa: Transactor[Task]) extends Repository[EmptySu
       );
     """.update.run
 
+  //TODO: Investigate Sink as a means to neaten this but also get to grips with this fs2/stream stuff
   override val init: Task[Unit] = createTableQuery.map(_ => ()).transact(xa)
 
   override val list: Task[List[EmptySurvey]] = Task.now(List.empty[EmptySurvey])
 
-  override def find(id: UUID): Task[Option[EmptySurvey]] = ???
-
-  private def findSurveyScores(id: UUID): Task[List[ModuleScore]] = {
-    val query =
-      sql"""
-        SELECT surveys_students.student_number, module_score.module, module_score.score
-        FROM surveys_students, module_score
-        WHERE survery_students.survey_id = $id
-        AND module_score.student_number = surveys_students.student_number
-      """.query[ModuleScore].list
-
-    query.transact(xa)
+  override def find(id: UUID): Task[Option[EmptySurvey]] = {
+    //TODO: work out how to take advantage of the first query for early bail out
+    val action = for {
+      ident <- findSurveyWithId(id)
+      scores <- listScoresForSurvey(id)
+      qs <- listQueriesForSurvey(id)
+    } yield {
+      val moduleSet = scores.iterator.map(_.module).toSet
+      //In memory group by potentially fine, but fs2 Stream has own groupBy operator. TODO: Check fs2.Stream.groupBy
+      val records = Survey.groupByStudents(scores)
+      ident.map(_ => EmptySurvey(moduleSet, qs, records))
+    }
+    action.transact(xa)
   }
 
-  private def findSurveyQueries(id: UUID): Task[Map[StudentNumber, ModuleCode]] = ???
+  def findSurveyScores(id: UUID): Task[List[ModuleScore]] = listScoresForSurvey(id).transact(xa)
 
-  private def find
+  def findSurveyQueries(id: UUID): Task[Map[StudentNumber, ModuleCode]] = listQueriesForSurvey(id).transact(xa)
 
   override def save[B >: EmptySurvey](entry: B): Task[EmptySurvey] = ???
 
@@ -128,18 +128,40 @@ class SurveyDb private[glance] (xa: Transactor[Task]) extends Repository[EmptySu
   override def sync[B >: EmptySurvey](entries: List[B]): Task[List[EmptySurvey]] = ???
 
   //Why lazy
-  private def listScoresForSurvey(id: UUID): ConnectionIO[List[ModuleScore]] =
+  private def findSurveyWithId(id: UUID): ConnectionIO[Option[UUID]] =
     sql"""
-        SELECT surveys_students.student_number, module_score.module, module_score.score
-        FROM surveys_students, module_score
-        WHERE survery_students.survey_id = $id
-        AND module_score.student_number = surveys_students.student_number
-      """.query[ModuleScore].list
+      SELECT s.id FROM surveys s WHERE s.id = $id
+    """.query[UUID].option
+  
+  private def listScoresForSurvey(id: UUID): ConnectionIO[List[ModuleScore]] = {
+    val query = sql"""
+        SELECT ss.student_number, ms.module, ms.score
+        FROM surveys_students ss, module_score ms
+        WHERE ss.survey_id = $id
+        AND ms.student_number = ss.student_number
+      """.query[(StudentNumber, ModuleCode, Double)]
 
-  private def listQueriesForSurvey(id: UUID): ConnectionIO[List[Map[StudentNumber, ModuleCode]]] =
+    query.process.map({ case (sn, mc, sc) => ModuleScore(sn, mc, sc) }).collect({ case Some(ms) => ms }).list
+  }
+
+  //TODO: Figure out better way to accumulate to a Map, this requires two passes, could duplicated toMap of stdLib and
+  // PR Doobie?
+  private def listQueriesForSurvey(id: UUID): ConnectionIO[Map[StudentNumber, ModuleCode]] =
     sql"""
-      SELECT
-    """
+      SELECT sq.student_number, sq.module
+      FROM survey_queries sq
+      WHERE sq.survey_id = $id
+    """.query[(StudentNumber, ModuleCode)].list.map(_.toMap)
+
+  private def saveQ(survey: EmptySurvey): ConnectionIO[EmptySurvey] = {
+    //First, break out the pieces of the Survey which correspond to tables
+    val EmptySurvey(_, queries, records) = survey
+    //First add a survey id. As this is a unary type which is program generated there really isn't a concept of collision
+    // here, perhaps not the best idea, but there we are.
+    //Once we have added the survey id, then add break down the records into a series of modulescores and add those.
+    //Finally add the queries.
+  }
+
 }
 
 

@@ -37,6 +37,7 @@ import scala.util.Random
   * TODO: Write some simple tests.
   * TODO: Clean up with a type alias
   * TODO: Explicitly represent common modules?
+  * TODO: Refactor away from common ADT for Surveys and responses. Its confusing things
   */
 sealed trait Survey { self =>
 
@@ -84,6 +85,7 @@ case class SurveyResponse(modules: Set[ModuleCode], queries: Map[StudentNumber, 
 
 /**
   * Case class representing a completed survey.
+  * TODO: This makes more sense as a boolean extractor on completed I think, so refactor accordingly
   */
 case class CompletedSurvey(modules: Set[ModuleCode], responses: Map[StudentNumber, ModuleScore], respondent: String,
                            entries: List[StudentRecords[SortedMap, ModuleCode, Double]], id: UUID) extends Survey {

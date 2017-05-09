@@ -19,19 +19,20 @@ package uk.ac.ncl.la.soar.glance
 
 import java.util.UUID
 
+import cats._
 import cats.implicits._
 import doobie.imports._
 import fs2.Task
-import uk.ac.ncl.la.soar.data.ModuleScore
+import uk.ac.ncl.la.soar.data.{ModuleScore, StudentRecords}
 import uk.ac.ncl.la.soar.{ModuleCode, StudentNumber}
 
 /**
   * Repository trait for retrieving objects from the [[Survey]] ADT from a database
-  * TODO: Move to a JVM folder
   */
 sealed trait Repository[A] {
   val init: Task[Unit]
-//  val list: Task[List[A]]
+//  val tearDown: Task[Unit]
+  val list: Task[List[A]]
   def find(id: UUID): Task[Option[A]]
   def save(entry: A): Task[Unit]
   def delete(id: UUID): Task[Boolean]
@@ -43,6 +44,7 @@ object Repository {
 
   /** Init method to set up the database */
   private val createSchema: Task[SurveyDb] = {
+    //TODO: Work out conf for db connection details
     val xa = DriverManagerTransactor[Task]("org.postgresql.Driver", "jdbc:postgresql:surveys", "postgres",
       "mysecretpassword")
 
@@ -57,13 +59,127 @@ class SurveyDb private[glance] (xa: Transactor[Task]) extends Repository[EmptySu
 
   implicit val uuidMeta: Meta[UUID] = Meta[String].nxmap(UUID.fromString, _.toString)
 
-  //Survey: pk varchar id, string module, string common - nope, unary type for now.
-  //SurveyEntry: pk varchar id, fk varchar SurveyId, fk varchar StudentNumber
-  //SurveyResponse: pk varchar id, varchar respondent, ? date, int type
-  //Query: pk varchar id, fk varchar SurveyId, fk varchar StudentNumber, varchar ModuleCode
-  //QueryResponse: pk varchar id, fk varchar SurveyResponseId, fk varchar QueryId, int Score not null
-  //Student: pk varchar number
-  //ModuleScore: pk varchar id, fk varchar StudentNumber, int score not null, varchar ModuleCode
+  //TODO: Investigate Sink as a means to neaten this but also get to grips with this fs2/stream stuff
+  override val init: Task[Unit] = createTableQuery.map(_ => ()).transact(xa)
+
+  //TODO: Consider the performance implications of list over stream/process.
+  // Not a problem here but could be for higher volume data.
+  override val list: Task[List[EmptySurvey]] = {
+    val action = for {
+      ids <- listSurveyIdsQ
+      surveyOpts <- ids.traverse(findSurveyWithIdQ)
+    } yield surveyOpts.flatten
+    action.transact(xa)
+  }
+
+  override def find(id: UUID): Task[Option[EmptySurvey]] = findSurveyWithIdQ(id).transact(xa)
+
+  override def save(entry: EmptySurvey): Task[Unit] = saveQ(entry).transact(xa)
+
+  override def delete(id: UUID): Task[Boolean] = deleteQ(id).transact(xa)
+
+  /** Queries */
+  private lazy val listSurveyIdsQ: ConnectionIO[List[UUID]] = sql"SELECT s.id FROM surveys s;".query[UUID].list
+
+  private def findSurveyIdQ(id: UUID): ConnectionIO[Option[UUID]] =
+    sql"""
+      SELECT s.id FROM surveys s WHERE s.id = $id;
+    """.query[UUID].option
+
+  private def findSurveyWithIdQ(id: UUID): ConnectionIO[Option[EmptySurvey]] = {
+    //TODO: work out how to take advantage of the first query for early bail out
+    for {
+      ident <- findSurveyIdQ(id)
+      scores <- listScoresForSurveyQ(id)
+      qs <- listQueriesForSurveyQ(id)
+    } yield {
+      val moduleSet = scores.iterator.map(_.module).toSet
+      //In memory group by potentially fine, but fs2 Stream has own groupBy operator. TODO: Check fs2.Stream.groupBy
+      val records = Survey.groupByStudents(scores)
+      ident.map(_ => EmptySurvey(moduleSet, qs, records))
+    }
+  }
+  
+  private def listScoresForSurveyQ(id: UUID): ConnectionIO[List[ModuleScore]] = {
+    val query = sql"""
+        SELECT ss.student_num, ms.module_num, ms.score
+        FROM surveys_students ss, module_score ms
+        WHERE ss.survey_id = $id
+        AND ms.student_num = ss.student_num;
+      """.query[(StudentNumber, ModuleCode, Double)]
+
+    query.process
+      .map({ case (sn, mc, sc) => ModuleScore(sn, mc, sc) })
+      .collect({ case Some(ms) => ms })
+      .list
+  }
+
+  private def listQueriesForSurveyQ(id: UUID): ConnectionIO[Map[StudentNumber, ModuleCode]] =
+    sql"""
+      SELECT sq.student_num, sq.module_num
+      FROM survey_queries sq
+      WHERE sq.survey_id = $id;
+    """.query[(StudentNumber, ModuleCode)].list.map(_.toMap)
+
+  //Look at returning a ConnectionIO of Int, or Option[EmptySurvey]
+  //TODO: This seems like a lot of imperative brittle boilerplate. Am I really doing this right?
+  private def saveQ(survey: EmptySurvey): ConnectionIO[Unit] = {
+    //First, break out the pieces of the Survey which correspond to tables
+    val EmptySurvey(_, queries, records, sId) = survey
+    //First add a survey id. As this is a unary type which is generated there really isn't a concept of collision
+    val addSurveyQ = sql"INSERT INTO surveys (id) VALUES ($sId);".update.run
+    //Once we have added the survey id, add students and surveys_students
+
+    //Then, break down the records into a series of modulescores and add those.
+    val mS = for {
+      stud <- records
+      (module, score) <- stud.record.iterator
+      m <- ModuleScore(stud.number, module, score)
+    } yield m
+
+    //Next, add students
+    val addStudentSQL =
+      """
+        INSERT INTO students (num) KEY (num) VALUES (?) ON CONFLICT (num) DO NOTHING;
+      """
+    val studRows = records.map(_.number)
+    val addStudentsQ = Update[(StudentNumber)](addStudentSQL).updateMany(studRows)
+
+    //Next, add survey entries
+    val addEntrySQL =
+      """
+        INSERT INTO surveys_students (id, survey_id, student_num) KEY (id)
+        VALUES (?, ?, ?) ON CONFLICT (survey_id, student_num) DO NOTHING;
+      """
+    val entryRows = records.map(r => (UUID.randomUUID, sId, r.number))
+    val addEntryQ = Update[(UUID, UUID, StudentNumber)](addEntrySQL).updateMany(entryRows)
+
+    val moduleScoreSQL =
+      """
+        INSERT INTO module_score (id, student_num, score, module_num) KEY (id)
+        VALUES (?, ?, ?, ?) ON CONFLICT (id) DO NOTHING;
+      """
+    val mSRows = mS.map({ case ModuleScore(stud, module, score) => (UUID.randomUUID, stud, score, module) })
+    val addModuleScoreQ = Update[(UUID, StudentNumber, Double, ModuleCode)](moduleScoreSQL).updateMany(mSRows)
+
+    //Finally add the queries
+    val querySQL =
+      """
+        INSERT INTO survey_queries (id, survey_id, student_num, module_num) KEY (id)
+        VALUES (?, ?, ?, ?) ON CONFLICT (id) DO NOTHING;
+      """
+    val qRows = queries.iterator.map({ case (stud, module) => (UUID.randomUUID, sId, stud, module) }).toList
+    val addQueryQ = Update[(UUID, UUID, StudentNumber, ModuleCode)](querySQL).updateMany(qRows)
+    //Return combined query
+    for{
+      _ <- addSurveyQ *> addStudentsQ
+      _ <- addEntryQ *> addModuleScoreQ *> addQueryQ
+    } yield ()
+  }
+
+  private def deleteQ(id: UUID): ConnectionIO[Boolean] = sql"DELETE FROM surveys WHERE id = $id;".update.run.map(_ > 0)
+
+  /** Create the various tables needed to store surveys, if they do not already exist */
   private lazy val createTableQuery: ConnectionIO[Int] = {
     sql"""
       CREATE TABLE IF NOT EXISTS surveys (
@@ -97,100 +213,42 @@ class SurveyDb private[glance] (xa: Transactor[Task]) extends Repository[EmptySu
       );
     """.update.run
   }
+}
 
-  //TODO: Investigate Sink as a means to neaten this but also get to grips with this fs2/stream stuff
-  override val init: Task[Unit] = createTableQuery.map(_ => ()).transact(xa)
+class SurveyResponseDb private[glance] (xa: Transactor[Task]) extends Repository[SurveyResponse] {
 
-//  override val list: Task[List[EmptySurvey]] = Task.now(List.empty[EmptySurvey])
+  override val init: Task[Unit] = createTableQUery.map(_ => ()).transact(xa)
+  override val list: Task[List[SurveyResponse]] = _
 
-  override def find(id: UUID): Task[Option[EmptySurvey]] = {
-    //TODO: work out how to take advantage of the first query for early bail out
-    val action = for {
-      ident <- findSurveyWithId(id)
-      scores <- listScoresForSurvey(id)
-      qs <- listQueriesForSurvey(id)
-    } yield {
-      val moduleSet = scores.iterator.map(_.module).toSet
-      //In memory group by potentially fine, but fs2 Stream has own groupBy operator. TODO: Check fs2.Stream.groupBy
-      val records = Survey.groupByStudents(scores)
-      ident.map(_ => EmptySurvey(moduleSet, qs, records))
-    }
-    action.transact(xa)
-  }
+  override def find(id: UUID): Task[Option[SurveyResponse]] = ???
 
-  def findSurveyScores(id: UUID): Task[List[ModuleScore]] = listScoresForSurvey(id).transact(xa)
-
-  def findSurveyQueries(id: UUID): Task[Map[StudentNumber, ModuleCode]] = listQueriesForSurvey(id).transact(xa)
-
-  override def save(entry: EmptySurvey): Task[Unit] = saveQ(entry).transact(xa)
+  override def save(entry: SurveyResponse): Task[Unit] = ???
 
   override def delete(id: UUID): Task[Boolean] = ???
 
-  private def findSurveyWithId(id: UUID): ConnectionIO[Option[UUID]] =
+  /** Queries */
+  private lazy val createTableQuery: ConnectionIO[Int] = {
     sql"""
-      SELECT s.id FROM surveys s WHERE s.id = $id;
-    """.query[UUID].option
-  
-  private def listScoresForSurvey(id: UUID): ConnectionIO[List[ModuleScore]] = {
-    val query = sql"""
-        SELECT ss.student_num, ms.module_num, ms.score
-        FROM surveys_students ss, module_score ms
-        WHERE ss.survey_id = $id
-        AND ms.student_num = ss.student_num;
-      """.query[(StudentNumber, ModuleCode, Double)]
+      CREATE TABLE IF NOT EXISTS surveys_respondents (
+        id VARCHAR PRIMARY KEY,
+        survey_id VARCHAR REFERENCES surveys(id) ON DELETE CASCADE,
+        respondent VARCHAR UNIQUE NOT NULL,
+        submitted TIMESTAMP WITH TIME ZONE NOT NULL
+      );
 
-    query.process.map({ case (sn, mc, sc) => ModuleScore(sn, mc, sc) }).collect({ case Some(ms) => ms }).list
+      CREATE TABLE IF NOT EXISTS survey_response (
+        id VARCHAR PRIMARY KEY,
+        response_id VARCHAR REFERENCES surveys_respondents(id) ON DELETE CASCADE,
+        query_id VARCHAR REFERENCES survey_queries(id) ON DELETE CASCADE
+      );
+    """.update.run
   }
 
-  //TODO: Figure out better way to accumulate to a Map, this requires two passes, could duplicate toMap of stdLib and
-  // PR Doobie?
-  private def listQueriesForSurvey(id: UUID): ConnectionIO[Map[StudentNumber, ModuleCode]] =
-    sql"""
-      SELECT sq.student_num, sq.module_num
-      FROM survey_queries sq
-      WHERE sq.survey_id = $id;
-    """.query[(StudentNumber, ModuleCode)].list.map(_.toMap)
+  //findRespondentIdQ
+  //findRespondentWithId
 
-  //Look at returning a ConnectionIO of Int, or Option[EmptySurvey]
-  //TODO: Clean up this monstrosity
-  private def saveQ(survey: EmptySurvey): ConnectionIO[Unit] = {
-    //First, break out the pieces of the Survey which correspond to tables
-    val EmptySurvey(_, queries, records, sId) = survey
-    //First add a survey id. As this is a unary type which is generated there really isn't a concept of collision
-    val addSurveyQ = sql"INSERT INTO surveys (id) VALUES ($sId) ON CONFLICT (id) DO NOTHING;".update.run
-    //Once we have added the survey id, add students and surveys_students
-
-    //Then, break down the records into a series of modulescores and add those.
-    val mS = for {
-      stud <- records
-      (module, score) <- stud.record.iterator
-      m <- ModuleScore(stud.number, module, score)
-    } yield m
-
-    val moduleScoreSQL =
-      """
-        INSERT INTO module_score (id, student_num, score, module_num) KEY (id)
-        VALUES (?, ?, ?, ?) ON CONFLICT (id) DO NOTHING;
-      """
-    val mSRows = mS.map({ case ModuleScore(stud, module, score) => (UUID.randomUUID, stud, score, module) })
-    val addModuleScoreQ = Update[(UUID, StudentNumber, Double, ModuleCode)](moduleScoreSQL).updateMany(mSRows)
-
-    //Finally add the queries
-    val querySQL =
-      """
-        INSERT INTO survey_queries (id, survey_id, student_num, module_num) KEY (id)
-        VALUES (?, ?, ?, ?) ON CONFLICT (id) DO NOTHING;
-      """
-    val qRows = queries.iterator.map({ case (stud, module) => (UUID.randomUUID, sId, stud, module) }).toList
-    val addQueryQ = Update[(UUID, UUID, StudentNumber, ModuleCode)](querySQL).updateMany(qRows)
-    //Return combined query
-    for{
-      _ <- addSurveyQ
-      _ <- addModuleScoreQ
-      _ <- addQueryQ
-    } yield ()
-  }
-
+  private def deleteQ(id: UUID): ConnectionIO[Boolean] =
+    sql"DELETE FROM surveys_respondents WHERE id = $id;".update.run.map(_ > 0)
 }
 
 

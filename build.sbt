@@ -33,8 +33,6 @@ lazy val testingDependencies = Seq(
 lazy val altStdLib = Seq(
   libraryDependencies += "org.typelevel" %%% "cats" % "0.9.0",
   libraryDependencies += "co.fs2" %%% "fs2-core" % "0.9.5"
-//  libraryDependencies += "io.monix" %%% "monix-eval" % "2.3.0",
-//  libraryDependencies += "io.monix" %%% "monix-cats" % "2.3.0"
 )
 
 lazy val commonDependencies = langFixes ++ testingDependencies ++ altStdLib

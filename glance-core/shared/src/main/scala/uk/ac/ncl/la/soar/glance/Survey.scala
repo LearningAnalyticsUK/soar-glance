@@ -30,8 +30,6 @@ import scala.util.Random
 
 
 /**
-  * Survey ADT, surveys may be empty, or contain responses.
-  *
   * TODO: provide an assess method on the trait which calculates RMSE between response and actual
   * TODO: provide helper methods like: trainingRecords, groundTruth etc...
   * TODO: Write some simple tests.
@@ -39,60 +37,24 @@ import scala.util.Random
   * TODO: Explicitly represent common modules?
   * TODO: Refactor away from common ADT for Surveys and responses. Its confusing things
   */
-sealed trait Survey { self =>
-
-  /** Hase the survey been completed or not yet? Default answer is no */
-  def completed: Boolean = self.responses.size == self.queries.size
-
-  /** The set of identifying strings for Modules whose scores appear in the survey entries. */
-  def modules: Set[ModuleCode]
-
-  /** The entry rows in a given survey (i.e. module scores/attainments grouped by student). */
-  def entries: List[StudentRecords[SortedMap, ModuleCode, Double]]
-
-  /** The queries in a given survey (i.e the `StudentNumber`/`ModuleCode` pairs whose score should be predicted. */
-  def queries: Map[StudentNumber, ModuleCode]
-
-  /** The responses for a given survey */
-  def responses: Map[StudentNumber, ModuleScore]
-
-  /** Method for returning training records by filtering out queries */
-  def training: List[StudentRecords[SortedMap, ModuleCode, Double]] = entries.filterNot(s => queries.contains(s.number))
-
-}
 
 /**
   * Case class representing an unanswered survey which will be presented to members of staff to fill out.
   */
-case class EmptySurvey(modules: Set[ModuleCode], queries: Map[StudentNumber, ModuleCode],
-                       entries: List[StudentRecords[SortedMap, ModuleCode, Double]],
-                       id: UUID = UUID.randomUUID) extends Survey {
-
-  override val completed = false
-
-  val responses = Map.empty[StudentNumber, ModuleScore]
-}
-
-//From records by line
-//From CSV
+case class Survey(modules: Set[ModuleCode], queries: Map[StudentNumber, ModuleCode],
+                  entries: List[StudentRecords[SortedMap, ModuleCode, Double]],
+                  id: UUID = UUID.randomUUID)
 
 /**
   * Case class representing an a partially answered survey which is being completed by a member of staff.
   */
-case class SurveyResponse(modules: Set[ModuleCode], queries: Map[StudentNumber, ModuleCode],
-                          responses: Map[StudentNumber, ModuleScore], respondent: String,
-                          entries: List[StudentRecords[SortedMap, ModuleCode, Double]], id: UUID) extends Survey
+case class SurveyResponse(survey: Survey, responses: Map[StudentNumber, ModuleScore], respondent: String, id: UUID)
 
 /**
-  * Case class representing a completed survey.
-  * TODO: This makes more sense as a boolean extractor on completed I think, so refactor accordingly
+  * Boolean extractor to detect completed survey responses
   */
-case class CompletedSurvey(modules: Set[ModuleCode], responses: Map[StudentNumber, ModuleScore], respondent: String,
-                           entries: List[StudentRecords[SortedMap, ModuleCode, Double]], id: UUID) extends Survey {
-
-  val queries: Map[StudentNumber, ModuleCode] = responses.mapValues(_.module)
-
-  override val completed = true
+object CompletedResponse {
+  def unapply(arg: SurveyResponse): Boolean = arg.responses.size == arg.survey.queries.size
 }
 
 object Survey {
@@ -118,7 +80,7 @@ object Survey {
     //Each entry in blendedQ represents the query set for one survey. Split them out and and make surveys
     blendedQ.iterator.map { case (module, students) =>
         val queryMap = students.map(_ -> module).toMap
-        EmptySurvey(allModules, queryMap, stRecords)
+        Survey(allModules, queryMap, stRecords)
     }.toList
   }
 

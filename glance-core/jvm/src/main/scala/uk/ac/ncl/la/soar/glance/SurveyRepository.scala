@@ -21,6 +21,7 @@ import java.util.UUID
 import java.time.{Instant, LocalDateTime}
 
 import cats._
+import cats.data.OptionT
 import cats.implicits._
 import doobie.imports._
 import fs2.Task
@@ -39,14 +40,12 @@ trait Repository[A] {
   def delete(id: UUID): Task[Boolean]
 }
 
-//TODO: Define a RepositoryCompanion which is package private or private[Repository] and which defines query methods
-
 trait RepositoryCompanion[A] {
-  protected val initQ: ConnectionIO[Unit]
-  protected val listQ: ConnectionIO[List[A]]
-  protected def findQ(id: UUID): ConnectionIO[Option[A]]
-  protected def saveQ(entry: A): ConnectionIO[Unit]
-  protected def deleteQ(id: UUID): ConnectionIO[Boolean]
+  val initQ: ConnectionIO[Unit]
+  val listQ: ConnectionIO[List[A]]
+  def findQ(id: UUID): ConnectionIO[Option[A]]
+  def saveQ(entry: A): ConnectionIO[Unit]
+  def deleteQ(id: UUID): ConnectionIO[Boolean]
 }
 
 object Repository {
@@ -70,8 +69,6 @@ class SurveyDb private[glance] (xa: Transactor[Task]) extends Repository[Survey]
 
   import SurveyDb._
 
-  implicit val uuidMeta: Meta[UUID] = Meta[String].nxmap(UUID.fromString, _.toString)
-
   //TODO: Investigate Sink as a means to neaten this but also get to grips with this fs2/stream stuff
   override val init: Task[Unit] = initQ.map(_ => ()).transact(xa)
 
@@ -84,11 +81,13 @@ class SurveyDb private[glance] (xa: Transactor[Task]) extends Repository[Survey]
   override def save(entry: Survey): Task[Unit] = saveQ(entry).transact(xa)
 
   override def delete(id: UUID): Task[Boolean] = deleteQ(id).transact(xa)
-
 }
 
 object SurveyDb extends RepositoryCompanion[Survey] {
-  override protected val initQ: ConnectionIO[Unit] = {
+
+  implicit val uuidMeta: Meta[UUID] = Meta[String].nxmap(UUID.fromString, _.toString)
+
+  override val initQ: ConnectionIO[Unit] = {
     sql"""
       CREATE TABLE IF NOT EXISTS surveys (
         id VARCHAR PRIMARY KEY
@@ -119,17 +118,17 @@ object SurveyDb extends RepositoryCompanion[Survey] {
         CHECK (score < 100.00),
         module_num VARCHAR(80) NOT NULL
       );
-    """.update.run
+    """.update.run.void
   }
 
-  override protected val listQ: ConnectionIO[List[Survey]] = {
+  override val listQ: ConnectionIO[List[Survey]] = {
     for {
       ids <- listSurveyIdsQ
-      surveyOpts <- ids.traverse(findSurveyWithIdQ)
+      surveyOpts <- ids.traverse(findQ)
     } yield surveyOpts.flatten
   }
 
-  override protected def findQ(id: UUID): ConnectionIO[Option[Survey]] = {
+  override def findQ(id: UUID): ConnectionIO[Option[Survey]] = {
     //TODO: work out how to take advantage of the first query for early bail out
     for {
       ident <- findSurveyIdQ(id)
@@ -145,7 +144,7 @@ object SurveyDb extends RepositoryCompanion[Survey] {
 
   //Look at returning a ConnectionIO of Int, or Option[EmptySurvey]
   //TODO: This seems like a lot of imperative brittle boilerplate. Am I really doing this right?
-  override protected def saveQ(entry: Survey): ConnectionIO[Unit] = {
+  override def saveQ(entry: Survey): ConnectionIO[Unit] = {
     //First, break out the pieces of the Survey which correspond to tables
     val Survey(_, queries, records, sId) = entry
     //First add a survey id. As this is a unary type which is generated there really isn't a concept of collision
@@ -199,7 +198,7 @@ object SurveyDb extends RepositoryCompanion[Survey] {
     } yield ()
   }
 
-  override protected def deleteQ(id: UUID): ConnectionIO[Boolean] =
+  override def deleteQ(id: UUID): ConnectionIO[Boolean] =
     sql"DELETE FROM surveys WHERE id = $id;".update.run.map(_ > 0)
 
   private lazy val listSurveyIdsQ: ConnectionIO[List[UUID]] = sql"SELECT s.id FROM surveys s;".query[UUID].list
@@ -233,8 +232,10 @@ object SurveyDb extends RepositoryCompanion[Survey] {
 
 class SurveyResponseDb private[glance] (xa: Transactor[Task]) extends Repository[SurveyResponse] {
 
+  implicit val uuidMeta: Meta[UUID] = Meta[String].nxmap(UUID.fromString, _.toString)
+
   override val init: Task[Unit] = createTableQuery.map(_ => ()).transact(xa)
-  override val list: Task[List[SurveyResponse]] = _
+  override val list: Task[List[SurveyResponse]] = Task.now(List.empty[SurveyResponse])
 
   override def find(id: UUID): Task[Option[SurveyResponse]] = ???
 
@@ -256,24 +257,46 @@ class SurveyResponseDb private[glance] (xa: Transactor[Task]) extends Repository
         id VARCHAR PRIMARY KEY,
         respondent_id VARCHAR REFERENCES surveys_respondents(id) ON DELETE CASCADE,
         query_id VARCHAR REFERENCES survey_queries(id) ON DELETE CASCADE
+        predicted_score DECIMAL(5,2) NOT NULL,
+        CHECK (predicted_score > 0.00),
+        CHECK (predicted_score < 100.00),
       );
     """.update.run
   }
 
-  //findRespondentIdQ
   private def findRespondentIdQ(id: UUID): ConnectionIO[Option[UUID]] =
-    sql"SELECT ssrs.id FROM surveys_respondents ssrs WHERE ssrs.id = $id".query[UUID].option
+    sql"SELECT ssrs.id FROM surveys_respondents ssrs WHERE ssrs.id = $id;".query[UUID].option
 
 
   private def findRespondentWithId(id: UUID): ConnectionIO[Option[SurveyResponse]] =  {
     type RespondentRow = (UUID, UUID, String, Instant)
-    val selectRespondents = sql"SELECT * FROM surveys_respondents r WHERE r.id = $id".query[RespondentRow].option
+    val selectRespondents = sql"SELECT * FROM surveys_respondents r WHERE r.id = $id;".query[RespondentRow].option
+
+    def selectResponses(id: UUID) =
+      sql"""
+      SELECT (rs.query_id, rs.predicted_score, sq.student_num, sq.module_num)
+      FROM survey_response rs, survey_queries sq
+      WHERE rs.respondent_id = $id
+      AND rs.query_id = sq.id;
+      """.query[(UUID, Double, StudentNumber, ModuleCode)].list
+
+    //Use OptionT to make the below a bit more managable
 
     val action = for {
-      respondentOpt <- selectRespondents
-      surveyOpt <- ???
+      respondent <- OptionT(selectRespondents)
+      survey <- OptionT(SurveyDb.findQ(respondent._2))
+      responses <- OptionT.liftF(selectResponses(respondent._1))
+    } yield {
 
+      val responsesMap = responses.iterator.flatMap({ case (_,sc,stud,mod) =>
+        ModuleScore(stud,mod,sc)
+      }).map({ case m @ ModuleScore(stud,_, _) =>
+        stud -> m
+      }).toMap
+
+      SurveyResponse(survey, responsesMap, respondent._3, id)
     }
+    action.value
   }
 
 

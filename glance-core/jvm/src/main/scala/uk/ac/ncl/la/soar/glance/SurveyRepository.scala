@@ -33,7 +33,6 @@ import uk.ac.ncl.la.soar.{ModuleCode, StudentNumber}
   */
 trait Repository[A] {
   val init: Task[Unit]
-//  val tearDown: Task[Unit]
   val list: Task[List[A]]
   def find(id: UUID): Task[Option[A]]
   def save(entry: A): Task[Unit]
@@ -50,18 +49,24 @@ trait RepositoryCompanion[A] {
 
 object Repository {
 
-  lazy val Survey: Task[SurveyDb] = createSchema
+  //Is this the best/safest way to expose the Repository classes? Not really....
+  lazy val Survey: SurveyDb = dbs._1
+  lazy val Response: SurveyResponse = dbs._2
+
+  private lazy val dbs: (SurveyDb, SurveyResponseDb) = _ //TODO
 
   /** Init method to set up the database */
   private val createSchema: Task[SurveyDb] = {
-    //TODO: Work out conf for db connection details
+    //TODO: Work out conf for db connection details - knobs lib?
     val xa = DriverManagerTransactor[Task]("org.postgresql.Driver", "jdbc:postgresql:surveys", "postgres",
       "mysecretpassword")
 
     val sDb = new SurveyDb(xa)
+    val rDb = new SurveyResponseDb(xa)
     for {
       _ <- sDb.init
-    } yield sDb
+      _ <- rDb.init
+    } yield (sDb, rDb)
   }
 }
 
@@ -70,7 +75,7 @@ class SurveyDb private[glance] (xa: Transactor[Task]) extends Repository[Survey]
   import SurveyDb._
 
   //TODO: Investigate Sink as a means to neaten this but also get to grips with this fs2/stream stuff
-  override val init: Task[Unit] = initQ.map(_ => ()).transact(xa)
+  override val init: Task[Unit] = initQ.transact(xa)
 
   //TODO: Consider the performance implications of list over stream/process.
   // Not a problem here but could be for higher volume data.
@@ -100,28 +105,36 @@ object SurveyDb extends RepositoryCompanion[Survey] {
       CREATE TABLE IF NOT EXISTS surveys_students (
         id VARCHAR PRIMARY KEY,
         survey_id VARCHAR REFERENCES surveys(id) ON DELETE CASCADE,
-        student_num VARCHAR REFERENCES students(num) ON DELETE CASCADE
+        student_num VARCHAR(10) REFERENCES students(num) ON DELETE CASCADE
       );
 
       CREATE TABLE IF NOT EXISTS survey_queries (
         id VARCHAR PRIMARY KEY,
         survey_id VARCHAR REFERENCES surveys(id) ON DELETE CASCADE,
-        student_number VARCHAR REFERENCES students(num) ON DELETE CASCADE,
-        module_num VARCHAR(80) NOT NULL
+        student_num VARCHAR(10) NOT NULL,
+        module_num VARCHAR NOT NULL,
+        FOREIGN KEY (student_num, module_num) REFERENCES queries(student_num, module_num) ON DELETE CASCADE
+      );
+
+      CREATE TABLE IF NOT EXISTS queries (
+        student_num VARCHAR(10) REFERENCES surveys(id) ON DELETE CASCADE,
+        module_num VARCHAR
+        PRIMARY KEY (student_num, module_num)
       );
 
       CREATE TABLE IF NOT EXISTS module_score (
         id VARCHAR PRIMARY KEY,
-        student_num VARCHAR REFERENCES students(num) ON DELETE CASCADE,
+        student_num VARCHAR(10) REFERENCES students(num) ON DELETE CASCADE,
         score DECIMAL(5,2) NOT NULL,
         CHECK (score > 0.00),
         CHECK (score < 100.00),
-        module_num VARCHAR(80) NOT NULL
+        module_num VARCHAR NOT NULL
       );
     """.update.run.void
   }
 
   override val listQ: ConnectionIO[List[Survey]] = {
+    //TODO: The below cannot be the best way to do this? Look into some better SQL foo. Also for SurveyResponseDb listQ
     for {
       ids <- listSurveyIdsQ
       surveyOpts <- ids.traverse(findQ)
@@ -232,19 +245,28 @@ object SurveyDb extends RepositoryCompanion[Survey] {
 
 class SurveyResponseDb private[glance] (xa: Transactor[Task]) extends Repository[SurveyResponse] {
 
-  implicit val uuidMeta: Meta[UUID] = Meta[String].nxmap(UUID.fromString, _.toString)
+  import SurveyResponseDb._
 
-  override val init: Task[Unit] = createTableQuery.map(_ => ()).transact(xa)
-  override val list: Task[List[SurveyResponse]] = Task.now(List.empty[SurveyResponse])
+  override val init: Task[Unit] = initQ.transact(xa)
+  override val list: Task[List[SurveyResponse]] = listQ.transact(xa)
 
-  override def find(id: UUID): Task[Option[SurveyResponse]] = ???
+  override def find(id: UUID): Task[Option[SurveyResponse]] = findQ(id).transact(xa)
 
-  override def save(entry: SurveyResponse): Task[Unit] = ???
+  override def save(entry: SurveyResponse): Task[Unit] = saveQ(entry).transact(xa)
 
   override def delete(id: UUID): Task[Boolean] = deleteQ(id).transact(xa)
 
-  /** Queries */
-  private lazy val createTableQuery: ConnectionIO[Int] = {
+}
+
+object SurveyResponseDb extends RepositoryCompanion[SurveyResponse] {
+
+  /** Type aliases for Db rows */
+  type RespondentRow = (UUID, UUID, String, Instant)
+  type ResponseRow = (UUID, UUID, StudentNumber, ModuleCode, Double)
+
+  implicit val uuidMeta: Meta[UUID] = Meta[String].nxmap(UUID.fromString, _.toString)
+
+  override val initQ: ConnectionIO[Unit] = {
     sql"""
       CREATE TABLE IF NOT EXISTS surveys_respondents (
         id VARCHAR PRIMARY KEY,
@@ -256,39 +278,42 @@ class SurveyResponseDb private[glance] (xa: Transactor[Task]) extends Repository
       CREATE TABLE IF NOT EXISTS survey_response (
         id VARCHAR PRIMARY KEY,
         respondent_id VARCHAR REFERENCES surveys_respondents(id) ON DELETE CASCADE,
-        query_id VARCHAR REFERENCES survey_queries(id) ON DELETE CASCADE
+        student_num VARCHAR(10) NOT NULL,
+        module_num VARCHAR NOT NULL,
         predicted_score DECIMAL(5,2) NOT NULL,
         CHECK (predicted_score > 0.00),
         CHECK (predicted_score < 100.00),
+        FOREIGN KEY (student_num, module_num) REFERENCES queries(student_num, module_num) ON DELETE CASCADE
       );
-    """.update.run
+    """.update.run.void
   }
 
-  private def findRespondentIdQ(id: UUID): ConnectionIO[Option[UUID]] =
-    sql"SELECT ssrs.id FROM surveys_respondents ssrs WHERE ssrs.id = $id;".query[UUID].option
+  override val listQ: ConnectionIO[List[SurveyResponse]] = {
+    for {
+      ids <- listRespondentIdsQ
+      surveyOpts <- ids.traverse(findQ)
+    } yield surveyOpts.flatten
+  }
 
+  override def findQ(id: UUID): ConnectionIO[Option[SurveyResponse]] = {
 
-  private def findRespondentWithId(id: UUID): ConnectionIO[Option[SurveyResponse]] =  {
-    type RespondentRow = (UUID, UUID, String, Instant)
     val selectRespondents = sql"SELECT * FROM surveys_respondents r WHERE r.id = $id;".query[RespondentRow].option
 
     def selectResponses(id: UUID) =
       sql"""
-      SELECT (rs.query_id, rs.predicted_score, sq.student_num, sq.module_num)
-      FROM survey_response rs, survey_queries sq
+      SELECT (rs.student_num, rs.module_num, rs.predicted_score)
+      FROM survey_response rs
       WHERE rs.respondent_id = $id
-      AND rs.query_id = sq.id;
-      """.query[(UUID, Double, StudentNumber, ModuleCode)].list
+      """.query[(StudentNumber, ModuleCode, Double)].list
 
-    //Use OptionT to make the below a bit more managable
-
+    //Assign query to action as we need to use OptionT transformer which we'll need to unwrap at the end.
     val action = for {
       respondent <- OptionT(selectRespondents)
       survey <- OptionT(SurveyDb.findQ(respondent._2))
       responses <- OptionT.liftF(selectResponses(respondent._1))
     } yield {
-
-      val responsesMap = responses.iterator.flatMap({ case (_,sc,stud,mod) =>
+      //Turn the response rows into a responses map as expected for the SurveyResponse constructor
+      val responsesMap = responses.iterator.flatMap({ case (stud,mod,sc) =>
         ModuleScore(stud,mod,sc)
       }).map({ case m @ ModuleScore(stud,_, _) =>
         stud -> m
@@ -299,11 +324,47 @@ class SurveyResponseDb private[glance] (xa: Transactor[Task]) extends Repository
     action.value
   }
 
+  override def saveQ(entry: SurveyResponse): ConnectionIO[Unit] = {
 
-  //findRespondentWithId
+    //Get the retrieve survey Id from nested survey in entry
+    val sId = entry.id
 
-  private def deleteQ(id: UUID): ConnectionIO[Boolean] =
+    //Get responses from entry
+    val responses = entry.responses
+
+    //Insert entry in respondents table
+    val addRespondentQ =
+      sql"""
+         INSERT INTO surveys_respondents (id, survey_id, respondent, submitted) KEY (id)
+         VALUES (${entry.id}, ${entry.survey.id}, ${entry.respondent}, CURRENT_TIMESTAMP);
+      """.update.withUniqueGeneratedKeys("id")
+
+    //Then batch insert entries in responses table
+    val addResponseSQL =
+      """
+        INSERT INTO survey_responses (id, respondent_id, student_num, module_num, predicted_score) KEY (id)
+        VALUES (?, ?, ?, ?, ?);
+      """
+    val responseRows = entry.responses.iterator.map({  case (student, ModuleScore(_, module, score)) =>
+      (UUID.randomUUID, entry.id, student, module, score)
+    }).toList
+    val addResponsesQ = Update[ResponseRow](addResponseSQL).updateMany(responseRows)
+
+    //Actually construct the combined query program
+    for {
+      _ <- addRespondentQ
+      _ <- addResponsesQ
+    } yield ()
+  }
+
+  override def deleteQ(id: UUID): ConnectionIO[Boolean] =
     sql"DELETE FROM surveys_respondents WHERE id = $id;".update.run.map(_ > 0)
+
+  private def findRespondentIdQ(id: UUID): ConnectionIO[Option[UUID]] =
+    sql"SELECT ssrs.id FROM surveys_respondents ssrs WHERE ssrs.id = $id;".query[UUID].option
+
+  private val listRespondentIdsQ: ConnectionIO[List[UUID]] =
+    sql"SELECT r.id FROM surveys_respondents r;".query[UUID].list
 }
 
 

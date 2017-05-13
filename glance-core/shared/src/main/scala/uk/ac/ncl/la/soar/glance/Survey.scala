@@ -37,7 +37,6 @@ import scala.util.Random
   * TODO: Explicitly represent common modules?
   * TODO: Refactor away from common ADT for Surveys and responses. Its confusing things
   */
-
 /**
   * Case class representing an unanswered survey which will be presented to members of staff to fill out.
   */

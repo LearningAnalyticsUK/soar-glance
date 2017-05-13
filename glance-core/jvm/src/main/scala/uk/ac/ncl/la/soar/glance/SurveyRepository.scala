@@ -25,13 +25,18 @@ import cats.data.OptionT
 import cats.implicits._
 import doobie.imports._
 import fs2.Task
+import com.typesafe.config.ConfigFactory.parseString
+import pureconfig.loadConfigOrThrow
 import uk.ac.ncl.la.soar.data.{ModuleScore, StudentRecords}
 import uk.ac.ncl.la.soar.{ModuleCode, StudentNumber}
 
 /**
-  * Repository trait for retrieving objects from the [[Survey]] ADT from a database
+  * Repository trait which defines the behaviour of a Repository, retrieving objects from a database
+  *
+  * Note: The repository is sealed at  the moment for clarity, but should be unsealed and move to a separate file if
+  * this pattern ends up being needed in other places throughout our codebase (which is likely ... its db access).
   */
-trait Repository[A] {
+sealed trait Repository[A] {
   val init: Task[Unit]
   val list: Task[List[A]]
   def find(id: UUID): Task[Option[A]]
@@ -39,6 +44,10 @@ trait Repository[A] {
   def delete(id: UUID): Task[Boolean]
 }
 
+/**
+  * Trait which defines raw query methods on the companion objects of [[Repository]].
+  * TODO: Decide on the scoping of these methods - public for now but could be `private[glance]`
+  */
 trait RepositoryCompanion[A] {
   val initQ: ConnectionIO[Unit]
   val listQ: ConnectionIO[List[A]]
@@ -50,17 +59,20 @@ trait RepositoryCompanion[A] {
 object Repository {
 
   //Is this the best/safest way to expose the Repository classes? Not really....
-  lazy val Survey: SurveyDb = dbs._1
-  lazy val Response: SurveyResponse = dbs._2
-
-  private lazy val dbs: (SurveyDb, SurveyResponseDb) = _ //TODO
+  lazy val Survey: Task[SurveyDb] = createSchema.map(_._1)
+  lazy val Response: Task[SurveyResponseDb] = createSchema.map(_._2)
 
   /** Init method to set up the database */
-  private val createSchema: Task[SurveyDb] = {
-    //TODO: Work out conf for db connection details - knobs lib?
-    val xa = DriverManagerTransactor[Task]("org.postgresql.Driver", "jdbc:postgresql:surveys", "postgres",
-      "mysecretpassword")
+  private val createSchema: Task[(SurveyDb, SurveyResponseDb)] = {
 
+    //TODO: do something better here. MonadError instance for Task and do something...
+    val cfg = loadConfigOrThrow[Config]
+    val xa = DriverManagerTransactor[Task](
+      "org.postgresql.Driver",
+      s"jdbc:postgresql:${cfg.database.name}",
+      cfg.database.user,
+      cfg.database.password
+    )
     val sDb = new SurveyDb(xa)
     val rDb = new SurveyResponseDb(xa)
     for {
@@ -288,6 +300,9 @@ object SurveyResponseDb extends RepositoryCompanion[SurveyResponse] {
     """.update.run.void
   }
 
+  private val listRespondentIdsQ: ConnectionIO[List[UUID]] =
+    sql"SELECT r.id FROM surveys_respondents r;".query[UUID].list
+
   override val listQ: ConnectionIO[List[SurveyResponse]] = {
     for {
       ids <- listRespondentIdsQ
@@ -337,7 +352,7 @@ object SurveyResponseDb extends RepositoryCompanion[SurveyResponse] {
       sql"""
          INSERT INTO surveys_respondents (id, survey_id, respondent, submitted) KEY (id)
          VALUES (${entry.id}, ${entry.survey.id}, ${entry.respondent}, CURRENT_TIMESTAMP);
-      """.update.withUniqueGeneratedKeys("id")
+      """.update.run
 
     //Then batch insert entries in responses table
     val addResponseSQL =
@@ -363,8 +378,6 @@ object SurveyResponseDb extends RepositoryCompanion[SurveyResponse] {
   private def findRespondentIdQ(id: UUID): ConnectionIO[Option[UUID]] =
     sql"SELECT ssrs.id FROM surveys_respondents ssrs WHERE ssrs.id = $id;".query[UUID].option
 
-  private val listRespondentIdsQ: ConnectionIO[List[UUID]] =
-    sql"SELECT r.id FROM surveys_respondents r;".query[UUID].list
 }
 
 

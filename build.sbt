@@ -4,7 +4,6 @@ import org.scalajs.sbtplugin.cross.{CrossProject, CrossType}
 /**
   * Build wide settings
   */
-
 //Use the typelevel compiler for partial unification
 scalaOrganization in ThisBuild := "org.typelevel"
 //TODO: Upgrade to 2.11.9
@@ -168,6 +167,7 @@ lazy val glanceCore = soarCrossProject("glance-core", CrossType.Full)
     moduleName := "soar-glance-core",
     unmanagedSourceDirectories in Compile += baseDirectory.value / "shared" / "main" / "scala")
   .settings(commonDoobie:_*)
+  .jvmSettings(libraryDependencies += "com.github.pureconfig" %% "pureconfig" % "0.7.0")
 
 lazy val glanceCoreJS = glanceCore.js
 lazy val glanceCoreJVM = glanceCore.jvm

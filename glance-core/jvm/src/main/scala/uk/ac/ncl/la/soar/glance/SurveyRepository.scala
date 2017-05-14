@@ -65,19 +65,22 @@ object Repository {
   /** Init method to set up the database */
   private val createSchema: Task[(SurveyDb, SurveyResponseDb)] = {
 
-    //TODO: do something better here. MonadError instance for Task and do something...
-    val cfg = loadConfigOrThrow[Config]
-    val xa = DriverManagerTransactor[Task](
-      "org.postgresql.Driver",
-      s"jdbc:postgresql:${cfg.database.name}",
-      cfg.database.user,
-      cfg.database.password
-    )
-    val sDb = new SurveyDb(xa)
-    val rDb = new SurveyResponseDb(xa)
+    //TODO: Work out if this is even vaguely sane?
+    //Lazy config for memoization?
+    lazy val config = loadConfigOrThrow[Config]
+
     for {
-      _ <- sDb.init
-      _ <- rDb.init
+      cfg <- Task.delay(config)
+      xa = DriverManagerTransactor[Task](
+        "org.postgresql.Driver",
+        s"jdbc:postgresql:${cfg.database.name}",
+        cfg.database.user,
+        cfg.database.password
+      )
+      sDb = new SurveyDb(xa)
+      rDb = new SurveyResponseDb(xa)
+      _ <- { println("Initialising Survey tables");sDb.init }
+      _ <- { println("Initialising Response tables");rDb.init }
     } yield (sDb, rDb)
   }
 }

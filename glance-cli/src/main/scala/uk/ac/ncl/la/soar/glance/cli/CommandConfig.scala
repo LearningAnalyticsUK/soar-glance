@@ -47,7 +47,7 @@ object CommandConfig {
   }
 
   /** Package private helper object for parsing command line arguments, provided by scopt */
-  private[eval] val generatorParser = new OptionParser[GeneratorConfig]("SoarEvalGen") {
+  private[cli] val generatorParser = new OptionParser[GeneratorConfig]("SoarEvalGen") {
     //Define the header for the command line display text
     head("Soar Evaluation Survey generator", "0.1.x")
 
@@ -85,7 +85,7 @@ object CommandConfig {
         "records to elide.")
   }
 
-  private[eval] val assessorParser = new OptionParser[AssessorConfig]("SoarEvalAssess") {
+  private[cli] val assessorParser = new OptionParser[AssessorConfig]("SoarEvalAssess") {
     //Define the header for the command line display text
     head("Soar Evaluation Survey assessor", "0.1.x")
 

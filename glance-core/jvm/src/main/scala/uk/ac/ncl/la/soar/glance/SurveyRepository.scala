@@ -24,7 +24,9 @@ import cats._
 import cats.data.OptionT
 import cats.implicits._
 import doobie.imports._
-import fs2.Task
+import fs2._
+import fs2.interop.cats._
+import scala.concurrent.ExecutionContext.Implicits.global
 import com.typesafe.config.ConfigFactory.parseString
 import pureconfig.loadConfigOrThrow
 import uk.ac.ncl.la.soar.data.{ModuleScore, StudentRecords}
@@ -36,12 +38,12 @@ import uk.ac.ncl.la.soar.{ModuleCode, StudentNumber}
   * Note: The repository is sealed at  the moment for clarity, but should be unsealed and move to a separate file if
   * this pattern ends up being needed in other places throughout our codebase (which is likely ... its db access).
   */
-sealed trait Repository[A] {
-  val init: Task[Unit]
-  val list: Task[List[A]]
-  def find(id: UUID): Task[Option[A]]
-  def save(entry: A): Task[Unit]
-  def delete(id: UUID): Task[Boolean]
+sealed abstract class Repository[A, F[_]: Monad] {
+  val init: F[Unit]
+  val list: F[List[A]]
+  def find(id: UUID): F[Option[A]]
+  def save(entry: A): F[Unit]
+  def delete(id: UUID): F[Boolean]
 }
 
 /**
@@ -85,7 +87,7 @@ object Repository {
   }
 }
 
-class SurveyDb private[glance] (xa: Transactor[Task]) extends Repository[Survey] {
+class SurveyDb private[glance] (xa: Transactor[Task]) extends Repository[Survey, Task] {
 
   import SurveyDb._
 
@@ -258,7 +260,7 @@ object SurveyDb extends RepositoryCompanion[Survey] {
     """.query[(StudentNumber, ModuleCode)].list.map(_.toMap)
 }
 
-class SurveyResponseDb private[glance] (xa: Transactor[Task]) extends Repository[SurveyResponse] {
+class SurveyResponseDb private[glance] (xa: Transactor[Task]) extends Repository[SurveyResponse, Task] {
 
   import SurveyResponseDb._
 

@@ -19,10 +19,12 @@ package uk.ac.ncl.la.soar.glance.cli
 
 import cats._
 import cats.implicits._
+import fs2.Task
 import uk.ac.ncl.la.soar.{ModuleCode, StudentNumber}
 import uk.ac.ncl.la.soar.data.{ModuleScore, Records, StudentRecords}
-import uk.ac.ncl.la.soar.eval.Survey
+import uk.ac.ncl.la.soar.glance.Survey
 
+import scala.collection.immutable.SortedMap
 import scala.io.Source
 
 /**
@@ -44,7 +46,7 @@ object Assessor extends Command[AssessorConfig, Unit] {
   //TODO: Make a Meta struct (or Type Alias to Map) which will be populated from the meta.json file which is going to
   // have to be generated for each survey folder.
 
-  def run(conf: AssessorConfig): Either[Throwable, Unit] = {
+  def run(conf: AssessorConfig): Task[Unit] = {
     ???
   }
 
@@ -96,9 +98,9 @@ object Assessor extends Command[AssessorConfig, Unit] {
     *
     * TODO: Map vs SortedMap here?
     */
-  private def scoresToStudentRecord(scores: ModuleScore*): Option[StudentRecords[Map, ModuleCode, Double]] = {
+  private def scoresToStudentRecord(scores: ModuleScore*): Option[StudentRecords[SortedMap, ModuleCode, Double]] = {
     val student = scores.headOption.map(_.student)
-    val bldr = Map.newBuilder[ModuleCode, Double]
+    val bldr = SortedMap.newBuilder[ModuleCode, Double]
     for (score <- scores) {
       bldr += (score.module -> score.score)
     }

@@ -24,10 +24,13 @@ import scala.io.Source
 import scopt._
 import cats._
 import cats.implicits._
+import fs2.Task
+import fs2.interop.cats._
 import resource._
-import uk.ac.ncl.la.soar.{Record, ModuleCode}
+import uk.ac.ncl.la.soar.{ModuleCode, Record}
 import uk.ac.ncl.la.soar.data.{ModuleScore, StudentRecords}
 import uk.ac.ncl.la.soar.Record._
+import uk.ac.ncl.la.soar.glance.{Repository, Survey}
 
 import scala.collection.immutable.SortedMap
 import scala.util.{Properties, Random}
@@ -38,19 +41,18 @@ import scala.util.{Properties, Random}
   */
 object Generator extends Command[GeneratorConfig, Unit] {
 
-  def run(conf: GeneratorConfig): Either[Throwable, Unit] = {
 
-    //TODO: Write out meta data file saying which modules have been dropped and which seed was used to generate.
+  override def run(conf: GeneratorConfig): Task[Unit] = {
     for {
       scores <- parseScores(conf.recordsPath)
-      records <- Either.right(groupByStudents(scores))
-      surveys <- sample(records, conf)
-      _ <- writeOut(getAllModules(scores), surveys, conf)
+      surveys <- Task.now(Survey.generate(scores, conf.elided, conf.modules, conf.common, conf.seed))
+      db <- Repository.Survey
+      _ <- surveys.traverse(db.save)
     } yield ()
   }
 
   /** Retrieve and parse all ModuleScores from provided file if possible */
-  private def parseScores(recordsPath: String): Either[Throwable, List[ModuleScore]] = Either.catchNonFatal {
+  private def parseScores[F[_]](recordsPath: String): Task[List[ModuleScore]] = Task.delay {
 
     //Read in ModuleScore CSV
     val lines = Source.fromFile(recordsPath).getLines()
@@ -58,87 +60,38 @@ object Generator extends Command[GeneratorConfig, Unit] {
     ModuleScore.parse(lines, ',').toList
   }
 
-  /** Group module scores by studnet numbers and construct StudentRecords */
-  private def groupByStudents(scores: List[ModuleScore]): List[StudentRecords[SortedMap, ModuleCode, Double]] = {
-
-    //Group by studentNumber and construct records
-    val fullRecords = scores.groupBy(_.student).map { case (stud, studScores) =>
-      val full = SortedMap.newBuilder[ModuleCode, Double] ++= studScores.iterator.map(s => s.module -> s.score)
-      StudentRecords(stud, full.result)
-    }
-
-    //TODO: replace magic number filter to drop students with few records with a conf option
-    fullRecords.filter(_.record.size > 10).toList
-  }
-
-  /** Get the list of distinct ModuleCodes, sorted alphanumerically (therefore chronologically) */
-  private def getAllModules(scores: List[ModuleScore]): List[ModuleCode] = scores.map(_.module).sortWith(_ < _).distinct
-
-  /** Randomly sample the student records, selecting conf.elided students *per* module, and removing both the score for
-    * that module and the score for any module which follows it in the order (where alphanum ~ chronological). */
-  private def sample(records: List[StudentRecords[SortedMap, ModuleCode, Double]],
-                     conf: GeneratorConfig): Either[Throwable, Map[ModuleCode, List[StudentRecords[SortedMap, ModuleCode, Double]]]] =
-    Either.catchNonFatal {
-      //Create the rng with provided seed
-      val rand = new Random(conf.seed)
-      //Shuffle the records list using Random
-      val shuffled = rand.shuffle(records)
-      //First take the "training data" which is a fixed n student records, where n = elided * 2
-      val (t, s) = shuffled.splitAt(conf.elided*2) match {
-        case (_, Nil) => throw new IllegalArgumentException("The number of students for which you have records must be " +
-          s"greater than the formula (elided * #modules) + (elided * 2). You provided elided:${conf.elided}, #modules: " +
-          s"${conf.modules.size} and students: ${shuffled.size}.")
-        case a => a
-      }
-
-      //Then chunk s into segments the size of elided, then drop modules from each chunk to create survey pieces
-      val surveyChunks = conf.modules.distinct.iterator.zip(s.grouped(conf.elided)).map({ case (module, students) =>
-        module -> students.map { s =>
-          val truncated = s.record.toKey(module).updated(module, -1.0)
-          s.copy(record = truncated)
-        }
-      }).toMap
-
-      //If a common module has been specified, retrieve its chunk and remove it from surveyChunks
-      val commonChunk = conf.common.flatMap(surveyChunks.get).getOrElse(List.empty[StudentRecords[SortedMap, ModuleCode, Double]])
-      val chunksNoCommon = conf.common.fold(surveyChunks)(surveyChunks - _)
-
-      //Combine training, common and a survey chunk to produce a survey of records, sorted by studentNumber.
-      chunksNoCommon.mapValues(c => (t ::: commonChunk ::: c).sortWith(_.number < _.number))
-    }
-
-  private def writeOut(modules: List[ModuleCode],
-                       chunks: Map[ModuleCode, List[StudentRecords[SortedMap, ModuleCode, Double]]],
-                       conf: GeneratorConfig): Either[Throwable, Unit] = Either.catchNonFatal {
-
-    val header = s"Student Number, ${modules.mkString(", ")}"
-    val metaFn = List((s: StudentRecords[SortedMap, ModuleCode, Double]) => s.number)
-    val csvs = chunks.mapValues { surveyLines =>
-      surveyLines.map(_.toCSV(metaFn, modules)).mkString(Properties.lineSeparator)
-    }
-
-    val out = Paths.get(conf.outputPath)
-
-    val outPath = if(Files.exists(out)) out else Files.createDirectories(out)
-
-    //Prepare folder structure
-    val subPaths = chunks.map { case (k,_) => k -> Files.createDirectory(Paths.get(s"$outPath/$k")) }
-    //Foreach subpath, write out survey
-
-    def write(module: ModuleCode, entries: Map[ModuleCode, String], path: Path) = {
-      //Scala monadic version of try with resources
-      for {
-        writer <- managed(Files.newBufferedWriter(path.resolve("survey.csv"), StandardCharsets.UTF_8, StandardOpenOption.CREATE,
-          StandardOpenOption.APPEND))
-      } {
-        writer.write(header)
-        writer.newLine()
-        writer.write(entries.getOrElse(module, ""))
-      }
-    }
-
-    subPaths.foreach { case (k,v) => write(k, csvs, v) }
-  }
+//  private def writeOut(modules: List[ModuleCode],
+//                       chunks: Map[ModuleCode, List[StudentRecords[SortedMap, ModuleCode, Double]]],
+//                       conf: GeneratorConfig): Either[Throwable, Unit] = Either.catchNonFatal {
+//
+//    val header = s"Student Number, ${modules.mkString(", ")}"
+//    val metaFn = List((s: StudentRecords[SortedMap, ModuleCode, Double]) => s.number)
+//    val csvs = chunks.mapValues { surveyLines =>
+//      surveyLines.map(_.toCSV(metaFn, modules)).mkString(Properties.lineSeparator)
+//    }
+//
+//    val out = Paths.get(conf.outputPath)
+//
+//    val outPath = if(Files.exists(out)) out else Files.createDirectories(out)
+//
+//    //Prepare folder structure
+//    val subPaths = chunks.map { case (k,_) => k -> Files.createDirectory(Paths.get(s"$outPath/$k")) }
+//    //Foreach subpath, write out survey
+//
+//    def write(module: ModuleCode, entries: Map[ModuleCode, String], path: Path) = {
+//      //Scala monadic version of try with resources
+//      for {
+//        writer <- managed(Files.newBufferedWriter(path.resolve("survey.csv"), StandardCharsets.UTF_8, StandardOpenOption.CREATE,
+//          StandardOpenOption.APPEND))
+//      } {
+//        writer.write(header)
+//        writer.newLine()
+//        writer.write(entries.getOrElse(module, ""))
+//      }
+//    }
+//
+//    subPaths.foreach { case (k,v) => write(k, csvs, v) }
+//  }
 }
 
 

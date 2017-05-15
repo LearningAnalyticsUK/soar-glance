@@ -18,6 +18,7 @@
 package uk.ac.ncl.la.soar.glance.cli
 
 import cats.MonadError
+import fs2.Task
 
 /**
   * Non-sealed trait which defines a structure for creating cli commands.
@@ -29,5 +30,7 @@ import cats.MonadError
   */
 trait Command[A <: CommandConfig, B] {
 
-  def run[F[_], E](conf: A)(implicit ev: MonadError[F, E]): F[B]
+  //TODO: abstract over some effect type F. I thought that MonadError was the appropriate typeclass, but Doobie requires
+  //  Catchable and Suspendable. Could attempt and rewrap using fromEither, but that seems crazy
+  def run(conf: A): Task[B]
 }

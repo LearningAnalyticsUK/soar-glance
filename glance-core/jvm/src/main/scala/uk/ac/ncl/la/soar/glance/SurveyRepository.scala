@@ -112,7 +112,7 @@ object SurveyDb extends RepositoryCompanion[Survey] {
   override val initQ: ConnectionIO[Unit] = {
     sql"""
       CREATE TABLE IF NOT EXISTS surveys (
-        id VARCHAR PRIMARY KEY
+        id VARCHAR(40) PRIMARY KEY
       );
 
       CREATE TABLE IF NOT EXISTS students (
@@ -120,32 +120,32 @@ object SurveyDb extends RepositoryCompanion[Survey] {
       );
 
       CREATE TABLE IF NOT EXISTS surveys_students (
-        id VARCHAR PRIMARY KEY,
-        survey_id VARCHAR REFERENCES surveys(id) ON DELETE CASCADE,
-        student_num VARCHAR(10) REFERENCES students(num) ON DELETE CASCADE
-      );
-
-      CREATE TABLE IF NOT EXISTS survey_queries (
-        id VARCHAR PRIMARY KEY,
-        survey_id VARCHAR REFERENCES surveys(id) ON DELETE CASCADE,
-        student_num VARCHAR(10) NOT NULL,
-        module_num VARCHAR NOT NULL,
-        FOREIGN KEY (student_num, module_num) REFERENCES queries(student_num, module_num) ON DELETE CASCADE
+        survey_id VARCHAR(40) REFERENCES surveys(id) ON DELETE CASCADE,
+        student_num VARCHAR(10) REFERENCES students(num) ON DELETE CASCADE,
+        PRIMARY KEY (survey_id, student_num)
       );
 
       CREATE TABLE IF NOT EXISTS queries (
-        student_num VARCHAR(10) REFERENCES surveys(id) ON DELETE CASCADE,
-        module_num VARCHAR
+        student_num VARCHAR(10) REFERENCES students(num) ON DELETE CASCADE,
+        module_num VARCHAR(8),
         PRIMARY KEY (student_num, module_num)
       );
 
+      CREATE TABLE IF NOT EXISTS survey_queries (
+        survey_id VARCHAR(40) REFERENCES surveys(id) ON DELETE CASCADE,
+        student_num VARCHAR(10) NOT NULL,
+        module_num VARCHAR(8) NOT NULL,
+        PRIMARY KEY (survey_id, student_num, module_num),
+        FOREIGN KEY (student_num, module_num) REFERENCES queries(student_num, module_num) ON DELETE CASCADE
+      );
+
       CREATE TABLE IF NOT EXISTS module_score (
-        id VARCHAR PRIMARY KEY,
+        id VARCHAR(40) PRIMARY KEY,
         student_num VARCHAR(10) REFERENCES students(num) ON DELETE CASCADE,
         score DECIMAL(5,2) NOT NULL,
-        CHECK (score > 0.00),
-        CHECK (score < 100.00),
-        module_num VARCHAR NOT NULL
+        CHECK (score >= 0.00),
+        CHECK (score <= 100.00),
+        module_num VARCHAR(8) NOT NULL
       );
     """.update.run.void
   }
@@ -191,7 +191,7 @@ object SurveyDb extends RepositoryCompanion[Survey] {
     //Next, add students
     val addStudentSQL =
       """
-        INSERT INTO students (num) KEY (num) VALUES (?) ON CONFLICT (num) DO NOTHING;
+        INSERT INTO students (num) VALUES (?) ON CONFLICT (num) DO NOTHING;
       """
     val studRows = records.map(_.number)
     val addStudentsQ = Update[(StudentNumber)](addStudentSQL).updateMany(studRows)
@@ -199,32 +199,39 @@ object SurveyDb extends RepositoryCompanion[Survey] {
     //Next, add survey entries
     val addEntrySQL =
       """
-        INSERT INTO surveys_students (id, survey_id, student_num) KEY (id)
-        VALUES (?, ?, ?) ON CONFLICT (survey_id, student_num) DO NOTHING;
+        INSERT INTO surveys_students (survey_id, student_num)
+        VALUES (?, ?) ON CONFLICT (survey_id, student_num) DO NOTHING;
       """
-    val entryRows = records.map(r => (UUID.randomUUID, sId, r.number))
-    val addEntryQ = Update[(UUID, UUID, StudentNumber)](addEntrySQL).updateMany(entryRows)
+    val entryRows = records.map(r => (sId, r.number))
+    val addEntryQ = Update[(UUID, StudentNumber)](addEntrySQL).updateMany(entryRows)
 
     val moduleScoreSQL =
       """
-        INSERT INTO module_score (id, student_num, score, module_num) KEY (id)
+        INSERT INTO module_score (id, student_num, score, module_num)
         VALUES (?, ?, ?, ?) ON CONFLICT (id) DO NOTHING;
       """
     val mSRows = mS.map({ case ModuleScore(stud, module, score) => (UUID.randomUUID, stud, score, module) })
     val addModuleScoreQ = Update[(UUID, StudentNumber, Double, ModuleCode)](moduleScoreSQL).updateMany(mSRows)
 
     //Finally add the queries
-    val querySQL =
+    val addQuerySQL = "INSERT INTO queries (student_num, module_num) VALUES (?, ?) ON CONFLICT DO NOTHING;"
+
+    val addSurveyQuerySQL =
       """
-        INSERT INTO survey_queries (id, survey_id, student_num, module_num) KEY (id)
-        VALUES (?, ?, ?, ?) ON CONFLICT (id) DO NOTHING;
+        INSERT INTO survey_queries (survey_id, student_num, module_num)
+        VALUES (?, ?, ?) ON CONFLICT (survey_id, student_num, module_num) DO NOTHING;
       """
-    val qRows = queries.iterator.map({ case (stud, module) => (UUID.randomUUID, sId, stud, module) }).toList
-    val addQueryQ = Update[(UUID, UUID, StudentNumber, ModuleCode)](querySQL).updateMany(qRows)
+
+    val qRows = queries.toList
+    val sQRows = queries.iterator.map({ case (stud, module) => (sId, stud, module) }).toList
+
+    val addQueryQ = Update[(StudentNumber, ModuleCode)](addQuerySQL).updateMany(qRows)
+    val addSQueryQ = Update[(UUID, StudentNumber, ModuleCode)](addSurveyQuerySQL).updateMany(sQRows)
+
     //Return combined query
     for{
       _ <- addSurveyQ *> addStudentsQ
-      _ <- addEntryQ *> addModuleScoreQ *> addQueryQ
+      _ <- addEntryQ *> addModuleScoreQ *> addQueryQ *> addSQueryQ
     } yield ()
   }
 
@@ -355,14 +362,14 @@ object SurveyResponseDb extends RepositoryCompanion[SurveyResponse] {
     //Insert entry in respondents table
     val addRespondentQ =
       sql"""
-         INSERT INTO surveys_respondents (id, survey_id, respondent, submitted) KEY (id)
+         INSERT INTO surveys_respondents (id, survey_id, respondent, submitted)
          VALUES (${entry.id}, ${entry.survey.id}, ${entry.respondent}, CURRENT_TIMESTAMP);
       """.update.run
 
     //Then batch insert entries in responses table
     val addResponseSQL =
       """
-        INSERT INTO survey_responses (id, respondent_id, student_num, module_num, predicted_score) KEY (id)
+        INSERT INTO survey_responses (id, respondent_id, student_num, module_num, predicted_score)
         VALUES (?, ?, ?, ?, ?);
       """
     val responseRows = entry.responses.iterator.map({  case (student, ModuleScore(_, module, score)) =>

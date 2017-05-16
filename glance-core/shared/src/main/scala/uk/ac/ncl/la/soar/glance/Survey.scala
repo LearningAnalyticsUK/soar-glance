@@ -27,6 +27,8 @@ import uk.ac.ncl.la.soar.Record._
 
 import scala.collection.immutable.SortedMap
 import scala.util.Random
+import io.circe._
+import io.circe.syntax._
 
 
 /**
@@ -57,6 +59,21 @@ object CompletedResponse {
 }
 
 object Survey {
+
+  /** Typeclass instances for Survey */
+  implicit val encodeSurvey: Encoder[Survey] = new Encoder[Survey] {
+    final def apply(a: Survey): Json = Json.obj(
+      "id" -> a.id.toString.asJson,
+      "modules" -> a.modules.asJson,
+      "queries" -> a.queries.asJson,
+      "entries" -> a.entries.map(recordAsJson).asJson
+    )
+
+    private def recordAsJson(a: StudentRecords[SortedMap, ModuleCode, Double]) = Json.obj(
+      "student_number" -> a.number.asJson,
+      "scores" -> a.record.asJson
+    )
+  }
 
   /**
     * Factory method for `EmptySurvey`s.

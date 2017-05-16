@@ -1,5 +1,7 @@
 ## Student Outcome Accelerator
 
+**NOTE**: This documentation is woefully out of date - watch this space.
+
 This repo contains the Soar framework for performing analytics jobs on data from Higher education. Soar is being 
 developed as part of a HEFCE funded project, the aims of which include improving the quality of student and teacher
 experiences at Universities. 

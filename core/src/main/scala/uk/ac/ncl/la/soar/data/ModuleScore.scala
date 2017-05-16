@@ -62,7 +62,5 @@ object ModuleScore {
 
   private[soar] def parseLineStrict(line: (String, Int), sep: Char): Either[(String, Int), ModuleScore] =
     parseLine(line._1, sep).fold(Either.left[(String, Int), ModuleScore](line))(r => Either.right(r))
-
-  //TODO: provide typeclass instances for ModuleScore
 }
 

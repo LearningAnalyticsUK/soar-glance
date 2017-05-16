@@ -13,28 +13,50 @@ scalaVersion in ThisBuild := "2.11.8"
   * Build dependencies
   *
   * NOTE: Dependencies which are used by modules which compile/cross-compile to scala.js must be declared using `%%%`
+  *
+  * TODO: Figure out how to avoid having replicated identical dependency lists, but for now sbt-assembly has beaten me
   */
 
 //Separate seqs of dependencies into separate lazy values to convey intent more clearly
-lazy val langFixes = Seq(
-  libraryDependencies += "com.github.mpilquist" %%% "simulacrum" % "0.10.0",
-  libraryDependencies += "org.typelevel" %%% "machinist" % "0.6.1",
+lazy val commonLangFixes = Seq(
   libraryDependencies += compilerPlugin("org.spire-math" %% "kind-projector" % "0.9.3"),
   libraryDependencies += compilerPlugin("org.scalamacros" % "paradise" % "2.1.0" cross CrossVersion.full)
 )
 
-lazy val testingDependencies = Seq(
+lazy val langFixesJS = Seq(
+  libraryDependencies += "com.github.mpilquist" %%% "simulacrum" % "0.10.0",
+  libraryDependencies += "org.typelevel" %%% "machinist" % "0.6.1"
+)
+
+lazy val langFixesJVM = Seq(
+  libraryDependencies += "com.github.mpilquist" %% "simulacrum" % "0.10.0",
+  libraryDependencies += "org.typelevel" %% "machinist" % "0.6.1"
+)
+
+lazy val testingDependenciesJS = Seq(
   libraryDependencies += "org.scalatest" %%% "scalatest" % "3.0.1" % "test",
   libraryDependencies += "org.scalacheck" %%% "scalacheck" % "1.13.4" % "test",
   libraryDependencies += "org.typelevel" %%% "discipline" % "0.7.2" % "test"
 )
 
-lazy val altStdLib = Seq(
+lazy val testingDependenciesJVM = Seq(
+  libraryDependencies += "org.scalatest" %% "scalatest" % "3.0.1" % "test",
+  libraryDependencies += "org.scalacheck" %% "scalacheck" % "1.13.4" % "test",
+  libraryDependencies += "org.typelevel" %% "discipline" % "0.7.2" % "test"
+)
+
+lazy val altStdLibJS = Seq(
   libraryDependencies += "org.typelevel" %%% "cats" % "0.9.0",
   libraryDependencies += "co.fs2" %%% "fs2-core" % "0.9.5"
 )
 
-lazy val commonDependencies = langFixes ++ testingDependencies ++ altStdLib
+lazy val altStdLibJVM = Seq(
+  libraryDependencies += "org.typelevel" %% "cats" % "0.9.0",
+  libraryDependencies += "co.fs2" %% "fs2-core" % "0.9.5"
+)
+
+lazy val commonDependenciesJS = commonLangFixes ++ langFixesJS ++ testingDependenciesJS ++ altStdLibJS
+lazy val commonDependenciesJVM = commonLangFixes ++ langFixesJVM ++ testingDependenciesJVM ++ altStdLibJVM
 
 //Lazy val defining dependencies common to modules containing spark batch jobs
 lazy val commonSparkBatch = Seq(
@@ -45,7 +67,12 @@ lazy val commonSparkBatch = Seq(
 )
 
 //Lazy val defining dependencies common to modules containing web servers
-lazy val commonCirce = Seq(
+lazy val commonCirceJVM = Seq(
+  libraryDependencies += "io.circe" %% "circe-generic" % "0.7.0",
+  libraryDependencies += "io.circe" %% "circe-core" % "0.7.0"
+)
+
+lazy val commonCirceJS = Seq(
   libraryDependencies += "io.circe" %%% "circe-generic" % "0.7.0",
   libraryDependencies += "io.circe" %%% "circe-core" % "0.7.0",
   libraryDependencies += "io.circe" %%% "circe-parser" % "0.7.0"
@@ -59,7 +86,8 @@ lazy val commonDoobie = Seq(
 
 lazy val commonServer = Seq(
   libraryDependencies += "com.github.finagle" %% "finch-core" % "0.14.0",
-  libraryDependencies += "com.github.finagle" %% "finch-circe" % "0.14.0"
+  libraryDependencies += "com.github.finagle" %% "finch-circe" % "0.14.0",
+  libraryDependencies += "com.twitter"        %% "twitter-server" % "1.29.0"
 )
 
 /**
@@ -73,7 +101,8 @@ lazy val soarSettings = Seq(
   organization := "uk.ac.ncl.la",
   resolvers ++= Seq(
     Resolver.sonatypeRepo("releases"),
-    Resolver.sonatypeRepo("snapshots")
+    Resolver.sonatypeRepo("snapshots"),
+    "Twitter Maven" at "http://maven.twttr.com"
   ),
   fork in test := true,
   parallelExecution in Test := false,
@@ -100,13 +129,14 @@ lazy val soarSettings = Seq(
 def soarProject(name: String): Project = {
   Project(name, file(name))
     .settings(soarSettings:_*)
-    .settings(commonDependencies:_*)
+    .settings(commonDependenciesJVM:_*)
 }
 
 def soarCrossProject(name: String, tpe: CrossType): CrossProject = {
   CrossProject(name, file(name), tpe)
     .settings(soarSettings:_*)
-    .settings(commonDependencies:_*)
+    .jvmSettings(commonDependenciesJVM:_*)
+    .jsSettings(commonDependenciesJS:_*)
 }
 
 //Method defining common merge strategy for duplicate files when constructing executable jars using assembly
@@ -114,27 +144,30 @@ def commonAssembly(main: String, jar: String) = Seq(
   mainClass in assembly := Some(main),
   assemblyJarName in assembly := jar,
   assemblyMergeStrategy in assembly := {
-      case PathList("javax", "servlet", xs @ _*) => MergeStrategy.last
-      case PathList("javax", "activation", xs @ _*) => MergeStrategy.last
-      case PathList("javax", "inject", xs @ _*) => MergeStrategy.last
-      case PathList("org", "apache", xs @ _*) => MergeStrategy.last
-      case PathList("org", "aopalliance", xs @ _*) => MergeStrategy.last
-      case PathList("org", "slf4j", "impl", xs @ _*) => MergeStrategy.last
-      case PathList("com", "google", xs @ _*) => MergeStrategy.last
-      case PathList("com", "esotericsoftware", xs @ _*) => MergeStrategy.last
-      case PathList("com", "codahale", xs @ _*) => MergeStrategy.last
-      case PathList("com", "yammer", xs @ _*) => MergeStrategy.last
-      case "about.html" => MergeStrategy.rename
-      case "META-INF/ECLIPSEF.RSA" => MergeStrategy.last
-      case "META-INF/mailcap" => MergeStrategy.last
-      case "META-INF/mimetypes.default" => MergeStrategy.last
-      case "plugin.properties" => MergeStrategy.last
-      case "log4j.properties" => MergeStrategy.last
-      case "overview.html" => MergeStrategy.rename
-      case x =>
-        val oldStrategy = (assemblyMergeStrategy in assembly).value
-        oldStrategy(x)
-    }
+    case PathList("javax", "servlet", xs @ _*) => MergeStrategy.last
+    case PathList("javax", "activation", xs @ _*) => MergeStrategy.last
+    case PathList("javax", "inject", xs @ _*) => MergeStrategy.last
+    case PathList("org", "apache", xs @ _*) => MergeStrategy.last
+    case PathList("org", "aopalliance", xs @ _*) => MergeStrategy.last
+    case PathList("org", "slf4j", "impl", xs @ _*) => MergeStrategy.last
+    case PathList("com", "google", xs @ _*) => MergeStrategy.last
+    case PathList("com", "esotericsoftware", xs @ _*) => MergeStrategy.last
+    case PathList("com", "codahale", xs @ _*) => MergeStrategy.last
+    case PathList("com", "yammer", xs @ _*) => MergeStrategy.last
+    case "BUILD" => MergeStrategy.rename
+    case "about.html" => MergeStrategy.rename
+    case "META-INF/ECLIPSEF.RSA" => MergeStrategy.last
+    case "META-INF/mailcap" => MergeStrategy.last
+    case "META-INF/mimetypes.default" => MergeStrategy.last
+    case "META-INF/io.netty.versions.properties" => MergeStrategy.last
+    case "plugin.properties" => MergeStrategy.last
+    case "log4j.properties" => MergeStrategy.last
+    case "overview.html" => MergeStrategy.rename
+    case "JS_DEPENDENCIES" => MergeStrategy.discard
+    case x =>
+      val oldStrategy = (assemblyMergeStrategy in assembly).value
+      oldStrategy(x)
+  }
 )
 
 /**
@@ -166,8 +199,10 @@ lazy val glanceCore = soarCrossProject("glance-core", CrossType.Full)
     name := "Soar Glance Core",
     moduleName := "soar-glance-core",
     unmanagedSourceDirectories in Compile += baseDirectory.value / "shared" / "main" / "scala")
-  .settings(commonDoobie:_*)
+  .jvmSettings(commonDoobie:_*)
+  .jvmSettings(commonCirceJVM:_*)
   .jvmSettings(libraryDependencies += "com.github.pureconfig" %% "pureconfig" % "0.7.0")
+  .jsSettings(commonCirceJS:_*)
 
 lazy val glanceCoreJS = glanceCore.js
 lazy val glanceCoreJVM = glanceCore.jvm
@@ -182,15 +217,14 @@ lazy val glanceCli = soarProject("glance-cli")
     commonAssembly("uk.ac.ncl.la.soar.glance.cli.Main", "soar-glance-cli.jar"))
   .settings(commonSparkBatch:_*)
 
+//TODO: Fix this so that the js/jvm dependencies are separate and I can build a proper server jar
+
 lazy val glanceWeb = soarCrossProject("glance-web", CrossType.Full)
-  .dependsOn(core, glanceCore)
   .settings(
     name := "Soar Glance Web",
     moduleName := "soar-glance-web",
     unmanagedSourceDirectories in Compile += baseDirectory.value / "shared" / "main" / "scala")
-  .settings(commonAssembly("uk.ac.ncl.la.soar.glance.server.Main", "soar-glance-web.jar"))
-  .settings(soarSettings:_*)
-  .settings(commonCirce:_*)
+  .jvmSettings(commonCirceJVM:_*)
   .jvmSettings(commonServer:_*)
   .jsSettings(
     libraryDependencies ++= Seq (
@@ -199,11 +233,17 @@ lazy val glanceWeb = soarCrossProject("glance-web", CrossType.Full)
       "org.webjars" % "bootstrap" % "3.3.7-1"
     ),
     scalaJSUseMainModuleInitializer := true)
+  .jsSettings(commonCirceJS:_*)
   .enablePlugins(ScalaJSPlugin)
 
 lazy val glanceWebJS = glanceWeb.js
+  .dependsOn(coreJS, glanceCoreJS)
 lazy val glanceWebJVM = glanceWeb.jvm
+  .dependsOn(coreJVM, glanceCoreJVM)
+  .settings((resources in Compile) += (fastOptJS in (glanceWebJS, Compile)).value.data)
+  .settings(commonAssembly("uk.ac.ncl.la.soar.glance.web.server.Main", "soar-glance-web.jar"))
 
 //Add some command aliases for testing/compiling all modules, rather than aggregating tasks from root indiscriminately
 addCommandAlias("testAll", "; core/test; model/test; glance-core/test")
 addCommandAlias("compileAll", ";core/compile; model/compile; glance-core/compile")
+addCommandAlias("cleanGlance", "; coreJVM/clean; glance-coreJVM/clean; glance-webJVM/clean")

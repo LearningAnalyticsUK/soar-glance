@@ -60,6 +60,8 @@ object Generator extends Command[GeneratorConfig, Unit] {
     ModuleScore.parse(lines, ',').toList
   }
 
+
+  //TODO: Refactor writeOut method for Survey objects and produce csv with ??? fields
 //  private def writeOut(modules: List[ModuleCode],
 //                       chunks: Map[ModuleCode, List[StudentRecords[SortedMap, ModuleCode, Double]]],
 //                       conf: GeneratorConfig): Either[Throwable, Unit] = Either.catchNonFatal {

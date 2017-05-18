@@ -21,6 +21,7 @@ import java.util.UUID
 
 import cats._
 import cats.implicits._
+import io.circe.Decoder.Result
 import uk.ac.ncl.la.soar._
 import uk.ac.ncl.la.soar.data._
 import uk.ac.ncl.la.soar.Record._
@@ -29,6 +30,7 @@ import scala.collection.immutable.SortedMap
 import scala.util.Random
 import io.circe._
 import io.circe.syntax._
+import io.circe.generic.auto._
 
 
 /**
@@ -73,6 +75,30 @@ object Survey {
       "student_number" -> a.number.asJson,
       "scores" -> a.record.asJson
     )
+  }
+
+  implicit val decodeSurvey: Decoder[Survey] = new Decoder[Survey] {
+
+    //TODO: Fix what I can only assume is a fairly inefficient decoder
+    override def apply(c: HCursor): Result[Survey] = {
+      for {
+        id <- c.downField("id").as[String]
+        modules <- c.downField("modules").as[Set[ModuleCode]]
+        queries <- c.downField("queries").as[Map[StudentNumber, ModuleCode]]
+        entries <- c.downField("entries").as[List[(StudentNumber, Map[ModuleCode, Double])]]
+      } yield {
+        Survey(modules, queries, recordsFrom(entries), UUID.fromString(id))
+      }
+    }
+
+    private implicit val decodeRecord = Decoder.forProduct2("student_number", "scores")((s: StudentNumber, r: Map[ModuleCode, Double]) => (s,r))
+
+    private def recordsFrom(part: List[(StudentNumber, Map[ModuleCode, Double])]) = part.map { case (stNum, records) =>
+      val bldr = SortedMap.newBuilder[ModuleCode, Double]
+      for(entry <- records) { bldr += entry }
+
+      StudentRecords[SortedMap, ModuleCode, Double](stNum, bldr.result())
+    }
   }
 
   /**

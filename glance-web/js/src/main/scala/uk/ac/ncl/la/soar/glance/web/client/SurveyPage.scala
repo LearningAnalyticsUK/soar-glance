@@ -17,6 +17,12 @@
   */
 package uk.ac.ncl.la.soar.glance.web.client
 
+import cats._
+import cats.implicits._
+import io.circe._
+import org.scalajs.dom.ext.Ajax
+import org.scalajs.dom
+import scala.concurrent.ExecutionContext.Implicits.global
 import org.singlespaced.d3js.Ops._
 import org.singlespaced.d3js.d3
 
@@ -25,6 +31,31 @@ import scala.scalajs.js
 object SurveyPage extends js.JSApp {
 
   def main(): Unit = {
+
+
+    //Lets get the survey data
+    val surveys = ApiClient.loadSurveys
+
+    //Lets map the dom element
+    val cells = dom.document.getElementById("cells")
+
+    surveys.fold(
+      { case e @ DecodingFailure(_, _) =>
+          //Create error message
+          val err = dom.document.createElement("p")
+          err.textContent = e.show
+          //Append error message to cells
+          cells.appendChild(err)
+      },
+      { case a =>
+          //Create success message
+          val succ = dom.document.createElement("p")
+          succ.textContent = a.size.toString
+          //Append success to cells
+          cells.appendChild(succ)
+      }
+    )
+
     /**
       * Adapted from http://thecodingtutorials.blogspot.ch/2012/07/introduction-to-d3.html
       */

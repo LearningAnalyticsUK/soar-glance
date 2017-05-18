@@ -9,6 +9,7 @@ scalaOrganization in ThisBuild := "org.typelevel"
 //TODO: Upgrade to 2.11.9
 scalaVersion in ThisBuild := "2.11.8"
 
+//Should I enable this for all projects like this or only for Cross/JS Projects? Work out.
 enablePlugins(WorkbenchPlugin)
 
 /**
@@ -37,6 +38,8 @@ lazy val langFixesJVM = Seq(
   libraryDependencies += "org.typelevel" %% "machinist" % "0.6.1"
 )
 
+//Consider swapping Scalatest for specs2 - is a typelevel project so might conceivably interoperate better with the rest
+//  of these libraries.
 lazy val testingDependenciesJS = Seq(
   libraryDependencies += "org.scalatest" %%% "scalatest" % "3.0.1" % "test",
   libraryDependencies += "org.scalacheck" %%% "scalacheck" % "1.13.4" % "test",
@@ -230,11 +233,11 @@ lazy val glanceWeb = soarCrossProject("glance-web", CrossType.Full)
     unmanagedSourceDirectories in Compile += baseDirectory.value / "shared" / "main" / "scala")
   .jvmSettings(commonCirceJVM:_*)
   .jvmSettings(commonServer:_*)
+  .jvmSettings(libraryDependencies += "org.webjars" % "bootstrap" % "3.3.7-1")
   .jsSettings(
     libraryDependencies ++= Seq (
       "org.scala-js" %%% "scalajs-dom" % "0.9.1",
-      "org.singlespaced" %%% "scalajs-d3" % "0.3.4",
-      "org.webjars" % "bootstrap" % "3.3.7-1"
+      "org.singlespaced" %%% "scalajs-d3" % "0.3.4"
     ),
     scalaJSUseMainModuleInitializer := true)
   .jsSettings(commonCirceJS:_*)
@@ -245,8 +248,20 @@ lazy val glanceWebJS = glanceWeb.js
 lazy val glanceWebJVM = glanceWeb.jvm
   .dependsOn(coreJVM, glanceCoreJVM)
   .settings(
+    //Docs (https://github.com/lihaoyi/workbench-example-app/blob/autowire/build.sbt) have the following:
+    //
+    // val exampleJVM = example.jvm.settings(
+    //   (resources in Compile) += {
+    //     (fastOptJS in (exampleJS, Compile)).value
+    //     (artifactPath in (exampleJS, Compile, fastOptJS)).value
+    //   }
+    // )
+    //
+    //What does the artifactPath line do? 
     (resources in Compile) += (fastOptJS in (glanceWebJS, Compile)).value.data,
+    //Do I still need the below now that I figured out the enablePlugins issue? Should be auto detected...
     mainClass in Compile := Some("uk.ac.ncl.la.soar.glance.web.server.Main")
+
   )
   .settings(commonAssembly("uk.ac.ncl.la.soar.glance.web.server.Main", "soar-glance-web.jar"))
 

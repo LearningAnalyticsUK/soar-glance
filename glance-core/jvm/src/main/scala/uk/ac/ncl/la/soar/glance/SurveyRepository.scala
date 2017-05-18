@@ -168,7 +168,7 @@ object SurveyDb extends RepositoryCompanion[Survey] {
       val moduleSet = scores.iterator.map(_.module).toSet
       //In memory group by potentially fine, but fs2 Stream has own groupBy operator. TODO: Check fs2.Stream.groupBy
       val records = Survey.groupByStudents(scores)
-      ident.map(_ => Survey(moduleSet, qs, records))
+      ident.map(id => Survey(moduleSet, qs, records, id))
     }
   }
 

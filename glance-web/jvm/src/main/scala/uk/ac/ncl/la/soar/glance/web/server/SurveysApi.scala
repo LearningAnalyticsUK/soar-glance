@@ -37,6 +37,7 @@ class SurveysApi(repository: SurveyDb) {
 
   /** Endpoint to retrieve a specific Survey by id */
   val read = get("surveys" :: path[UUID] ) { (id: UUID) =>
+    println(s"received a request for this survey: $id")
     repository.find(id).toFuture.map {
       case Some(s) => Ok(s)
       case None => notFound(id)

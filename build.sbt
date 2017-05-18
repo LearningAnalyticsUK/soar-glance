@@ -9,12 +9,16 @@ scalaOrganization in ThisBuild := "org.typelevel"
 //TODO: Upgrade to 2.11.9
 scalaVersion in ThisBuild := "2.11.8"
 
+enablePlugins(WorkbenchPlugin)
+
 /**
   * Build dependencies
   *
   * NOTE: Dependencies which are used by modules which compile/cross-compile to scala.js must be declared using `%%%`
   *
   * TODO: Figure out how to avoid having replicated identical dependency lists, but for now sbt-assembly has beaten me
+  * Above is possibly due to unnecessary enablePlugins call on glance-web. At some point revert to the single set of
+  * dependencies and see.
   */
 
 //Separate seqs of dependencies into separate lazy values to convey intent more clearly
@@ -234,13 +238,16 @@ lazy val glanceWeb = soarCrossProject("glance-web", CrossType.Full)
     ),
     scalaJSUseMainModuleInitializer := true)
   .jsSettings(commonCirceJS:_*)
-  .enablePlugins(ScalaJSPlugin)
+//  .enablePlugins(ScalaJSPlugin)
 
 lazy val glanceWebJS = glanceWeb.js
   .dependsOn(coreJS, glanceCoreJS)
 lazy val glanceWebJVM = glanceWeb.jvm
   .dependsOn(coreJVM, glanceCoreJVM)
-  .settings((resources in Compile) += (fastOptJS in (glanceWebJS, Compile)).value.data)
+  .settings(
+    (resources in Compile) += (fastOptJS in (glanceWebJS, Compile)).value.data,
+    mainClass in Compile := Some("uk.ac.ncl.la.soar.glance.web.server.Main")
+  )
   .settings(commonAssembly("uk.ac.ncl.la.soar.glance.web.server.Main", "soar-glance-web.jar"))
 
 //Add some command aliases for testing/compiling all modules, rather than aggregating tasks from root indiscriminately

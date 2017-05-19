@@ -28,7 +28,7 @@ import org.singlespaced.d3js.d3
 
 import scala.scalajs.js
 
-object SurveyPage extends js.JSApp {
+object SurveyPage {
 
   def main(): Unit = {
 

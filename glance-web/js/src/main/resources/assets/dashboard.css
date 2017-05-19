@@ -103,3 +103,11 @@ body {
     display: inline-block;
     border-radius: 50%;
 }
+
+/*
+ * Override table hover colour
+ */
+
+.table-hover tbody tr:hover td, .table-hover tbody tr:hover th {
+    background-color: #CBBF6F;
+}

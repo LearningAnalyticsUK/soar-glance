@@ -19,19 +19,22 @@ package uk.ac.ncl.la.soar.glance.web.client
 
 import com.thoughtworks.binding.Binding.{BindingSeq, Var, Vars}
 import org.scalajs.dom.raw.Node
+import org.scalajs.{dom => sjsDom}
 import com.thoughtworks.binding.{Binding, dom}
 import cats._
 import cats.implicits._
 import io.circe._
 import uk.ac.ncl.la.soar.glance.Survey
+import scala.concurrent.ExecutionContext.Implicits.global
 
 import scala.scalajs.js.annotation.JSExport
+import scala.scalajs.js
 
 /**
   * Entry point for client program
   */
-@JSExport
-object Main {
+
+object Main extends js.JSApp {
 
 
   /**
@@ -62,24 +65,22 @@ object Main {
     <nav class="navbar navbar-inverse navbar-fixed-top">
       <div class="container-fluid">
         <div class="navbar-header">
-          <a class="navbar-brand" href="#">Glance Survey - Base</a>
+          <a class="navbar-brand" href="#">Glance Survey</a>
         </div>
       </div>
     </nav>
   }
 
-
-
   @dom
-  def glanceApp: Binding[BindingSeq[Node]] = {
-    //Bind header
-    { header.bind }
-    //Bind main and do routing
-    { BaseSurvey.main(survey).bind }
-    //Bind footer
+  def glanceApp: Binding[Node] = {
+    <section class="surveyApp">
+      { header.bind }
+      <div class="col-sm-4 col-sm-offset-4 col-md-10 col-md-offset-1">
+        { BaseSurvey.main(survey).bind }
+      </div>
+    </section>
   }
 
-  @JSExport
-  def main(container: Node) = dom.render(container, glanceApp)
+  def main(): Unit =  dom.render(sjsDom.document.body, glanceApp)
 
 }

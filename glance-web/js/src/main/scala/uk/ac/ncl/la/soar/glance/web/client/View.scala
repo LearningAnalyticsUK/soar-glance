@@ -17,7 +17,7 @@
   */
 package uk.ac.ncl.la.soar.glance.web.client
 
-import com.thoughtworks.binding.Binding.BindingSeq
+import com.thoughtworks.binding.Binding.{BindingSeq, Constants}
 import com.thoughtworks.binding.{Binding, dom}
 import org.scalajs.dom.html.TableRow
 import org.scalajs.dom.raw.Node
@@ -34,13 +34,12 @@ import scala.collection.immutable.SortedMap
 /**
   * Survey view ADT
   */
-sealed trait SurveyView {
+sealed trait View[A] {
 
-  @dom
-  def main(survey: Binding[Option[Survey]]): Binding[Node]
+  def main(data: Binding[A]): Binding[Node]
 }
 
-object BaseSurvey extends SurveyView {
+object BaseSurvey extends View[Option[Survey]] {
 
   @dom
   private def tableHeader(survey: Survey) = {
@@ -53,7 +52,7 @@ object BaseSurvey extends SurveyView {
     //Get the table columns (minuse student number)
     val moduleCols = modules.toList.sorted
     //Fill in blanks where student has no score for module
-    val recordEntries = moduleCols.map(c => studentRecords.record.getOrElse(c, " "))
+    val recordEntries = moduleCols.map(c => studentRecords.record.get(c).fold(" ")(_.toString))
     //Add student number
     val columns = studentRecords.number :: recordEntries
     //Bind the row
@@ -64,31 +63,35 @@ object BaseSurvey extends SurveyView {
   private def tr(columns: List[String]): Binding[TableRow] = {
     <tr>
       {
-        for(col <- columns) yield (<td> { col } </td>).bind
+        for(col <- Constants(columns:_*)) yield { <td> { col } </td> }
       }
     </tr>
   }
 
   @dom
-  override def main(survey: Binding[Option[Survey]]): Binding[Node] = {
+  private def table(survey: Binding[Option[Survey]]): Binding[Node] = {
     //TODO Fix this
     survey.bind match {
       case Some(s) =>
-
         <div class="table-responsive">
-          <table class="table table-striped">
+          <table class="table table-striped table-bordered table-hover">
             <thead>{ tableHeader(s).bind }</thead>
             <tbody>
               {
-              for (entry <- s.entries) yield tableRow(s.modules, entry).bind
+              for (entry <- Constants(s.entries:_*)) yield { tableRow(s.modules, entry).bind }
               }
             </tbody>
           </table>
         </div>
 
-      case None => <p>ERROR!</p>
+      case None => <p>Loading...</p>
     }
+  }
 
+  @dom
+  override def main(survey: Binding[Option[Survey]]): Binding[Node] = {
+    <h2>Training Data</h2>
+    table(survey).bind
   }
 }
 

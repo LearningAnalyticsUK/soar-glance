@@ -237,7 +237,10 @@ lazy val glanceWeb = soarCrossProject("glance-web", CrossType.Full)
   .jsSettings(
     libraryDependencies ++= Seq (
       "org.scala-js" %%% "scalajs-dom" % "0.9.1",
-      "org.singlespaced" %%% "scalajs-d3" % "0.3.4"
+      "org.singlespaced" %%% "scalajs-d3" % "0.3.4",
+      "com.thoughtworks.binding" %%% "binding" % "latest.release",
+      "com.thoughtworks.binding" %%% "dom" % "latest.release",
+      "com.thoughtworks.binding" %%% "route" % "latest.release"
     ),
     scalaJSUseMainModuleInitializer := true)
   .jsSettings(commonCirceJS:_*)
@@ -245,6 +248,7 @@ lazy val glanceWeb = soarCrossProject("glance-web", CrossType.Full)
 
 lazy val glanceWebJS = glanceWeb.js
   .dependsOn(coreJS, glanceCoreJS)
+
 lazy val glanceWebJVM = glanceWeb.jvm
   .dependsOn(coreJVM, glanceCoreJVM)
   .settings(

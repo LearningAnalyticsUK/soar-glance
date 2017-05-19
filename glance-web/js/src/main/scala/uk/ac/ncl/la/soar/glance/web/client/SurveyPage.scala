@@ -36,7 +36,7 @@ object SurveyPage extends js.JSApp {
     //Lets get the survey data
     val surveys = ApiClient.loadSurveys
 
-    //Lets map the dom element
+    //Lets map the dom element for the training data
     val cells = dom.document.getElementById("cells")
 
     surveys.fold(

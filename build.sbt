@@ -4,11 +4,10 @@ import org.scalajs.sbtplugin.cross.{CrossProject, CrossType}
 /**
   * Build wide settings
   */
-//Use the typelevel compiler for partial unification
+//Use the typelevel compiler for extra goodies
 scalaOrganization in ThisBuild := "org.typelevel"
-//TODO: Upgrade to 2.11.9
 scalaVersion in ThisBuild := "2.11.8"
-
+//TODO: Switch to Typelevel 4 for 2.11.11 when things settle down
 //Should I enable this for all projects like this or only for Cross/JS Projects? Work out.
 enablePlugins(WorkbenchPlugin)
 
@@ -25,7 +24,7 @@ enablePlugins(WorkbenchPlugin)
 //Separate seqs of dependencies into separate lazy values to convey intent more clearly
 lazy val commonLangFixes = Seq(
   libraryDependencies += compilerPlugin("org.spire-math" %% "kind-projector" % "0.9.3"),
-  libraryDependencies += compilerPlugin("org.scalamacros" % "paradise" % "2.1.0" cross CrossVersion.full)
+  libraryDependencies += compilerPlugin("org.scalamacros" % "paradise" % "2.1.0" cross CrossVersion.patch)
 )
 
 lazy val langFixesJS = Seq(
@@ -144,6 +143,13 @@ def soarCrossProject(name: String, tpe: CrossType): CrossProject = {
     .settings(soarSettings:_*)
     .jvmSettings(commonDependenciesJVM:_*)
     .jsSettings(commonDependenciesJS:_*)
+//    .settings(
+//      //Work around for https://github.com/scala-js/scala-js/pull/2954
+//      // Remove the dependency on the scalajs-compiler
+//      libraryDependencies := libraryDependencies.value.filterNot(_.name == "scalajs-compiler"),
+//      // And add a custom one
+//      libraryDependencies += compilerPlugin("org.scala-js" % "scalajs-compiler" % "0.6.16" cross CrossVersion.patch)
+//    )
 }
 
 //Method defining common merge strategy for duplicate files when constructing executable jars using assembly
@@ -233,18 +239,25 @@ lazy val glanceWeb = soarCrossProject("glance-web", CrossType.Full)
     unmanagedSourceDirectories in Compile += baseDirectory.value / "shared" / "main" / "scala")
   .jvmSettings(commonCirceJVM:_*)
   .jvmSettings(commonServer:_*)
-  .jvmSettings(libraryDependencies += "org.webjars" % "bootstrap" % "3.3.7-1")
   .jsSettings(
     libraryDependencies ++= Seq (
       "org.scala-js" %%% "scalajs-dom" % "0.9.1",
       "org.singlespaced" %%% "scalajs-d3" % "0.3.4",
       "com.thoughtworks.binding" %%% "binding" % "latest.release",
       "com.thoughtworks.binding" %%% "dom" % "latest.release",
-      "com.thoughtworks.binding" %%% "route" % "latest.release"
+      "com.thoughtworks.binding" %%% "route" % "latest.release",
+      "org.webjars" % "bootstrap" % "3.3.7-1", //What is the point of having this dependency here?
+      "org.webjars" % "datatables" % "1.10.13"
+    ),
+    jsDependencies ++= Seq(
+      "org.webjars" % "jquery" % "1.11.1" / "jquery.js" minified "jquery.min.js",
+      "org.webjars" % "bootstrap" % "3.3.7-1" / "bootstrap.js" minified "bootstrap.min.js" dependsOn "jquery.js",
+      "org.webjars" % "datatables" % "1.10.13" / "jquery.dataTables.js" minified "jquery.dataTables.min.js" dependsOn "jquery.js",
+      "org.webjars" % "datatables" % "1.10.13" / "dataTables.bootstrap.js" minified "dataTables.bootstrap.min.js" dependsOn "jquery.js"
     ),
     scalaJSUseMainModuleInitializer := true)
   .jsSettings(commonCirceJS:_*)
-//  .enablePlugins(ScalaJSPlugin)
+  .enablePlugins(SbtWeb)
 
 lazy val glanceWebJS = glanceWeb.js
   .dependsOn(coreJS, glanceCoreJS)

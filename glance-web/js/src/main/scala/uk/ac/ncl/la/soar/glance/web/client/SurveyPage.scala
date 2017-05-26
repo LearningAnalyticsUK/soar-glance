@@ -59,16 +59,16 @@ object SurveyPage {
     /**
       * Adapted from http://thecodingtutorials.blogspot.ch/2012/07/introduction-to-d3.html
       */
-    val graphHeight = 450
+    val graphHeight = 250
 
     //The width of each bar.
-    val barWidth = 80
+    val barWidth = 40
 
     //The distance between each bar.
-    val barSeparation = 10
+    val barSeparation = 5
 
     //The maximum value of the data.
-    val maxData = 50
+    val maxData = 100
 
     //The actual horizontal distance from drawing one bar rectangle to drawing the next.
     val horizontalBarDistance = barWidth + barSeparation
@@ -84,7 +84,7 @@ object SurveyPage {
     val rectHeightFun = (d: Int) => d * barHeightMultiplier
     val rectColorFun = (d: Int, i: Int) => c.brighter(i * 0.5).toString
 
-    val svg = d3.select("body").append("svg").attr("width", "100%").attr("height", "450px")
+    val svg = d3.select("#cells").append("svg").attr("width", "100%").attr("height", "450px")
     val sel = svg.selectAll("rect").data(js.Array(8, 22, 31, 36, 48, 17, 25))
     sel.enter()
       .append("rect")

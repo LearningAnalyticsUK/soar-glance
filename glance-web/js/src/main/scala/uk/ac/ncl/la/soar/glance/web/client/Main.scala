@@ -27,7 +27,6 @@ import io.circe._
 import uk.ac.ncl.la.soar.glance.Survey
 import scala.concurrent.ExecutionContext.Implicits.global
 
-import scala.scalajs.js.annotation.JSExport
 import scala.scalajs.js
 
 /**
@@ -48,14 +47,6 @@ object Main extends js.JSApp {
   //Holder for Surveys
   val survey = Var(None: Option[Survey])
 
-  surveysJson.fold(
-    { case e @ DecodingFailure(_, _) =>
-      //Create error message
-      println(e.show)
-    },
-    { case s => survey.value = s.headOption }
-  )
-
   /**
     * Defines the header of our single page app
     * TODO: Move to its own file
@@ -65,7 +56,7 @@ object Main extends js.JSApp {
     <nav class="navbar navbar-inverse navbar-fixed-top">
       <div class="container-fluid">
         <div class="navbar-header">
-          <a class="navbar-brand" href="#">Glance Survey</a>
+          <a class="navbar-brand" href="#">Glance Survey - Base</a>
         </div>
       </div>
     </nav>
@@ -73,14 +64,35 @@ object Main extends js.JSApp {
 
   @dom
   def glanceApp: Binding[Node] = {
-    <section class="surveyApp">
+    <section id="surveyApp">
       { header.bind }
       <div class="col-sm-4 col-sm-offset-4 col-md-10 col-md-offset-1">
-        { BaseSurvey.main(survey).bind }
+        { BaseSurvey(survey).view.bind }
       </div>
     </section>
   }
 
-  def main(): Unit =  dom.render(sjsDom.document.body, glanceApp)
+  def main(): Unit =  {
+
+    dom.render(sjsDom.document.body, glanceApp)
+    val result = surveysJson.fold(
+      { case e @ DecodingFailure(_, _) =>
+        //Create error message
+        println(e.show)
+      },
+      { case s =>
+        survey.value = s.headOption
+      }
+    )
+    result.onComplete(_ => activation())
+  }
+
+  //Hack for now
+  private def activation(): Unit = {
+    val jQuery = js.Dynamic.global.$
+    val table = jQuery("#training-table")
+    table.DataTable(js.Dictionary("ordering" -> false))
+    ()
+  }
 
 }

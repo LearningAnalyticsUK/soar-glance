@@ -17,16 +17,15 @@
   */
 package uk.ac.ncl.la.soar.glance.web.client
 
-import com.thoughtworks.binding.Binding.{BindingSeq, Var, Vars}
 import org.scalajs.dom.raw.Node
-import org.scalajs.{dom => sjsDom}
-import com.thoughtworks.binding.{Binding, dom}
+import org.scalajs.dom
 import cats._
 import cats.implicits._
 import io.circe._
+import japgolly.scalajs.react.extra.router._
 import uk.ac.ncl.la.soar.glance.Survey
-import scala.concurrent.ExecutionContext.Implicits.global
 
+import scala.concurrent.ExecutionContext.Implicits.global
 import scala.scalajs.js
 
 /**
@@ -36,63 +35,40 @@ import scala.scalajs.js
 object Main extends js.JSApp {
 
 
-  /**
-    * Defines Routes for current program
-    * TODO: again move to own file at some point
-    */
+  /** Define routes for glance dashboard SPA */
+  val baseUrl = BaseUrl.until_#
+
+
+  /** Define the locations (views) used in this application */
+  sealed trait Loc
+  case object StudentListLoc
+  case object CohortGlanceLoc
+  case object StudentGlanceLoc
+  case object DashboardLoc
+
+  //Lets initialise the router config
+  val routerConfig = RouterConfigDsl[Loc].buildConfig { dsl =>
+    import dsl._
+
+    ()
+
+  }
 
   //Lets get the survey data
   val surveysJson = ApiClient.loadSurveys
 
-  //Holder for Surveys
-  val survey = Var(None: Option[Survey])
-
-  /**
-    * Defines the header of our single page app
-    * TODO: Move to its own file
-    */
-  @dom
-  def header: Binding[Node] = {
-    <nav class="navbar navbar-inverse navbar-fixed-top">
-      <div class="container-fluid">
-        <div class="navbar-header">
-          <a class="navbar-brand" href="#">Glance Survey - Base</a>
-        </div>
-      </div>
-    </nav>
-  }
-
-  @dom
-  def glanceApp: Binding[Node] = {
-    <section id="surveyApp">
-      { header.bind }
-      <div class="col-sm-4 col-sm-offset-4 col-md-10 col-md-offset-1">
-        { BaseSurvey(survey).view.bind }
-      </div>
-    </section>
-  }
-
-  def main(): Unit =  {
-
-    dom.render(sjsDom.document.body, glanceApp)
-    val result = surveysJson.fold(
-      { case e @ DecodingFailure(_, _) =>
-        //Create error message
-        println(e.show)
-      },
-      { case s =>
-        survey.value = s.headOption
-      }
-    )
-    result.onComplete(_ => activation())
-  }
-
-  //Hack for now
-  private def activation(): Unit = {
-    val jQuery = js.Dynamic.global.$
-    val table = jQuery("#training-table")
-    table.DataTable(js.Dictionary("ordering" -> false))
-    ()
-  }
+//  val baseUrl = BaseUrl(dom.window.location.href.takeWhile(_ != '#'))
+//
+//  val routerConfig: RouterConfig[TodoFilter] = RouterConfigDsl[TodoFilter].buildConfig { dsl =>
+//    import dsl._
+//
+//    /* how the application renders the list given a filter */
+//    def filterRoute(s: TodoFilter): Rule = staticRoute("#/" + s.link, s) ~> renderR(router => AppCircuit.connect(_.todos)(p => TodoList(p, s, router)))
+//
+//    val filterRoutes: Rule = TodoFilter.values.map(filterRoute).reduce(_ | _)
+//
+//    /* build a final RouterConfig with a default page */
+//    filterRoutes.notFound(redirectToPage(TodoFilter.All)(Redirect.Replace))
+//  }
 
 }

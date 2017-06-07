@@ -241,15 +241,18 @@ lazy val glanceWeb = soarCrossProject("glance-web", CrossType.Full)
   .jvmSettings(commonServer:_*)
   .jsSettings(
     libraryDependencies ++= Seq (
-      "org.scala-js" %%% "scalajs-dom" % "0.9.1",
-      "org.singlespaced" %%% "scalajs-d3" % "0.3.4",
-      "com.thoughtworks.binding" %%% "binding" % "latest.release",
-      "com.thoughtworks.binding" %%% "dom" % "latest.release",
-      "com.thoughtworks.binding" %%% "route" % "latest.release",
-      "org.webjars" % "bootstrap" % "3.3.7-1", //What is the point of having this dependency here?
-      "org.webjars" % "datatables" % "1.10.13"
+      "com.github.japgolly.scalajs-react" %%% "core"           % "1.0.0",
+      "com.github.japgolly.scalajs-react" %%% "extra"          % "1.0.0",
+      "org.scala-js"                      %%% "scalajs-dom"    % "0.9.1",
+      "org.singlespaced"                  %%% "scalajs-d3"     % "0.3.4",
+      "io.suzaku"                         %%% "diode"          % "1.1.2",
+      "io.suzaku"                         %%% "diode-react"    % "1.1.2",
+      "org.webjars"                       %   "bootstrap"      % "3.3.7-1", //What is the point of having this dependency here?
+      "org.webjars"                       %   "datatables"     % "1.10.13"
     ),
     jsDependencies ++= Seq(
+      "org.webjars.bower" % "react" % "15.5.4" / "react-with-addons.js" minified "react-with-addons.min.js",
+      "org.webjars.bower" % "react" % "15.5.4" / "react-dom.js" minified "react-dom.min.js" dependsOn "react-with-addons.js",
       "org.webjars" % "jquery" % "1.11.1" / "jquery.js" minified "jquery.min.js",
       "org.webjars" % "bootstrap" % "3.3.7-1" / "bootstrap.js" minified "bootstrap.min.js" dependsOn "jquery.js",
       "org.webjars" % "datatables" % "1.10.13" / "jquery.dataTables.js" minified "jquery.dataTables.min.js" dependsOn "jquery.js",

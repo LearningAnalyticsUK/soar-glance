@@ -34,6 +34,7 @@ import uk.ac.ncl.la.soar.glance.Survey
   */
 object ApiClient {
 
+  /** TODO: Figure out if there is a way to do compiletime config? Or something of that sort. Setting this here is bad*/
   val url = "http://localhost:8080/surveys"
 
   //Could maybe make these Tasks and assign to lazy vals?

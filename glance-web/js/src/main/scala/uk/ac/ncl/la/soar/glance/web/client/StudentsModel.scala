@@ -17,6 +17,8 @@
   */
 package uk.ac.ncl.la.soar.glance.web.client
 
+import diode.ActionHandler
+import diode._
 import uk.ac.ncl.la.soar.{ModuleCode, StudentNumber}
 import uk.ac.ncl.la.soar.data.StudentRecords
 
@@ -27,7 +29,7 @@ import scala.collection.immutable.SortedMap
   * UI elements throughout the Glance application. There may be other models containing other data, but this is the
   * primary one.
   */
-case class StudentsModel(students: Seq[StudentRecords[SortedMap, ModuleCode, Double]])
+case class StudentsModel(students: Seq[StudentRecords[SortedMap, ModuleCode, Double]], selected: Seq[StudentNumber])
 
 /**
   * ADT representing the set of actions which may be taken to update a `StudentsModel`. These actions encapsulate no
@@ -35,5 +37,8 @@ case class StudentsModel(students: Seq[StudentRecords[SortedMap, ModuleCode, Dou
   */
 sealed trait StudentsAction
 final case class InitStudents(students: Seq[StudentRecords[SortedMap, ModuleCode, Double]]) extends StudentsAction
-final case class SelectStudents(id: StudentNumber) extends StudentsAction
+final case class SelectStudents(ids: Seq[StudentNumber]) extends StudentsAction
+final case class AddSelectedStudent(id: StudentNumber) extends StudentsAction
 case object ResetStudents extends StudentsAction
+
+object StudentsAction

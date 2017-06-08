@@ -17,7 +17,7 @@
   */
 package uk.ac.ncl.la.soar.glance.web.client
 
-import diode.Circuit
+import diode.{ActionHandler, Circuit}
 import diode.react.ReactConnector
 
 
@@ -33,10 +33,19 @@ final case class GlanceModel(students: StudentsModel)
   */
 object GlanceCircuit extends Circuit[GlanceModel] with ReactConnector[GlanceModel] {
 
-  override protected def initialModel = GlanceModel(StudentsModel(Seq.empty))
+  override protected def initialModel = GlanceModel(StudentsModel(Seq.empty, Seq.empty))
 
-  override protected def actionHandler: GlanceCircuit.HandlerFunction = ???
+  override protected def actionHandler: GlanceCircuit.HandlerFunction = composeHandlers(studentHandler)
 
 
   /** Handlers for the various model actions, could split into model files? */
+  val studentHandler = new ActionHandler(zoomTo(_.students)) {
+    override def handle = {
+      case InitStudents(students) => updated(StudentsModel(students, Seq.empty))
+      case SelectStudents(numbers) => updated(value.copy(selected = numbers))
+      case AddSelectedStudent(number) => updated(value.copy(selected = value.selected +: number))
+      case ResetStudents => updated(StudentsModel(Seq.empty, Seq.empty))
+    }
+  }
+
 }

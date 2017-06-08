@@ -23,6 +23,7 @@ import cats._
 import cats.implicits._
 import io.circe._
 import japgolly.scalajs.react.extra.router._
+import japgolly.scalajs.react.vdom.TopNode
 import uk.ac.ncl.la.soar.glance.Survey
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -41,18 +42,25 @@ object Main extends js.JSApp {
 
   /** Define the locations (views) used in this application */
   sealed trait Loc
-  case object StudentListLoc
-  case object CohortGlanceLoc
-  case object StudentGlanceLoc
-  case object DashboardLoc
+  case object StudentListLoc extends Loc
+  case object CohortGlanceLoc extends Loc
+  case object StudentGlanceLoc extends Loc
+  case object DashboardLoc extends Loc
 
-  //Lets initialise the router config
+  /** Lets initialise the router config */
   val routerConfig = RouterConfigDsl[Loc].buildConfig { dsl =>
     import dsl._
 
-    ()
+    //Construct student list Route
+    val listRt = staticRoute(root, StudentListLoc) ~> renderR(router => GlanceCircuit.connect(_.students)(proxy => ???))
+
+    //Construct and return final routing table, adding a "Not Found" behaviour
+    listRt.notFound(redirectToPage(StudentListLoc)(Redirect.Replace))
 
   }
+
+  /** Mount the router React Component */
+  val router: ReactComponentU[Unit, Resolution[Loc], Any, TopNode] = Router(baseUrl, routerConfig.logToConsole)()
 
   //Lets get the survey data
   val surveysJson = ApiClient.loadSurveys

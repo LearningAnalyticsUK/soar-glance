@@ -21,24 +21,23 @@ import diode.ActionHandler
 import diode._
 import uk.ac.ncl.la.soar.{ModuleCode, StudentNumber}
 import uk.ac.ncl.la.soar.data.StudentRecords
+import uk.ac.ncl.la.soar.glance.Survey
 
 import scala.collection.immutable.SortedMap
 
 /**
-  * Container for the student data (a `Seq[StudentRecords[SortedMap, ModuleCode, Double]\]`) which is bound to various
-  * UI elements throughout the Glance application. There may be other models containing other data, but this is the
-  * primary one.
+  * Container for the survey data (a `glance.Survey`) which is bound to various UI elements throughout the Glance
+  * application. There may be other models containing other data, but this is the primary one.
   */
-case class StudentsModel(students: Seq[StudentRecords[SortedMap, ModuleCode, Double]], selected: Seq[StudentNumber])
+case class SurveyModel(survey: Option[Survey], selected: Option[StudentNumber])
 
 /**
-  * ADT representing the set of actions which may be taken to update a `StudentsModel`. These actions encapsulate no
+  * ADT representing the set of actions which may be taken to update a `SurveyModel`. These actions encapsulate no
   * behaviour. Instead the behaviour is defined in a handler/interpreter method provided in the `GlanceCircuit` object.
   */
-sealed trait StudentsAction
-final case class InitStudents(students: Seq[StudentRecords[SortedMap, ModuleCode, Double]]) extends StudentsAction
-final case class SelectStudents(ids: Seq[StudentNumber]) extends StudentsAction
-final case class AddSelectedStudent(id: StudentNumber) extends StudentsAction
-case object ResetStudents extends StudentsAction
+sealed trait SurveyAction
+final case class InitSurvey(survey: Survey) extends SurveyAction
+final case class SelectStudent(id: StudentNumber) extends SurveyAction
+case object ResetSurvey extends SurveyAction
 
-object StudentsAction
+object SurveyAction

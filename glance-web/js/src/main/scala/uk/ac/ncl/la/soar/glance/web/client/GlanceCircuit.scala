@@ -24,7 +24,7 @@ import diode.react.ReactConnector
 /**
   * Hierarchical definition of Application model, composing various other models.
   */
-final case class GlanceModel(students: StudentsModel)
+final case class GlanceModel(survey: SurveyModel)
 
 
 /**
@@ -33,18 +33,17 @@ final case class GlanceModel(students: StudentsModel)
   */
 object GlanceCircuit extends Circuit[GlanceModel] with ReactConnector[GlanceModel] {
 
-  override protected def initialModel = GlanceModel(StudentsModel(Seq.empty, Seq.empty))
+  override protected def initialModel = GlanceModel(SurveyModel(None, None))
 
-  override protected def actionHandler: GlanceCircuit.HandlerFunction = composeHandlers(studentHandler)
+  override protected def actionHandler: GlanceCircuit.HandlerFunction = composeHandlers(surveyHandler)
 
 
   /** Handlers for the various model actions, could split into model files? */
-  val studentHandler = new ActionHandler(zoomTo(_.students)) {
+  val surveyHandler = new ActionHandler(zoomTo(_.survey)) {
     override def handle = {
-      case InitStudents(students) => updated(StudentsModel(students, Seq.empty))
-      case SelectStudents(numbers) => updated(value.copy(selected = numbers))
-      case AddSelectedStudent(number) => updated(value.copy(selected = value.selected +: number))
-      case ResetStudents => updated(StudentsModel(Seq.empty, Seq.empty))
+      case InitSurvey(survey) => updated(SurveyModel(Some(survey), None))
+      case SelectStudent(number) => updated(value.copy(selected = Some(number)))
+      case ResetSurvey => updated(SurveyModel(None, None))
     }
   }
 

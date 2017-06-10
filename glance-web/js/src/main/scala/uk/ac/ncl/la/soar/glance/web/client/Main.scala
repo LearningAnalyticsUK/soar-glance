@@ -42,20 +42,21 @@ object Main extends js.JSApp {
 
   /** Define the locations (views) used in this application */
   sealed trait Loc
-  case object StudentListLoc extends Loc
-  case object CohortGlanceLoc extends Loc
-  case object StudentGlanceLoc extends Loc
-  case object DashboardLoc extends Loc
+  case object SurveyLoc extends Loc
+//  case object StudentListLoc extends Loc
+//  case object CohortGlanceLoc extends Loc
+//  case object StudentGlanceLoc extends Loc
+//  case object DashboardLoc extends Loc
 
   /** Lets initialise the router config */
   val routerConfig = RouterConfigDsl[Loc].buildConfig { dsl =>
     import dsl._
 
     //Construct student list Route
-    val listRt = staticRoute(root, StudentListLoc) ~> renderR(router => GlanceCircuit.connect(_.students)(proxy => ???))
+    val listRt = staticRoute(root, SurveyLoc) ~> renderR(router => GlanceCircuit.connect(_.survey)(proxy => ))
 
     //Construct and return final routing table, adding a "Not Found" behaviour
-    listRt.notFound(redirectToPage(StudentListLoc)(Redirect.Replace))
+    listRt.notFound(redirectToPage(SurveyLoc)(Redirect.Replace))
 
   }
 

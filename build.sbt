@@ -243,11 +243,12 @@ lazy val glanceWeb = soarCrossProject("glance-web", CrossType.Full)
     libraryDependencies ++= Seq (
       "com.github.japgolly.scalajs-react" %%% "core"           % "1.0.0",
       "com.github.japgolly.scalajs-react" %%% "extra"          % "1.0.0",
-//      "com.github.japgolly.scalajs-react" %%% "ext-cats"       % "1.0.0",
+      "com.github.japgolly.scalajs-react" %%% "ext-cats"       % "1.0.0",
       "org.scala-js"                      %%% "scalajs-dom"    % "0.9.1",
       "org.singlespaced"                  %%% "scalajs-d3"     % "0.3.4",
-      "io.suzaku"                         %%% "diode"          % "1.1.0",
-      "io.suzaku"                         %%% "diode-react"    % "1.1.0",
+      "io.suzaku"                         %%% "diode"          % "1.1.2",
+      "io.suzaku"                         %%% "diode-react"    % "1.1.2",
+//      "io.surfkit"                        %%% "scalajs-chart"  % "0.1-SNAPSHOT",
       "org.webjars"                       %   "bootstrap"      % "3.3.7-1", //What is the point of having this dependency here?
       "org.webjars"                       %   "datatables"     % "1.10.13"
     ),
@@ -258,6 +259,7 @@ lazy val glanceWeb = soarCrossProject("glance-web", CrossType.Full)
       "org.webjars" % "bootstrap" % "3.3.7-1" / "bootstrap.js" minified "bootstrap.min.js" dependsOn "jquery.js",
       "org.webjars" % "datatables" % "1.10.13" / "jquery.dataTables.js" minified "jquery.dataTables.min.js" dependsOn "jquery.js",
       "org.webjars" % "datatables" % "1.10.13" / "dataTables.bootstrap.js" minified "dataTables.bootstrap.min.js" dependsOn "jquery.js"
+//      "org.webjars" % "chartjs" % "1.0.2" / "chart.js" minified "chart.min.js"
     ),
     scalaJSUseMainModuleInitializer := true)
   .jsSettings(commonCirceJS:_*)

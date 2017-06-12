@@ -27,6 +27,7 @@ import japgolly.scalajs.react.extra.router._
 import japgolly.scalajs.react.extra.OnUnmount
 import japgolly.scalajs.react.vdom.html_<^._
 import org.scalajs.dom
+import uk.ac.ncl.la.soar.glance.web.client.view.SurveyView
 
 import scala.scalajs.js
 

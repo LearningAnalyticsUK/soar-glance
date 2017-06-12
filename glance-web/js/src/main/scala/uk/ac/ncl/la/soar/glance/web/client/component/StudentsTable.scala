@@ -15,7 +15,7 @@
   * See the License for the specific language governing permissions and
   * limitations under the License.
   */
-package uk.ac.ncl.la.soar.glance.web.client.components
+package uk.ac.ncl.la.soar.glance.web.client.component
 
 import cats._
 import cats.implicits._
@@ -35,7 +35,7 @@ import scala.collection.immutable.SortedMap
 /**
   * Component for listing students in a data table
   */
-object StudentTable {
+object StudentsTable {
 
   case class Props(
     records: Seq[StudentRecords[SortedMap, ModuleCode, Double]],
@@ -82,7 +82,7 @@ object StudentTable {
     private def convertDataTable() = {
       val jQuery = js.Dynamic.global.$
       val table = jQuery("#training-table")
-      println("Trying to convert now.")
+      println("Prettifying datatable")
       table.DataTable(js.Dictionary("ordering" -> false))
       ()
     }

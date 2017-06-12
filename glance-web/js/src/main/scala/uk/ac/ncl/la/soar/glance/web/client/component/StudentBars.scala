@@ -43,12 +43,19 @@ object StudentBars {
 
   class Backend(bs: BackendScope[Props, Unit]) {
 
-    def mounted(p: Props) = Callback {
-//      p.student.foreach(drawBars)
+    def mounted(p: Props) = Callback {}
+    def willUpdate = Callback {
+      println("Destroying chart")
+      d3.select(chartSelector).remove()
+    }
+    def didUpdate(p: Props) = Callback {
+      println("Initialising chart")
+      p.student.foreach(drawBars)
     }
 
+    val chartSelector = "#student-bars"
+
     def render(p: Props): VdomElement = {
-      println("trying to rerender")
       <.div(
           ^.id := "detailed",
           <.p("Click on a Student").unless(p.student.nonEmpty)
@@ -58,7 +65,6 @@ object StudentBars {
     /** Construct detailed representation of student scores, including d3 viz */
     private def drawBars(records: StudentRecords[SortedMap, ModuleCode, Double]): Unit = {
 
-      println("Redrawing bars")
       //Round scores
       val scores = records.record.iterator.map(_._2.toInt).toList
 
@@ -90,7 +96,6 @@ object StudentBars {
       val rectColorFun = (d: Int, i: Int) => colorPicker(d).toString
 
       //Clear existing
-//      d3.select("#student-bars").remove()
       val svg = d3.select("#detailed").append("svg")
         .attr("width", "100%")
         .attr("height", "250px")
@@ -111,6 +116,8 @@ object StudentBars {
   val component = ScalaComponent.builder[Props]("StudentBars")
     .renderBackend[Backend]
     .componentDidMount(scope => scope.backend.mounted(scope.props))
+    .componentWillUpdate(scope => scope.backend.willUpdate)
+    .componentDidUpdate(scope => scope.backend.didUpdate(scope.currentProps))
     .build
 
 }

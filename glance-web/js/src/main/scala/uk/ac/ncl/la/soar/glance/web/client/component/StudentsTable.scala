@@ -46,9 +46,12 @@ object StudentsTable {
 
   class Backend(bs: BackendScope[Props, Unit]) {
 
-    def mounted(props: Props) = Callback {
-      convertDataTable()
-    }
+    private lazy val jQ = js.Dynamic.global.$
+    private val tableSelector = "#training-table"
+
+    def mounted = Callback { initDataTable() }
+    def willUnmount = Callback { destroyDataTable() }
+
 
     def render(props: Props): VdomElement = {
 
@@ -79,18 +82,27 @@ object StudentsTable {
       )
     }
 
-    private def convertDataTable() = {
-      val jQuery = js.Dynamic.global.$
-      val table = jQuery("#training-table")
-      println("Prettifying datatable")
+    private def initDataTable(re: Boolean = false) = {
+      val table = jQ(tableSelector)
+      println(s"${if(re) "Re-" else ""}Initialising datatable")
       table.DataTable(js.Dictionary("ordering" -> false))
       ()
     }
+
+    private def destroyDataTable() = {
+      val table = jQ(tableSelector)
+      println("Destroying datatable")
+      table.DataTable().destroy()
+      ()
+    }
+
   }
 
   def component = ScalaComponent.builder[Props]("StudentList")
     .renderBackend[Backend]
-    .componentDidMount(scope => scope.backend.mounted(scope.props))
+    .componentDidMount(scope => scope.backend.mounted)
+    .componentWillUnmount(scope => scope.backend.willUnmount)
+    .shouldComponentUpdateConst(false)
     .build
 
 }

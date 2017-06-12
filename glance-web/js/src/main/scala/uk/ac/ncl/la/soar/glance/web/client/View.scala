@@ -106,56 +106,56 @@
 //    }
 //  }
 //
-//  private def drawBars(records: StudentRecords[SortedMap, ModuleCode, Double], selector: String): Unit = {
-//
-//    println("Redrawing bars")
-//    //Round scores
-//    val scores = records.record.iterator.map(_._2.toInt).toList
-//
-//    val graphHeight = 250
-//    //The width of each bar.
-//    val barWidth = 40
-//    //The distance between each bar.
-//    val barSeparation = 5
-//    //The maximum value of the data.
-//    val maxData = 100
-//    //The actual horizontal distance from drawing one bar rectangle to drawing the next.
-//    val horizontalBarDistance = barWidth + barSeparation
-//    //The value to multiply each bar's value by to get its height.
-//    val barHeightMultiplier = graphHeight / maxData
-//    //Color for start
-//    val fail = d3.rgb(203, 49, 49)
-//    val pass = d3.rgb(203, 199, 84)
-//    val good = d3.rgb(71, 203, 80)
-//
-//    def colorPicker(score: Int) = {
-//      if (score < 40) fail
-//      else if (score < 60) pass
-//      else good
-//    }
-//
-//    val rectXFun = (d: Int, i: Int) => i * horizontalBarDistance
-//    val rectYFun = (d: Int) => graphHeight - d * barHeightMultiplier
-//    val rectHeightFun = (d: Int) => d * barHeightMultiplier
-//    val rectColorFun = (d: Int, i: Int) => colorPicker(d).toString
-//
-//    //Clear existing
-//    d3.select(".student-bars").remove()
-//    val svg = d3.select(selector).append("svg")
-//      .attr("width", "100%")
-//      .attr("height", "250px")
-//      .attr("class", "student-bars")
-//    import js.JSConverters._
-//    val sel = svg.selectAll("rect").data(scores.toJSArray)
-//    sel.enter()
-//      .append("rect")
-//      .attr("x", rectXFun)
-//      .attr("y", rectYFun)
-//      .attr("width", barWidth)
-//      .attr("height", rectHeightFun)
-//      .style("fill", rectColorFun)
-//    ()
-//  }
+  private def drawBars(records: StudentRecords[SortedMap, ModuleCode, Double], selector: String): Unit = {
+
+    println("Redrawing bars")
+    //Round scores
+    val scores = records.record.iterator.map(_._2.toInt).toList
+
+    val graphHeight = 250
+    //The width of each bar.
+    val barWidth = 40
+    //The distance between each bar.
+    val barSeparation = 5
+    //The maximum value of the data.
+    val maxData = 100
+    //The actual horizontal distance from drawing one bar rectangle to drawing the next.
+    val horizontalBarDistance = barWidth + barSeparation
+    //The value to multiply each bar's value by to get its height.
+    val barHeightMultiplier = graphHeight / maxData
+    //Color for start
+    val fail = d3.rgb(203, 49, 49)
+    val pass = d3.rgb(203, 199, 84)
+    val good = d3.rgb(71, 203, 80)
+
+    def colorPicker(score: Int) = {
+      if (score < 40) fail
+      else if (score < 60) pass
+      else good
+    }
+
+    val rectXFun = (d: Int, i: Int) => i * horizontalBarDistance
+    val rectYFun = (d: Int) => graphHeight - d * barHeightMultiplier
+    val rectHeightFun = (d: Int) => d * barHeightMultiplier
+    val rectColorFun = (d: Int, i: Int) => colorPicker(d).toString
+
+    //Clear existing
+    d3.select(".student-bars").remove()
+    val svg = d3.select(selector).append("svg")
+      .attr("width", "100%")
+      .attr("height", "250px")
+      .attr("class", "student-bars")
+    import js.JSConverters._
+    val sel = svg.selectAll("rect").data(scores.toJSArray)
+    sel.enter()
+      .append("rect")
+      .attr("x", rectXFun)
+      .attr("y", rectYFun)
+      .attr("width", barWidth)
+      .attr("height", rectHeightFun)
+      .style("fill", rectColorFun)
+    ()
+  }
 //
 //
 //  @dom

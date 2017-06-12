@@ -17,28 +17,26 @@
   */
 package uk.ac.ncl.la.soar.glance.web.client
 
-import org.scalajs.dom.raw.Node
-import org.scalajs.dom
 import cats._
 import cats.implicits._
+import diode.data.Pot
+import diode.react._
 import io.circe._
+import japgolly.scalajs.react._
 import japgolly.scalajs.react.extra.router._
-import japgolly.scalajs.react.vdom.TopNode
-import uk.ac.ncl.la.soar.glance.Survey
+import japgolly.scalajs.react.extra.OnUnmount
+import japgolly.scalajs.react.vdom.html_<^._
+import org.scalajs.dom
 
-import scala.concurrent.ExecutionContext.Implicits.global
 import scala.scalajs.js
 
 /**
   * Entry point for client program
   */
-
 object Main extends js.JSApp {
 
-
   /** Define routes for glance dashboard SPA */
-  val baseUrl = BaseUrl.until_#
-
+  val baseUrl: BaseUrl = BaseUrl.until_#
 
   /** Define the locations (views) used in this application */
   sealed trait Loc
@@ -49,35 +47,44 @@ object Main extends js.JSApp {
 //  case object DashboardLoc extends Loc
 
   /** Lets initialise the router config */
-  val routerConfig = RouterConfigDsl[Loc].buildConfig { dsl =>
+  val routerConfig: RouterConfig[Loc] = RouterConfigDsl[Loc].buildConfig({ dsl =>
     import dsl._
 
+    val surveyConnector: ReactConnectProxy[Pot[SurveyModel]] = GlanceCircuit.connect(_.survey)
     //Construct student list Route
-    val listRt = staticRoute(root, SurveyLoc) ~> renderR(router => GlanceCircuit.connect(_.survey)(proxy => ))
+    val listRt =
+      staticRoute(root, SurveyLoc) ~> renderR(ctl => surveyConnector(p => SurveyView.component(p)))
 
     //Construct and return final routing table, adding a "Not Found" behaviour
     listRt.notFound(redirectToPage(SurveyLoc)(Redirect.Replace))
+  }).renderWith(layout)
 
+  // base layout for all pages
+  private def layout(c: RouterCtl[Loc], r: Resolution[Loc]) = {
+    <.div(
+      // here we use plain Bootstrap class names as these are specific to the top level layout defined here
+      <.nav(^.className := "navbar navbar-inverse navbar-fixed-top",
+        <.div(^.className := "container",
+          <.div(^.className := "navbar-header", <.span(^.className := "navbar-brand", "SOAR Glance"))
+        )
+      ),
+      // currently active module is shown in this container
+      <.div(^.className := "container", r.render())
+    )
   }
 
   /** Mount the router React Component */
-  val router: ReactComponentU[Unit, Resolution[Loc], Any, TopNode] = Router(baseUrl, routerConfig.logToConsole)()
+  val router: ScalaComponent.Unmounted[Unit, Resolution[Loc], OnUnmount.Backend] = Router(baseUrl, routerConfig.logToConsole)()
 
-  //Lets get the survey data
-  val surveysJson = ApiClient.loadSurveys
 
-//  val baseUrl = BaseUrl(dom.window.location.href.takeWhile(_ != '#'))
-//
-//  val routerConfig: RouterConfig[TodoFilter] = RouterConfigDsl[TodoFilter].buildConfig { dsl =>
-//    import dsl._
-//
-//    /* how the application renders the list given a filter */
-//    def filterRoute(s: TodoFilter): Rule = staticRoute("#/" + s.link, s) ~> renderR(router => AppCircuit.connect(_.todos)(p => TodoList(p, s, router)))
-//
-//    val filterRoutes: Rule = TodoFilter.values.map(filterRoute).reduce(_ | _)
-//
-//    /* build a final RouterConfig with a default page */
-//    filterRoutes.notFound(redirectToPage(TodoFilter.All)(Redirect.Replace))
-//  }
+
+  /** Main method where we kick everything off */
+  override def main(): Unit = {
+    //Load the survey data and render
+    GlanceCircuit.dispatch(RefreshSurvey)
+    //Find undeprecated way of doing this
+    router.renderIntoDOM(dom.document.getElementById("soar-app"))
+    ()
+  }
 
 }

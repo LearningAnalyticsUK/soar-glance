@@ -37,8 +37,14 @@ object ApiClient {
   /** TODO: Figure out if there is a way to do compiletime config? Or something of that sort. Setting this here is bad*/
   val url = "http://localhost:8080/surveys"
 
-  //Could maybe make these Tasks and assign to lazy vals?
-  def loadSurveys: EitherT[Future, Error, List[Survey]] = EitherT(Ajax.get(s"$url").map(decodeSurveys))
+  /** Load the surveys from the surveys API, then decode them using circe */
+  def loadSurveys: Future[Either[Error, List[Survey]]] = Ajax.get(s"$url").map(decodeSurveys)
+
+  /** Load the surveys, decode them then lift into an either transformer. Would be preferable to do this always, but
+    * [[diode.Effect]]'s `apply` method expects an un evaluated future and it seems crazy to lift only to call `.value`
+    * immediately. So, for now, this is just a helper.
+    */
+  def loadSurveysT: EitherT[Future, Error, List[Survey]] = EitherT(loadSurveys)
 
   private def decodeSurveys(xhr: XMLHttpRequest) = decode[List[Survey]](xhr.responseText)
 

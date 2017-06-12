@@ -17,13 +17,17 @@
   */
 package uk.ac.ncl.la.soar.glance.web.client
 
-import com.sun.tools.javac.comp.Todo
-import diode.react.ModelProxy
-import japgolly.scalajs.react.{BackendScope, Callback}
+import diode._
+import diode.react._
+import diode.react.ReactPot._
+import diode.data._
+import japgolly.scalajs.react._
+import japgolly.scalajs.react.extra.router._
 import japgolly.scalajs.react.vdom.html_<^._
 import uk.ac.ncl.la.soar.{ModuleCode, StudentNumber}
 import uk.ac.ncl.la.soar.data.StudentRecords
 import uk.ac.ncl.la.soar.glance.Survey
+import uk.ac.ncl.la.soar.glance.web.client.components.StudentTable
 
 import scala.collection.immutable.SortedMap
 
@@ -32,67 +36,127 @@ import scala.collection.immutable.SortedMap
   */
 object SurveyView {
 
-  case class Props(proxy: ModelProxy[Option[Survey]])
+  type Props = ModelProxy[Pot[SurveyModel]]
 
-  case class State(selected: Option[StudentNumber])
+  case class State(selected: Option[StudentRecords[SortedMap, ModuleCode, Double]])
 
-  class Backend($: BackendScope[Props, State]) {
+  class Backend(bs: BackendScope[Props, State]) {
 
     def mounted(props: Props) = Callback {}
 
-    def handleStudentClick(num: StudentNumber) = Callback { println(s"Clicked: $num") }
+    def handleStudentClick(bs: BackendScope[Props, State])
+                          (student: StudentRecords[SortedMap, ModuleCode, Double]) = Callback {
+      bs.modState(s => s.copy(selected = Some(student)))
+      println(s"Clicked: ${student.number}")
+    }
 
-    def render(p: Props, s: State) = {
+    val indexCol = "Student Number"
+
+    /** Construct the presentation of the modules as a sorted list to fill some table headings */
+    private def modules(survey: Option[Survey]) = survey.map(_.modules.toList).getOrElse(List.empty).sorted
+
+    /** Construct the full presentation of table headings, including modules */
+    private def headings(survey: Option[Survey]) = indexCol :: modules(survey)
+
+    /** Construct the presentation of the students to fill table rows */
+    private def students(survey: Option[Survey]) = survey.map(_.entries).getOrElse(List.empty)
+
+    /** Construct the function which provides the presentation of a table cell, given a StudentRecord and string key */
+    private def renderCell(default: String)(student: StudentRecords[SortedMap, ModuleCode, Double], key: String) =
+      key match {
+        case k if k == indexCol => student.number
+        case k => student.record.get(k).fold(default)(_.toString)
+      }
+
+    /** Construct detailed representation of student scores, including d3 viz */
+    private def drawBars(records: StudentRecords[SortedMap, ModuleCode, Double], selector: String): Unit = {
+
+      println("Redrawing bars")
+      //Round scores
+      val scores = records.record.iterator.map(_._2.toInt).toList
+
+      val graphHeight = 250
+      //The width of each bar.
+      val barWidth = 40
+      //The distance between each bar.
+      val barSeparation = 5
+      //The maximum value of the data.
+      val maxData = 100
+      //The actual horizontal distance from drawing one bar rectangle to drawing the next.
+      val horizontalBarDistance = barWidth + barSeparation
+      //The value to multiply each bar's value by to get its height.
+      val barHeightMultiplier = graphHeight / maxData
+      //Color for start
+      val fail = d3.rgb(203, 49, 49)
+      val pass = d3.rgb(203, 199, 84)
+      val good = d3.rgb(71, 203, 80)
+
+      def colorPicker(score: Int) = {
+        if (score < 40) fail
+        else if (score < 60) pass
+        else good
+      }
+
+      val rectXFun = (d: Int, i: Int) => i * horizontalBarDistance
+      val rectYFun = (d: Int) => graphHeight - d * barHeightMultiplier
+      val rectHeightFun = (d: Int) => d * barHeightMultiplier
+      val rectColorFun = (d: Int, i: Int) => colorPicker(d).toString
+
+      //Clear existing
+      d3.select(".student-bars").remove()
+      val svg = d3.select(selector).append("svg")
+        .attr("width", "100%")
+        .attr("height", "250px")
+        .attr("class", "student-bars")
+      import js.JSConverters._
+      val sel = svg.selectAll("rect").data(scores.toJSArray)
+      sel.enter()
+        .append("rect")
+        .attr("x", rectXFun)
+        .attr("y", rectYFun)
+        .attr("width", barWidth)
+        .attr("height", rectHeightFun)
+        .style("fill", rectColorFun)
+      ()
+    }
+
+    def render(p: Props, s: State): VdomElement = {
       //Get the necessary data from the model
-      val survey = p.proxy()
-      val modules = survey.map(_.modules).getOrElse(Set.empty)
-      val students = survey.map(_.entries).getOrElse(List.empty)
+      //This is a bit of a nested Mess - TODO: Make sure we're understanding the model construction properly
+      val model = p()
 
       //Build UI elements
-      val columns = "Student Number" :: modules.toList.sorted
 
-      <.section(
-        ^.id := "training-section",
+      //TODO: investigate why we're having to call TagMod.fromTraversableOnce directly. Most examples don't.
+      <.div(
+        ^.id := "training",
         <.h2("Training Data"),
         <.div(
           ^.className := "table-responsive",
-          <.table(
-            ^.className := "table table-striped table-bordered table-hover",
-            ^.id := "training-data",
-            <.thead(
-              <.tr(
-                columns.map(<.td(_)):_*
+          model.renderFailed(ex => "Error loading survey"),
+          model.renderPending(_ > 50, _ => <.p("Loading ...")),
+          model.render { sm =>
+            StudentTable.component(
+              StudentTable.Props(
+                students(sm.survey),
+                headings(sm.survey),
+                renderCell(" "),
+                handleStudentClick(bs)
               )
-            ),
-            <.tbody(
-              students.map(tableRow(modules, _)):_*
             )
-          )
-        )
-      )
-    }
-
-    def tableRow(modules: Set[String], studentRecords: StudentRecords[SortedMap, ModuleCode, Double]) = {
-      //Get the table columns (minuse student number)
-      val moduleCols = modules.toList.sorted
-      //Fill in blanks where student has no score for module
-      val recordEntries = moduleCols.map(c => studentRecords.record.get(c).fold(" ")(_.toString))
-      //Add student number
-      val columns = studentRecords.number :: recordEntries
-      //Build the table row
-      <.tr(
-        ^.onClick --> handleStudentClick(studentRecords.number),
-        columns.map(<.td(_)):_*
+          }
+        ),
+        <.h2("Detailed View")
+        <.div()
       )
     }
 
   }
 
-  private val component = ReactComponentB[Props]("Survey")
-    .initialState_P(p => State(None))
+  val component = ScalaComponent.builder[ModelProxy[Pot[SurveyModel]]]("SurveyView")
+    .initialStateFromProps(p => State(None))
     .renderBackend[Backend]
     .componentDidMount(scope => scope.backend.mounted(scope.props))
     .build
 
-  def apply(proxy: ModelProxy[Seq[Todo]], currentFilter: TodoFilter, ctl: RouterCtl[TodoFilter]) = component(Props(proxy, currentFilter, ctl))
 }

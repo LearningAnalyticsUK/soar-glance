@@ -17,14 +17,55 @@
   */
 package uk.ac.ncl.la.soar.glance.web.client
 
-import diode.{ActionHandler, Circuit}
+import scala.concurrent.ExecutionContext.Implicits.global
+import cats._
+import cats.implicits._
+import diode._
+import diode.ActionHandler._
+import diode.data._
+import diode.util._
 import diode.react.ReactConnector
+import io.circe._
+import uk.ac.ncl.la.soar.StudentNumber
+import uk.ac.ncl.la.soar.glance.Survey
 
 
 /**
   * Hierarchical definition of Application model, composing various other models.
   */
-final case class GlanceModel(survey: SurveyModel)
+final case class GlanceModel(survey: Pot[SurveyModel])
+
+/**
+  * Container for the survey data (a `glance.Survey`) which is bound to various UI elements throughout the Glance
+  * application. There may be other models containing other data, but this is the primary one.
+  */
+case class SurveyModel(survey: Option[Survey])
+
+/**
+  * ADT representing the set of actions which may be taken to update a `SurveyModel`. These actions encapsulate no
+  * behaviour. Instead the behaviour is defined in a handler/interpreter method provided in the `GlanceCircuit` object.
+  */
+sealed trait SurveyAction extends Action
+final case class InitSurvey(survey: Either[Error, List[Survey]]) extends SurveyAction
+final case class SelectStudent(id: StudentNumber) extends SurveyAction
+case object RefreshSurvey extends SurveyAction
+
+/**
+  * Handles actions related to Surveys
+  */
+class SurveyHandler[M](modelRW: ModelRW[M, Pot[SurveyModel]]) extends ActionHandler(modelRW) {
+  override def handle = {
+    case RefreshSurvey =>
+      //Going round the houses a bit here. Tersest to lift ot a transformer, map, then call value. How is performance?
+      effectOnly(Effect(ApiClient.loadSurveys.map(s => InitSurvey(s))))
+    //case SelectStudent(number) => ??? //Unclear to me if this should be an Action or just handled in the component?
+    case InitSurvey(decodedSurveys) =>
+      decodedSurveys.fold(
+        e => updated(Failed(e)),
+        s => updated(Ready(SurveyModel(s.headOption)))
+      )
+  }
+}
 
 
 /**
@@ -33,18 +74,12 @@ final case class GlanceModel(survey: SurveyModel)
   */
 object GlanceCircuit extends Circuit[GlanceModel] with ReactConnector[GlanceModel] {
 
-  override protected def initialModel = GlanceModel(SurveyModel(None, None))
+  override protected def initialModel = GlanceModel(Empty)
 
-  override protected def actionHandler: GlanceCircuit.HandlerFunction = composeHandlers(surveyHandler)
+  override protected def actionHandler: GlanceCircuit.HandlerFunction = composeHandlers(
+    new SurveyHandler(zoomTo(_.survey))
+  )
 
 
-  /** Handlers for the various model actions, could split into model files? */
-  val surveyHandler = new ActionHandler(zoomTo(_.survey)) {
-    override def handle = {
-      case InitSurvey(survey) => updated(SurveyModel(Some(survey), None))
-      case SelectStudent(number) => updated(value.copy(selected = Some(number)))
-      case ResetSurvey => updated(SurveyModel(None, None))
-    }
-  }
 
 }

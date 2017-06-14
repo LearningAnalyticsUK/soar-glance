@@ -21,6 +21,24 @@ body {
  * Top navigation
  * Hide default border to remove 1px line.
  */
+.navbar {
+    background-color: #003965;
+}
+
+.navbar-nav > li {
+    background-color: #003965;
+}
+
+.navbar-nav > li.active {
+    background-color: #fff;
+    color: #003965;
+}
+
+.navbar #title {
+    color: #f5f5f5;
+    font-family: Helvetica, sans-serif;
+}
+
 .navbar-fixed-top {
     border: 0;
 }

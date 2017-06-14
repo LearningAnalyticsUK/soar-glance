@@ -27,9 +27,12 @@ import japgolly.scalajs.react.extra.router._
 import japgolly.scalajs.react.extra.OnUnmount
 import japgolly.scalajs.react.vdom.html_<^._
 import org.scalajs.dom
-import uk.ac.ncl.la.soar.glance.web.client.view.SurveyView
+import uk.ac.ncl.la.soar.glance.web.client.style.GlobalStyle
+import uk.ac.ncl.la.soar.glance.web.client.view.{MainMenuView, SurveyView}
 
 import scala.scalajs.js
+import scalacss.DevDefaults._
+import scalacss.ScalaCssReact._
 
 /**
   * Entry point for client program
@@ -42,6 +45,7 @@ object Main extends js.JSApp {
   /** Define the locations (views) used in this application */
   sealed trait Loc
   case object SurveyLoc extends Loc
+  case object DashboardLoc extends Loc
 //  case object StudentListLoc extends Loc
 //  case object CohortGlanceLoc extends Loc
 //  case object StudentGlanceLoc extends Loc
@@ -66,7 +70,12 @@ object Main extends js.JSApp {
       // here we use plain Bootstrap class names as these are specific to the top level layout defined here
       <.nav(^.className := "navbar navbar-inverse navbar-fixed-top",
         <.div(^.className := "container",
-          <.div(^.className := "navbar-header", <.span(^.className := "navbar-brand", "SOAR Glance"))
+          <.div(^.className := "navbar-header", <.span(^.className := "navbar-brand", ^.id := "title", "SOAR Glance")),
+          <.div(^.className := "collapse navbar-collapse",
+            MainMenuView.component(
+              MainMenuView.Props(c, r.page)
+            )
+          )
         )
       ),
       // currently active module is shown in this container
@@ -81,6 +90,8 @@ object Main extends js.JSApp {
 
   /** Main method where we kick everything off */
   override def main(): Unit = {
+    //Load the styles
+    GlobalStyle.addToDocument()
     //Load the survey data and render
     GlanceCircuit.dispatch(RefreshSurvey)
     //Find undeprecated way of doing this

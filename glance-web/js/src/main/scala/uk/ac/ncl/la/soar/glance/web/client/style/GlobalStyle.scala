@@ -37,9 +37,20 @@ object GlobalStyle extends StyleSheet.Inline {
   /** Declare bootstrap wrapper style */
   val bootstrapStyle = new BootStrapStyle
 
+  /** Declare mixins */
+  val uiChrome = mixin(
+    backgroundColor(primaryChrome),
+    color(chromeText)
+  )
+
   /** Declare main style */
-  style(unsafeRoot("body")(
-    paddingTop(50.px)
-  ))
+  style(
+
+    unsafeRoot("body")(
+      paddingTop(50.px)
+    )
+  )
+
+  
 
 }

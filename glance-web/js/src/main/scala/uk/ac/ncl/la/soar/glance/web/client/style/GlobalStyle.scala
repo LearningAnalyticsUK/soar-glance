@@ -45,12 +45,10 @@ object GlobalStyle extends StyleSheet.Inline {
 
   /** Declare main style */
   style(
-
     unsafeRoot("body")(
       paddingTop(50.px)
     )
   )
-
   
 
 }

@@ -17,10 +17,3 @@
   */
 package uk.ac.ncl.la.soar
 
-/** Description of Class
-  *
-  * @author hugofirth
-  */
-trait Anonymise {
-
-}

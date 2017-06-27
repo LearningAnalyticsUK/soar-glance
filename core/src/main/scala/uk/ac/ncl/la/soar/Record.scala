@@ -44,9 +44,7 @@ trait Record[F[_, _]] extends Any with Serializable { self =>
   /** Import filter syntax */
   import Filter._
 
-  /** Foldable instance for this Record */
-  //TODO: Investigate using a Scato like encoding to related Record to Foldable
-  //def foldable[A]: Foldable[F[A, ?]] 
+  //TODO: Look to define typeclass in terms of foldable if possible. Currently defined in terms of Iterable
 
   /** Get a specific element of a record. Return none if that element does not exist
     *

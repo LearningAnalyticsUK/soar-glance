@@ -60,7 +60,7 @@ trait Summarise[F[_, _]] extends Any with Serializable { self =>
 
 object Summarise {
 
-  /** Summarise instance for any type which has a Record */
+  /** TODO: Implement Summarise instance for any type which has a Record */
 
 
   /** Quartile ADT for records - simple enum essentially. */

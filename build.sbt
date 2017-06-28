@@ -260,7 +260,8 @@ lazy val glanceWeb = soarCrossProject("glance-web", CrossType.Full)
       "org.webjars" % "jquery" % "1.11.1" / "jquery.js" minified "jquery.min.js",
       "org.webjars" % "bootstrap" % "3.3.7-1" / "bootstrap.js" minified "bootstrap.min.js" dependsOn "jquery.js",
       "org.webjars" % "datatables" % "1.10.13" / "jquery.dataTables.js" minified "jquery.dataTables.min.js" dependsOn "jquery.js",
-      "org.webjars" % "datatables" % "1.10.13" / "dataTables.bootstrap.js" minified "dataTables.bootstrap.min.js" dependsOn "jquery.js"
+      "org.webjars" % "datatables" % "1.10.13" / "dataTables.bootstrap.js" minified "dataTables.bootstrap.min.js" dependsOn "jquery.js",
+      "org.webjars" % "chartjs" % "2.1.3" / "Chart.js" minified "Chart.min.js"
     ),
     scalaJSUseMainModuleInitializer := true)
   .jsSettings(commonCirceJS:_*)

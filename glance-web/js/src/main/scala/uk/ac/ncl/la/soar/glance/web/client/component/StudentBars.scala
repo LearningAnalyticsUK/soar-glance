@@ -33,6 +33,7 @@ import uk.ac.ncl.la.soar.glance.web.client.SurveyModel
 
 import scala.collection.immutable.SortedMap
 import scala.scalajs.js
+import scala.util.Random
 
 /**
   * Simple component for rendering bar charts describing some stat for an individual student
@@ -42,6 +43,17 @@ object StudentBars {
   case class Props(student: Option[StudentRecords[SortedMap, ModuleCode, Double]])
 
   class Backend(bs: BackendScope[Props, Unit]) {
+
+    // create dummy data for the chart
+    val cp = Chart.Props(
+      "Test chart",
+      Chart.BarChart,
+      ChartData(
+        Random.alphanumeric.map(_.toUpper.toString).distinct.take(10),
+        Seq(ChartDataset(Iterator.continually(Random.nextDouble() * 10).take(10).toSeq, "Data1"))
+      )
+    )
+
 
     def mounted(p: Props) = Callback {}
     def willUpdate = Callback {
@@ -58,6 +70,7 @@ object StudentBars {
     def render(p: Props): VdomElement = {
       <.div(
           ^.id := "detailed",
+          Chart.component(cp),
           <.p("Click on a Student").unless(p.student.nonEmpty)
         )
     }

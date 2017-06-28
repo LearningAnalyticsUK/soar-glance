@@ -26,34 +26,34 @@ import scala.scalajs.js.annotation.JSName
   * Wrapping React FixedDataTable component to avoid hacking in the Jquery datatable plugin
   * @author hugofirth
   */
-object FixedDataTable {
-
-  @JSName("FixedDataTable")
-  @js.native
-  object RawComponent extends js.Object
-
-  @js.native
-  trait Props extends js.Object {
-    var width: Int = js.native
-    var height: Int = js.native
-    var rowHeight: Int = js.native
-    var rowsCount: Int = js.native
-    var headerHeight: Int = js.native
-  }
-
-  def props(width: Int, height: Int, rowHeight: Int, rowsCount: Int, headerHeight: Int): Props = {
-    //Construct Props object
-    val p = (new js.Object).asInstanceOf[Props]
-    p.width = width
-    p.height = height
-    p.rowHeight = rowHeight
-    p.rowsCount = rowsCount
-
-    p
-  }
-
-  val component = JsComponent[Props, Children.Varargs, Null](RawComponent)
-}
+//object FixedDataTable {
+//
+//  @JSName("FixedDataTable")
+//  @js.native
+//  object RawComponent extends js.Object
+//
+//  @js.native
+//  trait Props extends js.Object {
+//    var width: Int = js.native
+//    var height: Int = js.native
+//    var rowHeight: Int = js.native
+//    var rowsCount: Int = js.native
+//    var headerHeight: Int = js.native
+//  }
+//
+//  def props(width: Int, height: Int, rowHeight: Int, rowsCount: Int, headerHeight: Int): Props = {
+//    //Construct Props object
+//    val p = (new js.Object).asInstanceOf[Props]
+//    p.width = width
+//    p.height = height
+//    p.rowHeight = rowHeight
+//    p.rowsCount = rowsCount
+//
+//    p
+//  }
+//
+//  val component = JsComponent[Props, Children.Varargs, Null](RawComponent)
+//}
 
 
 

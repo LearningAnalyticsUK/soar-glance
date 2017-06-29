@@ -39,7 +39,7 @@ import scala.util.Random
 /**
   * Simple component for rendering bar charts describing some stat for an individual student
   */
-object StudentBars {
+object StudentCharts {
 
   case class Props(student: Option[StudentRecords[SortedMap, ModuleCode, Double]])
 
@@ -52,12 +52,40 @@ object StudentBars {
     def render(p: Props): VdomElement = {
       println("Rendering bars")
       <.div(
-        ^.className := "chart-container",
         ^.id := "detailed",
         p.student.fold(<.p(^.className := "chart-placedholder", "Click on a student"): TagMod) { s =>
-          Chart.component(drawBars(s))
+          Seq(
+            <.div(
+              ^.className := "chart-container",
+              Chart.component(drawBars(s))
+              ),
+            <.div(
+              ^.className := "chart-container",
+              Chart.component(drawLines(s))
+            )
+          ).toTagMod
+
         }
       )
+    }
+
+    /** Construct line chart representation of student average over time, as a proof of concept */
+    private def drawLines(records: StudentRecords[SortedMap, ModuleCode, Double]): Chart.Props = {
+      print("Drawing lines")
+      //Very mutable, but I'm trying to get back into the habit of method local mutability.
+      var total = 0.0
+      var counter = 0.0
+      val aBldr = ListBuffer.empty[Double]
+      for((_, r) <- records.record){
+        total += r
+        counter += 1
+        aBldr += (total / counter)
+      }
+      val averages = aBldr.result()
+      val labels = averages.map(_ => "")
+      println(s"Averages: $averages")
+      val data = ChartData(labels, Seq(ChartDataset(averages, "Average score")))
+      Chart.Props("Average Score Over Time", Chart.LineChart, data)
     }
 
     /** Construct detailed representation of student scores, including d3 viz */

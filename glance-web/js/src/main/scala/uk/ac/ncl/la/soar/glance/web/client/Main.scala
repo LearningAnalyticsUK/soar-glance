@@ -44,12 +44,10 @@ object Main extends js.JSApp {
 
   /** Define the locations (views) used in this application */
   sealed trait Loc
-  case object SurveyLoc extends Loc
-  case object DashboardLoc extends Loc
-//  case object StudentListLoc extends Loc
-//  case object CohortGlanceLoc extends Loc
-//  case object StudentGlanceLoc extends Loc
-//  case object DashboardLoc extends Loc
+  case object StudentLoc extends Loc
+  case object ModuleLoc extends Loc
+  case object AboutLoc extends Loc
+  case object SettingsLoc extends Loc
 
   /** Lets initialise the router config */
   val routerConfig: RouterConfig[Loc] = RouterConfigDsl[Loc].buildConfig({ dsl =>
@@ -58,10 +56,10 @@ object Main extends js.JSApp {
     val surveyConnector: ReactConnectProxy[Pot[SurveyModel]] = GlanceCircuit.connect(_.survey)
     //Construct student list Route
     val listRt =
-      staticRoute(root, SurveyLoc) ~> renderR(ctl => surveyConnector(p => SurveyView.component(p)))
+      staticRoute(root, StudentLoc) ~> renderR(ctl => surveyConnector(p => SurveyView.component(p)))
 
     //Construct and return final routing table, adding a "Not Found" behaviour
-    listRt.notFound(redirectToPage(SurveyLoc)(Redirect.Replace))
+    listRt.notFound(redirectToPage(StudentLoc)(Redirect.Replace))
   }).renderWith(layout)
 
   // base layout for all pages

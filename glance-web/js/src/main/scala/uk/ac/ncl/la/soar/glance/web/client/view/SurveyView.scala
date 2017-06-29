@@ -28,7 +28,8 @@ import uk.ac.ncl.la.soar.ModuleCode
 import uk.ac.ncl.la.soar.data.StudentRecords
 import uk.ac.ncl.la.soar.glance.Survey
 import uk.ac.ncl.la.soar.glance.web.client.SurveyModel
-import uk.ac.ncl.la.soar.glance.web.client.component.{StudentBars, StudentsTable}
+import uk.ac.ncl.la.soar.glance.web.client.component.{StudentCharts, StudentsTable}
+import uk.ac.ncl.la.soar.glance.web.client.style.Icon
 
 import scala.collection.immutable.SortedMap
 import scala.scalajs.js
@@ -81,7 +82,10 @@ object SurveyView {
       //TODO: investigate why we're having to call TagMod.fromTraversableOnce directly. Most examples don't.
       <.div(
         ^.id := "training",
-        <.h2("Training Data"),
+        <.span(
+          ^.className := "sub-title",
+          Icon.list(Icon.Medium),
+          <.h2("Training Data")),
         <.div(
           ^.className := "table-responsive",
           model.renderFailed(ex => "Error loading survey"),
@@ -97,9 +101,13 @@ object SurveyView {
             )
           }
         ),
-        <.h2("Detailed View"),
-        StudentBars.component(
-          StudentBars.Props(s.selected)
+        <.span(
+          ^.className := "sub-title",
+          Icon.search(Icon.Medium),
+          <.h2("Detailed View")
+        ),
+        StudentCharts.component(
+          StudentCharts.Props(s.selected)
         )
       )
     }

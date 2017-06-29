@@ -31,12 +31,14 @@ object MainMenuView {
 
   case class Props(router: RouterCtl[Main.Loc], currentLoc: Loc)
 
-  private case class MenuItem(idx: Int, label: String, target: Loc)
+  private case class MenuItem(idx: Int, label: String, target: Loc, collapsed: Boolean)
 
   private val menuItems = Seq(
-    MenuItem(1, "Settings", SurveyLoc),
-    MenuItem(2, "About", SurveyLoc),
-    MenuItem(3, "Logout", SurveyLoc)
+    MenuItem(1, "Modules", ModuleLoc, collapsed = false),
+    MenuItem(2, "Students", StudentLoc, collapsed = false),
+    MenuItem(3, "About", AboutLoc, collapsed = false),
+    MenuItem(4, "Settings", SettingsLoc, collapsed = true),
+    MenuItem(5, "Logout", SettingsLoc, collapsed = true)
   )
 
   class Backend(bs: BackendScope[Props, Unit]) {
@@ -45,12 +47,17 @@ object MainMenuView {
 
     def render(p: Props): VdomElement = {
       <.ul(
+        ^.id := "main-menu",
         ^.className := "nav navbar-nav",
         menuItems.map({ item =>
           <.li(
             ^.key := item.idx,
             (^.className := "active").when(p.currentLoc == item.target),
-            p.router.link(item.target)(item.label)
+//            p.router.link(item.target)(item.label)
+            <.a(
+              ^.href := "#",
+              item.label
+            )
           )
         }).toTagMod
       )

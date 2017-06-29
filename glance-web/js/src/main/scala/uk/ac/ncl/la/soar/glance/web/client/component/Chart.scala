@@ -136,8 +136,8 @@ object Chart {
   case class Props(name: String,
                    style: ChartStyle,
                    data: ChartData,
-                   width: Int = 1000,
-                   height: Int = 300)
+                   width: Option[Int] = Some(1110),
+                   height: Option[Int] = Some(300))
 
   class Backend(bs: BackendScope[Props, State]) {
 
@@ -168,9 +168,9 @@ object Chart {
 
     def render(p: Props) =
       <.canvas(
-        ^.className := "detail-chart",
-        VdomAttr("width") := p.width,
-        VdomAttr("height") := p.height)
+        ^.className := "chart",
+        p.width.map(w => VdomAttr("width") := w).whenDefined,
+        p.height.map(h => VdomAttr("height") := h).whenDefined)
 
     private def addAllData(newData: ChartData) = bs.state.map{s =>
       s.chart.foreach{c => addData(c, newData) }

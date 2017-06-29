@@ -61,15 +61,28 @@ object ChartData {
 }
 
 @js.native
+trait ChartLegendOptions extends js.Object {
+  def legend: Boolean = js.native
+}
+
+@js.native
 trait ChartOptions extends js.Object {
   def responsive: Boolean = js.native
+  def legend: ChartLegendOptions = js.native
 }
 
 object ChartOptions {
   def apply(responsive: Boolean = true): ChartOptions = {
     js.Dynamic.literal(
-      responsive = responsive
+      responsive = responsive,
+      legend = legend(false)
     ).asInstanceOf[ChartOptions]
+  }
+
+  private def legend(visible: Boolean): ChartLegendOptions = {
+    js.Dynamic.literal(
+      legend = visible
+    ).asInstanceOf[ChartLegendOptions]
   }
 }
 
@@ -90,10 +103,16 @@ object ChartConfiguration {
   }
 }
 
+@js.native
+trait ChartWithData extends js.Object {
+  def data: ChartData = js.native
+  def update(): Unit = js.native
+}
+
 // define a class to access the Chart.js component
 @js.native
 @JSGlobal("Chart")
-class JSChart(ctx: js.Dynamic, config: ChartConfiguration) extends js.Object
+class JSChart(ctx: js.Dynamic, config: ChartConfiguration) extends js.Object with ChartWithData
 
 object Chart {
 
@@ -102,18 +121,20 @@ object Chart {
   case object LineChart extends ChartStyle
   case object BarChart extends ChartStyle
 
+  case class State(chart: Option[JSChart])
+
   case class Props(name: String,
                    style: ChartStyle,
                    data: ChartData,
-                   width: Int = 500,
+                   width: Int = 1000,
                    height: Int = 300)
 
-  class Backend(bs: BackendScope[Props, Unit]) {
+  class Backend(bs: BackendScope[Props, State]) {
 
     def mounted(p: Props) =
       for {
         node <- bs.getDOMNode
-        _ <- Callback {
+        chart <- CallbackTo[JSChart] {
           // access context of the canvas
           // TODO: Fix the horrendous hack!
           val ctx = node.asInstanceOf[HTMLCanvasElement].getContext("2d")
@@ -121,18 +142,48 @@ object Chart {
           p.style match {
             case LineChart => new JSChart(ctx, ChartConfiguration("line", p.data))
             case BarChart => new JSChart(ctx, ChartConfiguration("bar", p.data))
-            case _ => throw new IllegalArgumentException
+            case _ => new JSChart(ctx, ChartConfiguration("bar", p.data))
           }
         }
+        _ <- bs.modState(s => State(Some(chart)))
       } yield ()
 
+    def willRecieveProps(next: Props) = {
+      println("Whats going on here then?")
+      for {
+        _ <- removeAllData
+        _ <- addAllData(next.data)
+        state <- bs.state
+      } yield state.chart.foreach(_.update())
+    }
+
     def render(p: Props) = <.canvas(VdomAttr("width") := p.width, VdomAttr("height") := p.height)
-   
+
+    private def addAllData(newData: ChartData) = bs.state.map{s =>
+      s.chart.foreach{c => addData(c, newData) }
+    }
+
+    private def addData(chart: JSChart, newData: ChartData) = {
+      chart.data.labels.push(newData.labels:_*)
+      chart.data.datasets.push(newData.datasets:_*)
+    }
+
+    //TODO: Perhaps an OptionT stack would work better here?
+    private def removeAllData = bs.state.map{s =>
+      s.chart.foreach{c => removeData(c) }
+    }
+
+    private def removeData(chart: JSChart) = {
+      for(i <- 0 until chart.data.datasets.length) { chart.data.datasets.pop() }
+      for(i <- 0 until chart.data.labels.length) { chart.data.labels.pop() }
+    }
   }
 
   val component = ScalaComponent.builder[Props]("Chart")
+    .initialState(State(None))
     .renderBackend[Backend]
     .componentDidMount(scope => scope.backend.mounted(scope.props))
+    .componentWillReceiveProps(scope => scope.backend.willRecieveProps(scope.nextProps))
     .build
 }
 

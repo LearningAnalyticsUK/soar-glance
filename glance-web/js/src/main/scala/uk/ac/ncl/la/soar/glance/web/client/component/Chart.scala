@@ -43,6 +43,16 @@ object ChartDataset {
       borderColor = borderColor
     ).asInstanceOf[ChartDataset]
   }
+
+  def apply(data: Seq[Double],
+            label: String, backgroundColor: Seq[String], borderColor: Seq[String]): ChartDataset = {
+    js.Dynamic.literal(
+      label = label,
+      data = data.toJSArray,
+      backgroundColor = backgroundColor.toJSArray,
+      borderColor = borderColor.toJSArray
+    ).asInstanceOf[ChartDataset]
+  }
 }
 
 @js.native
@@ -62,7 +72,7 @@ object ChartData {
 
 @js.native
 trait ChartLegendOptions extends js.Object {
-  def legend: Boolean = js.native
+  def display: Boolean = js.native
 }
 
 @js.native
@@ -75,13 +85,13 @@ object ChartOptions {
   def apply(responsive: Boolean = true): ChartOptions = {
     js.Dynamic.literal(
       responsive = responsive,
-      legend = legend(false)
+      legend = legend
     ).asInstanceOf[ChartOptions]
   }
 
-  private def legend(visible: Boolean): ChartLegendOptions = {
+  private val legend: ChartLegendOptions = {
     js.Dynamic.literal(
-      legend = visible
+      display = false
     ).asInstanceOf[ChartLegendOptions]
   }
 }
@@ -142,14 +152,13 @@ object Chart {
           p.style match {
             case LineChart => new JSChart(ctx, ChartConfiguration("line", p.data))
             case BarChart => new JSChart(ctx, ChartConfiguration("bar", p.data))
-            case _ => new JSChart(ctx, ChartConfiguration("bar", p.data))
           }
         }
         _ <- bs.modState(s => State(Some(chart)))
       } yield ()
 
     def willRecieveProps(next: Props) = {
-      println("Whats going on here then?")
+      //TODO: Clean this up a bit, could just be a single map statement rather than a for comprehension
       for {
         _ <- removeAllData
         _ <- addAllData(next.data)
@@ -157,7 +166,11 @@ object Chart {
       } yield state.chart.foreach(_.update())
     }
 
-    def render(p: Props) = <.canvas(VdomAttr("width") := p.width, VdomAttr("height") := p.height)
+    def render(p: Props) =
+      <.canvas(
+        ^.className := "detail-chart",
+        VdomAttr("width") := p.width,
+        VdomAttr("height") := p.height)
 
     private def addAllData(newData: ChartData) = bs.state.map{s =>
       s.chart.foreach{c => addData(c, newData) }

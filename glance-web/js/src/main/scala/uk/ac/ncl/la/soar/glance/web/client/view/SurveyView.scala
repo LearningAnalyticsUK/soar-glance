@@ -17,18 +17,18 @@
   */
 package uk.ac.ncl.la.soar.glance.web.client.view
 
+import cats._
+import cats.implicits._
 import diode.data._
 import diode.react.ReactPot._
 import diode.react._
 import japgolly.scalajs.react._
 import japgolly.scalajs.react.vdom.html_<^._
-import org.singlespaced.d3js.Ops._
-import org.singlespaced.d3js.d3
 import uk.ac.ncl.la.soar.ModuleCode
 import uk.ac.ncl.la.soar.data.StudentRecords
 import uk.ac.ncl.la.soar.glance.Survey
 import uk.ac.ncl.la.soar.glance.web.client.SurveyModel
-import uk.ac.ncl.la.soar.glance.web.client.component.{StudentCharts, StudentsTable}
+import uk.ac.ncl.la.soar.glance.web.client.component.{Select, StudentCharts, StudentsTable}
 import uk.ac.ncl.la.soar.glance.web.client.style.Icon
 
 import scala.collection.immutable.SortedMap
@@ -71,11 +71,33 @@ object SurveyView {
         case k => student.record.get(k).fold(default)(_.toString)
       }
 
+    private val options = Vector(
+      Select.Choice("stage-1", "Stage 1"),
+      Select.Choice("stage-2", "Stage 2"),
+      Select.Choice("stage-3", "Stage 3")
+    )
+
+    private def filterOpt(selected: String) = {
+      //Stringly typed :( - TODO: Fix with ADT of some kind
+      val lastModule = selected match {
+        case "stage-1" => "CSC1026"
+        case "stage-2" => "CSC2026"
+        case "stage-3" => "CSC723"
+      }
+      bs.modState { st =>
+        val delta = st.selected.map { records =>
+          records.copy(record = records.record.until(lastModule))
+        }
+        State(delta)
+      }
+    }
+
 
     def render(p: Props, s: State): VdomElement = {
       //Get the necessary data from the model
       //This is a bit of a nested Mess - TODO: Make sure we're understanding the model construction properly
       val model = p()
+
 
       //Build UI elements
 
@@ -108,6 +130,12 @@ object SurveyView {
         ),
         StudentCharts.component(
           StudentCharts.Props(s.selected)
+        ),
+        <.span(
+          ^.className := "sub-title",
+          Icon.filter(Icon.Small),
+          <.h4("Filter"),
+          Select.component(Select.Props("stage-3", options, filterOpt))
         )
       )
     }

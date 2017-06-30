@@ -33,7 +33,7 @@ object Select {
 
   case class Choice[A](value: A, label: String, disabled: Boolean = false)
 
-  case class Props[A](selected: A, choices: IndexedSeq[Choice[A]], select: A => Callback)
+  case class Props[A](default: A, choices: IndexedSeq[Choice[A]], select: A => Callback)
 
   class Backend[A: Eq](bs: BackendScope[Props[A], Unit]) {
 
@@ -49,14 +49,12 @@ object Select {
       var selected = -1
       for (c <- p.choices) {
         oBldr += <.option(^.value := i, ^.key := i, ^.disabled := c.disabled, c.label)
-        if(!seenSelected && c.value === p.selected) {
+        if(!seenSelected && c.value === p.default) {
           seenSelected = true
           selected = i
         }
         i += 1
       }
-
-      val options = oBldr.result()
 
       def onChange: SyntheticEvent[HTMLSelectElement] => Option[Callback] = { event =>
         for {
@@ -66,12 +64,16 @@ object Select {
         } yield fn(v)
       }
 
+      val options = oBldr.result()
+
       <.select(
+        ^.className := "form-control",
         ^.value := selected,
         ^.onChange ==>? onChange,
         options.toTagMod
       )
     }
+
   }
 
 
@@ -79,6 +81,7 @@ object Select {
     .backend(new Backend(_))
     .renderBackend
     .componentDidMount(scope => scope.backend.mounted)
+    .shouldComponentUpdateConst(false)
     .build
     .apply(p)
 }

@@ -82,7 +82,7 @@ object SurveyView {
       val lastModule = selected match {
         case "stage-1" => "CSC1026"
         case "stage-2" => "CSC2026"
-        case "stage-3" => "CSC723"
+        case "stage-3" => "CSC3723"
       }
       bs.modState { st =>
         val delta = st.selected.map { records =>
@@ -131,11 +131,22 @@ object SurveyView {
         StudentCharts.component(
           StudentCharts.Props(s.selected)
         ),
-        <.span(
-          ^.className := "sub-title",
-          Icon.filter(Icon.Small),
-          <.h4("Filter"),
-          Select.component(Select.Props("stage-3", options, filterOpt))
+        <.form(
+          ^.id := "detailed-options",
+          <.div(
+            ^.className := "row",
+            <.div(
+              ^.className := "col-lg-6",
+              <.div(
+                ^.className := "input-group",
+                <.span(
+                  ^.className := "input-group-addon",
+                  Icon.filter(Icon.Small),
+                  "Filter"),
+                Select.component(Select.Props("stage-3", options, filterOpt))
+              )
+            )
+          )
         )
       )
     }

@@ -33,9 +33,9 @@ object Select {
 
   case class Choice[A](value: A, label: String, disabled: Boolean = false)
 
-  case class Props[A](default: A, choices: IndexedSeq[Choice[A]], select: A => Callback)
+  case class Props[A](selected: Choice[A], choices: IndexedSeq[Choice[A]], select: Choice[A] => Callback)
 
-  class Backend[A: Eq](bs: BackendScope[Props[A], Unit]) {
+  class Backend[A](bs: BackendScope[Props[A], Unit]) {
 
     def mounted = Callback {}
     def willRecieveProps = Callback {}
@@ -49,17 +49,18 @@ object Select {
       var selected = -1
       for (c <- p.choices) {
         oBldr += <.option(^.value := i, ^.key := i, ^.disabled := c.disabled, c.label)
-        if(!seenSelected && c.value === p.default) {
+        if(!seenSelected && c.label == p.selected.label) {
           seenSelected = true
           selected = i
         }
         i += 1
       }
 
+      //TODO: Clean up the below a bit - lots of wrapping and unwrapping.
       def onChange: SyntheticEvent[HTMLSelectElement] => Option[Callback] = { event =>
         for {
           j <- Try(event.target.value.toInt).toOption
-          v = p.choices(j).value
+          v = p.choices(j)
           fn <- Option(p.select)
         } yield fn(v)
       }
@@ -77,11 +78,10 @@ object Select {
   }
 
 
-  def component[A: Eq](p: Props[A]) = ScalaComponent.builder[Props[A]]("Select")
+  def component[A](p: Props[A]) = ScalaComponent.builder[Props[A]]("Select")
     .backend(new Backend(_))
     .renderBackend
     .componentDidMount(scope => scope.backend.mounted)
-    .shouldComponentUpdateConst(false)
     .build
     .apply(p)
 }

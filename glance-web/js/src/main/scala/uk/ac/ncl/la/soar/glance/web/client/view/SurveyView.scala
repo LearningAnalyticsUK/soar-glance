@@ -49,7 +49,6 @@ object SurveyView {
 
     def handleStudentClick(bs: BackendScope[Props, State])
                           (student: StudentRecords[SortedMap, ModuleCode, Double]) = {
-      println("Changing state")
       bs.modState(s => s.copy(selected = Some(student)))
     }
 
@@ -71,36 +70,10 @@ object SurveyView {
         case k => student.record.get(k).fold(default)(_.toString)
       }
 
-    private val options = Vector(
-      Select.Choice("stage-1", "Stage 1"),
-      Select.Choice("stage-2", "Stage 2"),
-      Select.Choice("stage-3", "Stage 3")
-    )
-
-    private def filterOpt(selected: String) = {
-      //Stringly typed :( - TODO: Fix with ADT of some kind
-      val lastModule = selected match {
-        case "stage-1" => "CSC1026"
-        case "stage-2" => "CSC2026"
-        case "stage-3" => "CSC3723"
-        case _ => "CSC3723"
-      }
-      bs.modState { st =>
-        val delta = st.selected.map { records =>
-          records.copy(record = records.record.until(lastModule))
-        }
-        State(delta)
-      }
-    }
-
-
     def render(p: Props, s: State): VdomElement = {
       //Get the necessary data from the model
       //This is a bit of a nested Mess - TODO: Make sure we're understanding the model construction properly
       val model = p()
-
-
-      //Build UI elements
 
       //TODO: investigate why we're having to call TagMod.fromTraversableOnce directly. Most examples don't.
       <.div(
@@ -131,23 +104,6 @@ object SurveyView {
         ),
         StudentCharts.component(
           StudentCharts.Props(s.selected)
-        ),
-        <.form(
-          ^.id := "detailed-options",
-          <.div(
-            ^.className := "row",
-            <.div(
-              ^.className := "col-lg-6",
-              <.div(
-                ^.className := "input-group",
-                <.span(
-                  ^.className := "input-group-addon",
-                  Icon.filter(Icon.Small),
-                  "Filter"),
-                Select.component(Select.Props("stage-3", options, filterOpt))
-              )
-            )
-          )
         )
       )
     }

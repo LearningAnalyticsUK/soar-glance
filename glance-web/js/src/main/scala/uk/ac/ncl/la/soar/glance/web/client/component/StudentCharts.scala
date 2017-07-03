@@ -122,6 +122,9 @@ object StudentCharts {
       (fills.toList, borders.toList)
     }
 
+    /** Draw filter form group */
+    private def drawFilters
+
   }
 
   val component = ScalaComponent.builder[Props]("StudentBars")

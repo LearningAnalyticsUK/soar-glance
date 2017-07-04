@@ -25,6 +25,8 @@ import scala.scalajs.js
 import scala.scalajs.js.JSConverters._
 import scala.scalajs.js.annotation.{JSGlobal, JSName}
 
+//TODO: Introduce chart dataset which persists between props changes unless a boolean flag is set in props
+
 @js.native
 trait ChartDataset extends js.Object {
   def label: String = js.native

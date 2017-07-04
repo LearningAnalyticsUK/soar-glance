@@ -75,7 +75,7 @@ object SurveyView {
       //This is a bit of a nested Mess - TODO: Make sure we're understanding the model construction properly
       val model = p()
 
-      //TODO: investigate why we're having to call TagMod.fromTraversableOnce directly. Most examples don't.
+      //TODO: Investigate Diode Pot conditional rendering. Doesn't render message on fail
       <.div(
         ^.id := "training",
         <.span(

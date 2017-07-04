@@ -38,7 +38,7 @@ import scala.collection.mutable.ListBuffer
 import scala.scalajs.js
 
 /**
-  * Simple component for rendering bar charts describing some stat for an individual student
+  * Simple component for rendering charts describing some stat for an individual student
   */
 object StudentCharts {
 
@@ -63,23 +63,21 @@ object StudentCharts {
   class Backend(bs: BackendScope[Props, State]) {
 
     def mounted(p: Props) = Callback { println("Bars did mount") }
-    def willUpdate = Callback { }
-    def didUpdate(p: Props) = Callback { }
 
     def render(p: Props, s: State): VdomElement = {
       <.div(
         ^.id := "detailed",
         p.student.fold(<.p(^.className := "chart-placedholder", "Click on a student"): TagMod) { student =>
-          Seq(
+          List(
+            drawBars(filtered(student, s.selectedFilter)),
+            drawLines(filtered(student, s.selectedFilter)),
             <.div(
-              ^.className := "chart-container",
-              Chart.component(drawBars(filtered(student, s.selectedFilter.value)))
-              ),
-            <.div(
-              ^.className := "chart-container",
-              Chart.component(drawLines(filtered(student, s.selectedFilter.value)))
-            ),
-            drawFilters(p.filterChoices, s.selectedFilter)
+              ^.className := "chart-controls",
+              <.div(
+                ^.className := "row",
+                drawFilters(p.filterChoices, s.selectedFilter)
+              )
+            )
           ).toTagMod
 
         }
@@ -88,10 +86,10 @@ object StudentCharts {
 
     /** Filter Student Records */
     private def filtered(records: StudentRecords[SortedMap, ModuleCode, Double],
-                         filter: Filter) = records.record.filter { case (mc, s) => filter(mc, s) }
+                         filter: Select.Choice[Filter]) = records.record.filter { case (mc, s) => filter.value(mc, s) }
 
     /** Construct line chart representation of student average over time, as a proof of concept */
-    private def drawLines(data: SortedMap[ModuleCode, Double]): Chart.Props = {
+    private def drawLines(data: SortedMap[ModuleCode, Double]) = {
       //Apply selected filter
 
       //Very mutable, but I'm trying to get back into the habit of method local mutability.
@@ -107,11 +105,13 @@ object StudentCharts {
       //List of blank strings required rather than just having no labels as otherwise Chart.js only renders first point
       val labels = averages.map(_ => "")
       val chartData = ChartData(labels, List(ChartDataset(averages, "Average score")))
-      Chart.Props("Average Score Over Time", Chart.LineChart, chartData)
+      val p = Chart.Props("Average Score Over Time", Chart.LineChart, chartData)
+
+      <.div(^.className := "chart-container", Chart.component(p))
     }
 
-    /** Construct detailed representation of student scores, including d3 viz */
-    private def drawBars(data: SortedMap[ModuleCode, Double]): Chart.Props = {
+    /** Construct detailed representation of student scores, including viz */
+    private def drawBars(data: SortedMap[ModuleCode, Double])  = {
       //Create a props object for the chart component based on a StudentRecords object
       //Get the module labels and scores
       val mB = ListBuffer.empty[ModuleCode]
@@ -125,7 +125,9 @@ object StudentCharts {
 
       val (fillColours, borderColours) = colourBars(scores)
       val chartData = ChartData(modules, List(ChartDataset(scores, "Module Scores", fillColours, borderColours)))
-      Chart.Props("Student Module Scores", Chart.BarChart, chartData)
+      val p = Chart.Props("Student Module Scores", Chart.BarChart, chartData)
+
+      <.div(^.className := "chart-container", Chart.component(p))
     }
 
     /** Calculate List of colours for student bars */
@@ -147,22 +149,19 @@ object StudentCharts {
 
     /** Draw filter form group */
     private def drawFilters(choices: NonEmptyVector[Select.Choice[Filter]], selected: Select.Choice[Filter]) = {
-
-
-      <.form(
-        ^.id := "detailed-options",
+      <.div(
+        ^.className := "col-lg-6",
         <.div(
-          ^.className := "row",
+          ^.className := "input-group",
           <.div(
-            ^.className := "col-lg-6",
-            <.div(
-              ^.className := "input-group",
-              <.span(
-                ^.className := "input-group-addon",
-                Icon.filter(Icon.Small), "Filter"),
-                Select.component(Select.Props(selected, choices.toVector, filterSelect))
-            )
-          )
+            ^.className := "input-group-addon",
+            Icon.filter(Icon.Small), "Filters:  "),
+          <.input(
+            ^.`type` := "text",
+            ^.className := "form-control",
+            ^.placeholder := "Active filters...",
+            ^.aria.label := "..."),
+          Select.component(Select.Props(selected, choices.toVector, filterSelect, Some("Choose  ")))
         )
       )
     }
@@ -176,8 +175,6 @@ object StudentCharts {
     .initialStateFromProps(p => State(p.filterChoices.head))
     .renderBackend[Backend]
     .componentDidMount(scope => scope.backend.mounted(scope.props))
-//    .componentWillUpdate(scope => scope.backend.willUpdate)
-//    .componentDidUpdate(scope => scope.backend.didUpdate(scope.currentProps))
     .build
 
 }

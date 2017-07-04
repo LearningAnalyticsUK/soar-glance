@@ -7,9 +7,6 @@ body {
     padding-top: 50px;
 }
 
-/*.container {*/
-    /*margin-bottom: 20px;*/
-/*}*/
 
 /*
  * Global add-ons
@@ -151,6 +148,11 @@ span.sub-title {
 .chart-container {
     position: relative;
     width: 100%;
-    padding: 15px 15px 14px 15px;
+    padding: 15px 15px 15px 15px;
 }
 
+.chart-controls {
+    position: relative;
+    width: 100%;
+    padding: 15px 15px 15px 15px;
+}

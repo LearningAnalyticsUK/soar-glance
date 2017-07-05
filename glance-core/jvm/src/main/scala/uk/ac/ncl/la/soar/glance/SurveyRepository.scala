@@ -32,66 +32,12 @@ import pureconfig.loadConfigOrThrow
 import uk.ac.ncl.la.soar.data.{ModuleScore, StudentRecords}
 import uk.ac.ncl.la.soar.{ModuleCode, StudentNumber}
 
-/**
-  * Repository trait which defines the behaviour of a Repository, retrieving objects from a database
-  *
-  * Note: The repository is sealed at  the moment for clarity, but should be unsealed and move to a separate file if
-  * this pattern ends up being needed in other places throughout our codebase (which is likely ... its db access).
-  *
-  * TODO: Add teardown
-  */
-sealed abstract class Repository[A, F[_]: Monad] {
-  val init: F[Unit]
-  val list: F[List[A]]
-  def find(id: UUID): F[Option[A]]
-  def save(entry: A): F[Unit]
-  def delete(id: UUID): F[Boolean]
-}
 
-/**
-  * Trait which defines raw query methods on the companion objects of [[Repository]].
-  * TODO: Decide on the scoping of these methods - public for now but could be `private[glance]`
-  */
-trait RepositoryCompanion[A] {
-  val initQ: ConnectionIO[Unit]
-  val listQ: ConnectionIO[List[A]]
-  def findQ(id: UUID): ConnectionIO[Option[A]]
-  def saveQ(entry: A): ConnectionIO[Unit]
-  def deleteQ(id: UUID): ConnectionIO[Boolean]
-}
-
-object Repository {
-
-  //Is this the best/safest way to expose the Repository classes? Not really....
-  lazy val Survey: Task[SurveyDb] = createSchema.map(_._1)
-  lazy val Response: Task[SurveyResponseDb] = createSchema.map(_._2)
-
-  /** Init method to set up the database */
-  private val createSchema: Task[(SurveyDb, SurveyResponseDb)] = {
-
-    //TODO: Work out if this is even vaguely sane?
-    //Lazy config for memoization?
-    lazy val config = loadConfigOrThrow[Config]
-
-    for {
-      cfg <- Task.delay(config)
-      xa = DriverManagerTransactor[Task](
-        "org.postgresql.Driver",
-        s"jdbc:postgresql:${cfg.database.name}",
-        cfg.database.user,
-        cfg.database.password
-      )
-      sDb = new SurveyDb(xa)
-      rDb = new SurveyResponseDb(xa)
-      _ <- { println("Initialising Survey tables");sDb.init }
-      _ <- { println("Initialising Response tables");rDb.init }
-    } yield (sDb, rDb)
-  }
-}
-
-class SurveyDb private[glance] (xa: Transactor[Task]) extends Repository[Survey, Task] {
+class SurveyDb private[glance] (xa: Transactor[Task]) extends Repository[Survey] {
 
   import SurveyDb._
+
+  type PK = UUID
 
   //TODO: Investigate Sink as a means to neaten this but also get to grips with this fs2/stream stuff
   override val init: Task[Unit] = initQ.transact(xa)
@@ -107,7 +53,7 @@ class SurveyDb private[glance] (xa: Transactor[Task]) extends Repository[Survey,
   override def delete(id: UUID): Task[Boolean] = deleteQ(id).transact(xa)
 }
 
-object SurveyDb extends RepositoryCompanion[Survey] {
+object SurveyDb extends RepositoryCompanion[Survey, SurveyDb] {
 
   implicit val uuidMeta: Meta[UUID] = Meta[String].nxmap(UUID.fromString, _.toString)
 
@@ -115,10 +61,6 @@ object SurveyDb extends RepositoryCompanion[Survey] {
     sql"""
       CREATE TABLE IF NOT EXISTS surveys (
         id VARCHAR(40) PRIMARY KEY
-      );
-
-      CREATE TABLE IF NOT EXISTS students (
-        num VARCHAR(10) PRIMARY KEY
       );
 
       CREATE TABLE IF NOT EXISTS surveys_students (
@@ -191,6 +133,7 @@ object SurveyDb extends RepositoryCompanion[Survey] {
     } yield m
 
     //Next, add students
+    //TODO: Should this be extracted to the StudentDb companion?
     val addStudentSQL =
       """
         INSERT INTO students (num) VALUES (?) ON CONFLICT (num) DO NOTHING;
@@ -269,9 +212,11 @@ object SurveyDb extends RepositoryCompanion[Survey] {
     """.query[(StudentNumber, ModuleCode)].list.map(_.toMap)
 }
 
-class SurveyResponseDb private[glance] (xa: Transactor[Task]) extends Repository[SurveyResponse, Task] {
+class SurveyResponseDb private[glance] (xa: Transactor[Task]) extends Repository[SurveyResponse] {
 
   import SurveyResponseDb._
+
+  override type PK = UUID
 
   override val init: Task[Unit] = initQ.transact(xa)
   override val list: Task[List[SurveyResponse]] = listQ.transact(xa)
@@ -284,7 +229,7 @@ class SurveyResponseDb private[glance] (xa: Transactor[Task]) extends Repository
 
 }
 
-object SurveyResponseDb extends RepositoryCompanion[SurveyResponse] {
+object SurveyResponseDb extends RepositoryCompanion[SurveyResponse, SurveyResponseDb] {
 
   /** Type aliases for Db rows */
   type RespondentRow = (UUID, UUID, String, Instant)

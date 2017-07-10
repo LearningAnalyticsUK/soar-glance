@@ -57,7 +57,7 @@ object StudentDb extends RepositoryCompanion[Student, StudentDb] {
       CREATE TABLE IF NOT EXISTS students(
         num VARCHAR(10) PRIMARY KEY
       );
-      """.update.run.void
+    """.update.run.void
   }
 
   override val listQ: ConnectionIO[List[Student]] = sql"SELECT * FROM students;".query[Student].list

@@ -35,9 +35,6 @@ import uk.ac.ncl.la.soar.{ModuleCode, StudentNumber}
 /**
   * Repository trait which defines the behaviour of a Repository, retrieving objects from a database
   *
-  * Note: The repository is sealed at  the moment for clarity, but should be unsealed and move to a separate file if
-  * this pattern ends up being needed in other places throughout our codebase (which is likely ... its db access).
-  *
   * TODO: Add teardown
   */
 abstract class Repository[A] {

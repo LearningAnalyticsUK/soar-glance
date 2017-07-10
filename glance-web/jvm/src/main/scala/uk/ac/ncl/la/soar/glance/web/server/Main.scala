@@ -22,11 +22,20 @@ import com.twitter.server.TwitterServer
 import com.twitter.util.Await
 import uk.ac.ncl.la.soar.glance.Repository
 import Util._
+import fs2.Task
+import org.flywaydb.core.Flyway
 
 /**
   * Main class for the glance server
   */
 object Main extends TwitterServer {
+
+
+  private def migrate(dbUrl: String, user: String, pass: String) = Task {
+    val flyway = new Flyway()
+    flyway.setDataSource(dbUrl, user, pass)
+    flyway.migrate()
+  }
 
   def main(): Unit = {
     //TODO: Neaten up - perhaps introduce limited point free style to clarify

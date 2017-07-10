@@ -132,6 +132,14 @@ lazy val soarSettings = Seq(
   )
 )
 
+lazy val flywaySettings = Seq(
+  flywayUrl  := "jdbc:postgresql:postgres",
+  flywayUser := "postgres",
+  flywayLocations := Seq(
+    s"filesystem:${baseDirectory.value}/src/main/resources/db/migrations"
+  )
+)
+
 def soarProject(name: String): Project = {
   Project(name, file(name))
     .settings(soarSettings:_*)
@@ -239,6 +247,8 @@ lazy val glanceWeb = soarCrossProject("glance-web", CrossType.Full)
     unmanagedSourceDirectories in Compile += baseDirectory.value / "shared" / "main" / "scala")
   .jvmSettings(commonCirceJVM:_*)
   .jvmSettings(commonServer:_*)
+  .jvmSettings(flywaySettings:_*)
+  .jvmSettings(libraryDependencies += "org.flywaydb" % "flyway-core" % "4.0.3")
   .jsSettings(
     libraryDependencies ++= Seq (
       "com.github.japgolly.scalajs-react" %%% "core"           % "1.0.0",
@@ -261,8 +271,7 @@ lazy val glanceWeb = soarCrossProject("glance-web", CrossType.Full)
       "org.webjars" % "bootstrap" % "3.3.7-1" / "bootstrap.js" minified "bootstrap.min.js" dependsOn "jquery.js",
       "org.webjars" % "datatables" % "1.10.13" / "jquery.dataTables.js" minified "jquery.dataTables.min.js" dependsOn "jquery.js",
       "org.webjars" % "datatables" % "1.10.13" / "dataTables.bootstrap.js" minified "dataTables.bootstrap.min.js" dependsOn "jquery.js",
-      "org.webjars" % "chartjs" % "2.1.3" / "Chart.js" minified "Chart.min.js",
-      "org.webjars" % "bootstrap-select" % "1.12.2" / "bootstrap-select.js" minified "bootstrap-select.min.js" dependsOn "bootstrap.js"
+      "org.webjars" % "chartjs" % "2.1.3" / "Chart.js" minified "Chart.min.js"
     ),
     scalaJSUseMainModuleInitializer := true)
   .jsSettings(commonCirceJS:_*)
@@ -274,20 +283,8 @@ lazy val glanceWebJS = glanceWeb.js
 lazy val glanceWebJVM = glanceWeb.jvm
   .dependsOn(coreJVM, glanceCoreJVM)
   .settings(
-    //Docs (https://github.com/lihaoyi/workbench-example-app/blob/autowire/build.sbt) have the following:
-    //
-    // val exampleJVM = example.jvm.settings(
-    //   (resources in Compile) += {
-    //     (fastOptJS in (exampleJS, Compile)).value
-    //     (artifactPath in (exampleJS, Compile, fastOptJS)).value
-    //   }
-    // )
-    //
-    //What does the artifactPath line do? 
     (resources in Compile) += (fastOptJS in (glanceWebJS, Compile)).value.data,
-    //Do I still need the below now that I figured out the enablePlugins issue? Should be auto detected...
     mainClass in Compile := Some("uk.ac.ncl.la.soar.glance.web.server.Main")
-
   )
   .settings(commonAssembly("uk.ac.ncl.la.soar.glance.web.server.Main", "soar-glance-web.jar"))
 

@@ -8,73 +8,88 @@ import org.scalajs.sbtplugin.cross.{CrossProject, CrossType}
 scalaOrganization in ThisBuild := "org.typelevel"
 scalaVersion in ThisBuild := "2.11.8"
 //TODO: Switch to Typelevel 4 for 2.11.11 when things settle down
-//Should I enable this for all projects like this or only for Cross/JS Projects? Work out.
-enablePlugins(WorkbenchPlugin)
+////Should I enable this for all projects like this or only for Cross/JS Projects? Work out.
+//enablePlugins(WorkbenchPlugin)
+
+/**
+  * Major dependency versions
+  */
 
 /**
   * Build dependencies
   *
   * NOTE: Dependencies which are used by modules which compile/cross-compile to scala.js must be declared using `%%%`
   */
-
-//Separate seqs of dependencies into separate lazy values to convey intent more clearly
-lazy val commonLangFixes = Seq(
+lazy val langFixDeps = Seq(
   libraryDependencies += compilerPlugin("org.spire-math" %% "kind-projector" % "0.9.3"),
-  libraryDependencies += compilerPlugin("org.scalamacros" % "paradise" % "2.1.0" cross CrossVersion.patch)
-)
-
-lazy val langFixes = Seq(
+  libraryDependencies += compilerPlugin("org.scalamacros" % "paradise" % "2.1.0" cross CrossVersion.patch),
   libraryDependencies += "com.github.mpilquist" %%% "simulacrum" % "0.10.0",
   libraryDependencies += "org.typelevel" %%% "machinist" % "0.6.1"
 )
 
-lazy val testingDependencies = Seq(
+lazy val testingDeps = Seq(
   libraryDependencies += "org.scalatest" %%% "scalatest" % "3.0.1" % "test",
   libraryDependencies += "org.scalacheck" %%% "scalacheck" % "1.13.4" % "test",
   libraryDependencies += "org.typelevel" %%% "discipline" % "0.7.2" % "test"
 )
 
-lazy val altStdLib = Seq(
+lazy val altStdLibDeps = Seq(
   libraryDependencies += "org.typelevel" %%% "cats" % "0.9.0",
   libraryDependencies += "co.fs2" %%% "fs2-core" % "0.9.5"
 )
 
-lazy val commonDependencies = commonLangFixes ++ langFixes ++ testingDependencies ++ altStdLib
-
 //Lazy val defining dependencies common to modules containing spark batch jobs
-lazy val commonSparkBatch = Seq(
+lazy val sparkBatchDeps = Seq(
   libraryDependencies += "org.apache.spark" %% "spark-core" % "2.1.0" % "provided",
   libraryDependencies += "org.apache.spark" %% "spark-sql" % "2.1.0",
   libraryDependencies += "org.apache.spark" %% "spark-mllib" % "2.1.0",
   libraryDependencies += "com.github.scopt" %% "scopt" % "3.5.0"
 )
 
-//Lazy vals defining dependencies common to modules containing web servers
-lazy val commonCirce = Seq(
+//Lazy vals defining dependencies common to modules containing web servers/clients
+lazy val circeDeps = Seq(
   libraryDependencies += "io.circe" %%% "circe-generic" % "0.7.0",
   libraryDependencies += "io.circe" %%% "circe-core" % "0.7.0",
   libraryDependencies += "io.circe" %%% "circe-parser" % "0.7.0"
 )
 
-lazy val commonDoobie = Seq(
+lazy val doobieDeps = Seq(
   libraryDependencies += "org.tpolecat" %% "doobie-core-cats" % "0.4.1",
   libraryDependencies += "org.tpolecat" %% "doobie-postgres-cats" % "0.4.1",
   libraryDependencies += "org.tpolecat" %% "doobie-scalatest-cats" % "0.4.1"
 )
 
-lazy val commonServer = Seq(
+lazy val finchDeps = Seq(
   libraryDependencies += "com.github.finagle" %% "finch-core" % "0.14.0",
   libraryDependencies += "com.github.finagle" %% "finch-circe" % "0.14.0",
   libraryDependencies += "com.twitter"        %% "twitter-server" % "1.29.0"
 )
 
-/**
-  * Common helper methods factoring out project definition boilerplate
-  */
+//Lazy vals defining dependencies common to modules containing Javascript front ends
+lazy val scalaJSDeps = Seq(
+  libraryDependencies += "org.scala-js" %%% "scalajs-dom" % "0.9.1",
+  libraryDependencies += "be.doeraene" %%% "scalajs-jquery" % "0.9.1"
+)
 
-//Template of common settings shared by all modules
-//TODO: refactor into JS and JVM settings.
-lazy val soarSettings = Seq(
+lazy val reactJSDeps = Seq(
+  libraryDependencies += "com.github.japgolly.scalajs-react" %%% "core"           % "1.0.0",
+  libraryDependencies += "com.github.japgolly.scalajs-react" %%% "extra"          % "1.0.0",
+  libraryDependencies += "com.github.japgolly.scalajs-react" %%% "ext-cats"       % "1.0.0",
+  libraryDependencies += "io.suzaku"                         %%% "diode"          % "1.1.2",
+  libraryDependencies += "io.suzaku"                         %%% "diode-react"    % "1.1.2",
+  libraryDependencies += "com.github.japgolly.scalacss"      %%% "core"           % "0.5.3",
+  libraryDependencies += "com.github.japgolly.scalacss"      %%% "ext-react"      % "0.5.3"
+)
+
+lazy val commonDeps = langFixDeps ++ testingDeps ++ altStdLibDeps ++ circeDeps
+lazy val commonBackendDeps = doobieDeps ++ finchDeps
+lazy val commonFrontendDeps = scalaJSDeps ++ reactJSDeps
+
+
+/**
+  * Lazy vals containing Seqs of settings which are common to one or more modules build definitions
+  */
+lazy val commonSettings = Seq(
   version := "0.1-SNAPSHOT",
   organization := "uk.ac.ncl.la",
   resolvers ++= Seq(
@@ -82,8 +97,6 @@ lazy val soarSettings = Seq(
     Resolver.sonatypeRepo("snapshots"),
     "Twitter Maven" at "http://maven.twttr.com"
   ),
-  fork in test := true,
-  parallelExecution in Test := false,
   scalacOptions ++= Seq(
     "-deprecation",
     "-encoding", "UTF-8",
@@ -94,14 +107,23 @@ lazy val soarSettings = Seq(
     "-language:experimental.macros",
     "-unchecked",
     "-Xfatal-warnings",
-    "-Xlint",
-    "-Yno-adapted-args",
-    "-Ywarn-dead-code",
-    "-Ywarn-numeric-widen",
-    "-Ywarn-value-discard",
-    "-Ypartial-unification",
-    "-Xfuture"
+  "-Xlint",
+  "-Yno-adapted-args",
+  "-Ywarn-dead-code",
+  "-Ywarn-numeric-widen",
+  "-Ywarn-value-discard",
+  "-Ypartial-unification",
+  "-Xfuture"
   )
+)
+
+lazy val soarSettings = commonSettings ++ Seq(
+  fork in test := true,
+  parallelExecution in Test := false
+)
+
+lazy val soarJSSettings = commonSettings ++ Seq(
+  parallelExecution := false
 )
 
 lazy val flywaySettings = Seq(
@@ -112,17 +134,20 @@ lazy val flywaySettings = Seq(
   )
 )
 
+/**
+  * Common helper methods factoring out project definition boilerplate
+  */
 def soarProject(name: String): Project = {
   Project(name, file(name))
     .settings(soarSettings:_*)
-    .settings(commonDependencies:_*)
+    .settings(commonDeps:_*)
 }
 
 def soarCrossProject(name: String, tpe: CrossType): CrossProject = {
   CrossProject(name, file(name), tpe)
-    .settings(soarSettings:_*)
-    .jvmSettings(commonDependencies:_*)
-    .jsSettings(commonDependencies:_*)
+    .jvmSettings(soarSettings:_*)
+    .jsSettings(soarJSSettings:_*)
+    .settings(commonDeps:_*)
 //    .settings(
 //      //Work around for https://github.com/scala-js/scala-js/pull/2954
 //      // Remove the dependency on the scalajs-compiler
@@ -166,7 +191,6 @@ def commonAssembly(main: String, jar: String) = Seq(
 /**
   * Definition of modules
   */
-
 //Core module of the project - any commonly depended code will be placed here.
 lazy val core = soarCrossProject("core", CrossType.Pure)
   .settings(name := "Soar Core", moduleName := "soar-core")
@@ -182,7 +206,7 @@ lazy val model = soarProject("model")
     moduleName := "soar-model",
     libraryDependencies += "com.jsuereth" %% "scala-arm" % "2.0",
     commonAssembly("uk.ac.ncl.la.soar.model.ScorePredictor", "model.jar"))
-  .settings(commonSparkBatch:_*)
+  .settings(sparkBatchDeps:_*)
 
 //Module which contains code for the empirical evaluation of Soar, and an explanation of its methodology
 lazy val glanceCore = soarCrossProject("glance-core", CrossType.Full)
@@ -191,15 +215,12 @@ lazy val glanceCore = soarCrossProject("glance-core", CrossType.Full)
     name := "Soar Glance Core",
     moduleName := "soar-glance-core",
     unmanagedSourceDirectories in Compile += baseDirectory.value / "shared" / "main" / "scala")
-  .jvmSettings(commonDoobie:_*)
-  .jvmSettings(commonCirce:_*)
+  .jvmSettings(doobieDeps:_*)
   .jvmSettings(libraryDependencies += "com.github.pureconfig" %% "pureconfig" % "0.7.0")
-  .jsSettings(commonCirce:_*)
 
 lazy val glanceCoreJS = glanceCore.js
 lazy val glanceCoreJVM = glanceCore.jvm
 
-//Also JVM only module. Depend on coreJVM and glanceJVM?
 //TODO: Investigate intermittent heap space OOM error on assembly of this module
 lazy val glanceCli = soarProject("glance-cli")
   .dependsOn(coreJVM, glanceCoreJVM)
@@ -208,7 +229,7 @@ lazy val glanceCli = soarProject("glance-cli")
     moduleName := "soar-glance-cli",
     libraryDependencies += "com.jsuereth" %% "scala-arm" % "2.0",
     commonAssembly("uk.ac.ncl.la.soar.glance.cli.Main", "soar-glance-cli.jar"))
-  .settings(commonSparkBatch:_*)
+  .settings(sparkBatchDeps:_*)
 
 //TODO: Fix this so that the js/jvm dependencies are separate and I can build a proper server jar
 
@@ -217,24 +238,15 @@ lazy val glanceWeb = soarCrossProject("glance-web", CrossType.Full)
     name := "Soar Glance Web",
     moduleName := "soar-glance-web",
     unmanagedSourceDirectories in Compile += baseDirectory.value / "shared" / "main" / "scala")
-  .jvmSettings(commonCirce:_*)
-  .jvmSettings(commonServer:_*)
+  .jvmSettings(commonBackendDeps:_*)
   .jvmSettings(flywaySettings:_*)
   .jvmSettings(libraryDependencies += "org.flywaydb" % "flyway-core" % "4.0.3")
+  .jsSettings(commonFrontendDeps:_*)
   .jsSettings(
     libraryDependencies ++= Seq (
-      "com.github.japgolly.scalajs-react" %%% "core"           % "1.0.0",
-      "com.github.japgolly.scalajs-react" %%% "extra"          % "1.0.0",
-      "com.github.japgolly.scalajs-react" %%% "ext-cats"       % "1.0.0",
-      "org.scala-js"                      %%% "scalajs-dom"    % "0.9.1",
-      "org.singlespaced"                  %%% "scalajs-d3"     % "0.3.4",
-      "be.doeraene"                       %%% "scalajs-jquery" % "0.9.1",
-      "io.suzaku"                         %%% "diode"          % "1.1.2",
-      "io.suzaku"                         %%% "diode-react"    % "1.1.2",
-      "com.github.japgolly.scalacss"      %%% "core"           % "0.5.3",
-      "com.github.japgolly.scalacss"      %%% "ext-react"      % "0.5.3",
-      "org.webjars"                       %   "bootstrap"      % "3.3.7-1", //What is the point of having this dependency here?
-      "org.webjars"                       %   "datatables"     % "1.10.13"
+      //What is the point of having these dependencies in libraryDependencies?
+      "org.webjars" %   "bootstrap"  % "3.3.7-1",
+      "org.webjars" %   "datatables" % "1.10.13"
     ),
     jsDependencies ++= Seq(
       "org.webjars.bower" % "react" % "15.5.4" / "react-with-addons.js" minified "react-with-addons.min.js",
@@ -246,8 +258,8 @@ lazy val glanceWeb = soarCrossProject("glance-web", CrossType.Full)
       "org.webjars" % "chartjs" % "2.1.3" / "Chart.js" minified "Chart.min.js"
     ),
     scalaJSUseMainModuleInitializer := true)
-  .jsSettings(commonCirce:_*)
   .enablePlugins(SbtWeb)
+  .enablePlugins(WorkbenchPlugin)
 
 lazy val glanceWebJS = glanceWeb.js
   .dependsOn(coreJS, glanceCoreJS)
@@ -256,11 +268,13 @@ lazy val glanceWebJVM = glanceWeb.jvm
   .dependsOn(coreJVM, glanceCoreJVM)
   .settings(
     (resources in Compile) += (fastOptJS in (glanceWebJS, Compile)).value.data,
-    mainClass in Compile := Some("uk.ac.ncl.la.soar.glance.web.server.Main")
-  )
+    mainClass in Compile := Some("uk.ac.ncl.la.soar.glance.web.server.Main"))
   .settings(commonAssembly("uk.ac.ncl.la.soar.glance.web.server.Main", "soar-glance-web.jar"))
 
-//Add some command aliases for testing/compiling all modules, rather than aggregating tasks from root indiscriminately
+/**
+  * Command Aliases to make using this sbt project from the console a little more palatable
+  */
 addCommandAlias("testAll", "; core/test; model/test; glance-core/test")
-addCommandAlias("compileAll", ";core/compile; model/compile; glance-core/compile")
+addCommandAlias("compileAll", ";coreJS/compile; coreJVM/compile; model/compile; glance-cli/compile; " +
+  "glance-coreJS/compile; glance-coreJVM/compile; glance-webJS/compile; glance-webJVM/compile")
 addCommandAlias("cleanGlance", "; coreJVM/clean; glance-coreJVM/clean; glance-webJVM/clean")

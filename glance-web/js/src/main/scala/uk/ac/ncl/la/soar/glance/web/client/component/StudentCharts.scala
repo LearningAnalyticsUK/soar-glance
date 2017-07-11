@@ -24,8 +24,6 @@ import diode.react.ReactPot._
 import diode.react._
 import japgolly.scalajs.react._
 import japgolly.scalajs.react.vdom.html_<^._
-import org.singlespaced.d3js.Ops._
-import org.singlespaced.d3js.d3
 import uk.ac.ncl.la.soar.ModuleCode
 import uk.ac.ncl.la.soar.data.StudentRecords
 import uk.ac.ncl.la.soar.glance.Survey

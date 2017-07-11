@@ -46,7 +46,7 @@ object ModuleDb extends RepositoryCompanion[Module, ModuleDb] {
       CREATE TABLE IF NOT EXISTS modules(
         code VARCHAR(8) PRIMARY KEY
       );
-    """.update.run.void
+    """.update.run.map(_ => ())
   }
 
   override val listQ: ConnectionIO[List[Module]] = sql"SELECT * FROM modules;".query[Module].list
@@ -55,7 +55,7 @@ object ModuleDb extends RepositoryCompanion[Module, ModuleDb] {
     sql"SELECT * FROM modules m WHERE m.code = $id;".query[Module].option
 
   override def saveQ(entry: Module): ConnectionIO[Unit] =
-    sql"INSERT INTO modules (code) VALUES (${entry.code});".update.run.void
+    sql"INSERT INTO modules (code) VALUES (${entry.code});".update.run.map(_ => ())
 
   override def deleteQ(id: ModuleCode): ConnectionIO[Boolean] =
     sql"DELETE FROM modules m WHERE m.code = $id;".update.run.map(_ > 0)

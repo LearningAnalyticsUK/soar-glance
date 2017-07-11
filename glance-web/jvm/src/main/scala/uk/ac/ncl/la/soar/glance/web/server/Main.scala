@@ -31,11 +31,11 @@ import org.flywaydb.core.Flyway
 object Main extends TwitterServer {
 
 
-  private def migrate(dbUrl: String, user: String, pass: String) = Task {
-    val flyway = new Flyway()
-    flyway.setDataSource(dbUrl, user, pass)
-    flyway.migrate()
-  }
+//  private def migrate(dbUrl: String, user: String, pass: String) = Task {
+//    val flyway = new Flyway()
+//    flyway.setDataSource(dbUrl, user, pass)
+//    flyway.migrate()
+//  }
 
   def main(): Unit = {
     //TODO: Neaten up - perhaps introduce limited point free style to clarify

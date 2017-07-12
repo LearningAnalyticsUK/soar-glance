@@ -17,9 +17,13 @@
   */
 package uk.ac.ncl.la.soar.glance.cli
 
-import org.apache.log4j.{LogManager, Level}
+import org.apache.log4j.{Level, LogManager}
 import cats._
 import cats.implicits._
+import monix.eval.Task
+import monix.cats._
+import monix.execution.Scheduler.Implicits.global
+import scala.util.{Failure, Success}
 
 /** Entry point to the Cli version of the Evaluation program
   *
@@ -33,24 +37,26 @@ object Main {
     log.setLevel(Level.WARN)
 
     //Bring in Args - pass to Config factory
-    val conf = CommandConfig(args).toRight {
-      throw new IllegalArgumentException("Failed to parse command line arguments! " +
-        "Format: ./submit.sh [command] --options")
-    }
+    val conf = CommandConfig(args).fold(
+      Task.raiseError[CommandConfig](
+        new IllegalArgumentException("Failed to parse command line arguments! " +
+          "Format: ./submit.sh [command] --options"))
+    )(Task.now)
 
     //TODO: Fix the horrible pattern match anon function below. Uses type annotations....
     conf.flatMap {
-      case a: GeneratorConfig => Generator.run(a).unsafeAttemptRun()
-      case a: AssessorConfig => Assessor.run(a).unsafeAttemptRun()
-    } match {
-      case Left(e) =>
+      case a: GeneratorConfig => Generator.run(a)
+      case a: AssessorConfig => Assessor.run(a)
+    } runOnComplete {
+      case Failure(e) =>
         //In the event of an error, log and crash out.
         System.err.println(e.toString)
         sys.exit(1)
-      case Right(_) =>
+      case Success(_) =>
         //In the event of a successful job, log and finish
         println("Job finished.")
     }
+    ()
   }
 
 }

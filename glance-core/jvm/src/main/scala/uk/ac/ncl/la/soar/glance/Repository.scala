@@ -17,20 +17,15 @@
   */
 package uk.ac.ncl.la.soar.glance
 
-import java.util.UUID
-import java.time.{Instant, LocalDateTime}
-
 import cats._
-import cats.data.OptionT
 import cats.implicits._
 import doobie.imports._
-import fs2._
-import fs2.interop.cats._
-import scala.concurrent.ExecutionContext.Implicits.global
-import com.typesafe.config.ConfigFactory.parseString
+import monix.eval.Task
+import monix.cats._
+import monix.execution.Scheduler.Implicits.global
 import pureconfig.loadConfigOrThrow
-import uk.ac.ncl.la.soar.data.{ModuleScore, StudentRecords}
-import uk.ac.ncl.la.soar.{ModuleCode, StudentNumber}
+import org.flywaydb.core.Flyway
+import Implicits._
 
 /**
   * Repository trait which defines the behaviour of a Repository, retrieving objects from a database
@@ -69,6 +64,13 @@ object Repository {
   lazy val Survey: Task[SurveyDb] = createSchema.map(_._2)
   lazy val Response: Task[SurveyResponseDb] = createSchema.map(_._3)
 
+  /** Method to perform db migrations */
+  private def migrate(dbUrl: String, user: String, pass: String) = Task {
+    val flyway = new Flyway()
+    flyway.setDataSource(dbUrl, user, pass)
+    flyway.migrate()
+  }
+
   /** Init method to set up the database */
   private val createSchema: Task[(StudentDb, SurveyDb, SurveyResponseDb)] = {
 
@@ -77,7 +79,12 @@ object Repository {
     lazy val config = loadConfigOrThrow[Config]
 
     for {
-      cfg <- Task.delay(config)
+      cfg <- Task(config)
+      _ <- migrate(
+        s"jdbc:postgresql:${cfg.database.name}",
+        cfg.database.user,
+        cfg.database.password
+      )
       xa = DriverManagerTransactor[Task](
         "org.postgresql.Driver",
         s"jdbc:postgresql:${cfg.database.name}",
@@ -85,9 +92,11 @@ object Repository {
         cfg.database.password
       )
       stDb = new StudentDb(xa)
+      mDb = new ModuleDb(xa)
       sDb = new SurveyDb(xa)
       rDb = new SurveyResponseDb(xa)
       - <- { println("Initialising Student tables");stDb.init }
+      _ <- { prinln("Initialising Module tables"); mDb.init }
       _ <- { println("Initialising Survey tables");sDb.init }
       _ <- { println("Initialising Response tables");rDb.init }
     } yield (stDb, sDb, rDb)

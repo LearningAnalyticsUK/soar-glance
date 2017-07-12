@@ -18,9 +18,11 @@
 package uk.ac.ncl.la.soar.glance
 
 import doobie.imports._
-import fs2._
+import monix.eval.Task
+import monix.cats._
 import uk.ac.ncl.la.soar.ModuleCode
 import uk.ac.ncl.la.soar.data.Module
+import Implicits._
 
 class ModuleDb private[glance] (xa: Transactor[Task]) extends Repository[Module] {
 

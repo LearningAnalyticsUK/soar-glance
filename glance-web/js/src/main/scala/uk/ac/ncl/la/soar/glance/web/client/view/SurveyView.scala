@@ -83,6 +83,7 @@ object SurveyView {
         case "stage-1" => "CSC1026"
         case "stage-2" => "CSC2026"
         case "stage-3" => "CSC3723"
+        case _ => "CSC3723"
       }
       bs.modState { st =>
         val delta = st.selected.map { records =>

@@ -6,15 +6,29 @@ import org.scalajs.sbtplugin.cross.{CrossProject, CrossType}
   */
 //Use the typelevel compiler for extra goodies
 scalaOrganization in ThisBuild := "org.typelevel"
-scalaVersion in ThisBuild := "2.11.8"
-//TODO: Switch to Typelevel 4 for 2.11.11 when things settle down
-////Should I enable this for all projects like this or only for Cross/JS Projects? Work out.
-//enablePlugins(WorkbenchPlugin)
+scalaVersion in ThisBuild := "2.11.11-bin-typelevel-4"
+//TODO: Switch to Typelevel 4 for 2.11.11 when things settle down re: ScalaJS
 
 /**
-  * Major dependency versions
+  * Repeated scala dependency versions
   */
+lazy val catsVersion = "0.9.0"
+lazy val monixVersion = "2.3.0"
+lazy val sparkVersion = "2.1.0"
+lazy val circeVersion = "0.7.0"
+lazy val doobieVersion = "0.4.1"
+lazy val finagleVersion = "0.14.0"
+lazy val sjsExtVersion = "0.9.1"
+lazy val sjsReactVersion = "1.0.0"
+lazy val diodeVersion = "1.1.2"
+lazy val scalaCSSVersion = "0.5.3"
 
+/**
+  * Repeated js dependency versions
+  */
+lazy val reactVersion = "15.5.4"
+lazy val datatablesVersion = "1.10.13"
+lazy val bootstrapVersion = "3.3.7-1"
 
 /**
   * Build dependencies
@@ -22,66 +36,75 @@ scalaVersion in ThisBuild := "2.11.8"
   * NOTE: Dependencies which are used by modules which compile/cross-compile to scala.js must be declared using `%%%`
   */
 lazy val langFixDeps = Seq(
-  libraryDependencies += compilerPlugin("org.spire-math" %% "kind-projector" % "0.9.3"),
-  libraryDependencies += compilerPlugin("org.scalamacros" % "paradise" % "2.1.0" cross CrossVersion.patch),
-  libraryDependencies += "com.github.mpilquist" %%% "simulacrum" % "0.10.0",
-  libraryDependencies += "org.typelevel" %%% "machinist" % "0.6.1"
+  libraryDependencies ++= Seq(
+    compilerPlugin("org.spire-math" %% "kind-projector" % "0.9.3"),
+    compilerPlugin("org.scalamacros" % "paradise" % "2.1.0" cross CrossVersion.patch),
+    "com.github.mpilquist" %%% "simulacrum" % "0.10.0",
+    "org.typelevel" %%% "machinist" % "0.6.1")
 )
 
 lazy val testingDeps = Seq(
-  libraryDependencies += "org.scalatest" %%% "scalatest" % "3.0.1" % "test",
-  libraryDependencies += "org.scalacheck" %%% "scalacheck" % "1.13.4" % "test",
-  libraryDependencies += "org.typelevel" %%% "discipline" % "0.7.2" % "test"
+  libraryDependencies ++= Seq(
+    "org.scalatest" %%% "scalatest" % "3.0.1" % "test",
+    "org.scalacheck" %%% "scalacheck" % "1.13.4" % "test",
+    "org.typelevel" %%% "discipline" % "0.7.2" % "test")
 )
 
 lazy val altStdLibDeps = Seq(
-  libraryDependencies += "org.typelevel" %%% "cats" % "0.9.0",
-  libraryDependencies += "io.monix" %%% "monix-eval" % "2.3.0",
-  libraryDependencies += "io.monix" %%% "monix-cats" % "2.3.0"
+  libraryDependencies ++= Seq(
+    "org.typelevel" %%% "cats" % catsVersion,
+    "io.monix" %%% "monix-eval" % monixVersion,
+    "io.monix" %%% "monix-cats" % monixVersion)
 )
 
 //Lazy val defining dependencies common to modules containing spark batch jobs
 lazy val sparkBatchDeps = Seq(
-  libraryDependencies += "org.apache.spark" %% "spark-core" % "2.1.0" % "provided",
-  libraryDependencies += "org.apache.spark" %% "spark-sql" % "2.1.0",
-  libraryDependencies += "org.apache.spark" %% "spark-mllib" % "2.1.0",
-  libraryDependencies += "com.github.scopt" %% "scopt" % "3.5.0"
+  libraryDependencies ++= Seq(
+    "org.apache.spark" %% "spark-core" % sparkVersion % "provided",
+    "org.apache.spark" %% "spark-sql" % sparkVersion,
+    "org.apache.spark" %% "spark-mllib" % sparkVersion,
+    "com.github.scopt" %% "scopt" % "3.5.0")
 )
 
 //Lazy vals defining dependencies common to modules containing web servers/clients
 lazy val circeDeps = Seq(
-  libraryDependencies += "io.circe" %%% "circe-generic" % "0.7.0",
-  libraryDependencies += "io.circe" %%% "circe-core" % "0.7.0",
-  libraryDependencies += "io.circe" %%% "circe-parser" % "0.7.0"
+  libraryDependencies ++= Seq(
+    "io.circe" %%% "circe-generic" % circeVersion,
+    "io.circe" %%% "circe-core" % circeVersion,
+    "io.circe" %%% "circe-parser" % circeVersion)
 )
 
 lazy val doobieDeps = Seq(
-  libraryDependencies += "org.tpolecat" %% "doobie-core-cats" % "0.4.1",
-  libraryDependencies += "org.tpolecat" %% "doobie-postgres-cats" % "0.4.1",
-  libraryDependencies += "org.tpolecat" %% "doobie-scalatest-cats" % "0.4.1"
+  libraryDependencies ++= Seq(
+    "org.tpolecat" %% "doobie-core-cats" % doobieVersion,
+    "org.tpolecat" %% "doobie-postgres-cats" % doobieVersion,
+    "org.tpolecat" %% "doobie-scalatest-cats" % doobieVersion)
 )
 
 lazy val finchDeps = Seq(
-  libraryDependencies += "com.github.finagle" %% "finch-core" % "0.14.0",
-  libraryDependencies += "com.github.finagle" %% "finch-circe" % "0.14.0",
-  libraryDependencies += "com.twitter"        %% "twitter-server" % "1.29.0"
+  libraryDependencies ++= Seq(
+    "com.github.finagle" %% "finch-core" % finagleVersion,
+    "com.github.finagle" %% "finch-circe" % finagleVersion,
+    "com.twitter"        %% "twitter-server" % "1.29.0")
 )
 
 //Lazy vals defining dependencies common to modules containing Javascript front ends
 //TODO: Add jsDependencies commands to the below vals
 lazy val scalaJSDeps = Seq(
-  libraryDependencies += "org.scala-js" %%% "scalajs-dom" % "0.9.1",
-  libraryDependencies += "be.doeraene" %%% "scalajs-jquery" % "0.9.1"
+  libraryDependencies ++= Seq(
+    "org.scala-js" %%% "scalajs-dom" % sjsExtVersion,
+    "be.doeraene" %%% "scalajs-jquery" % sjsExtVersion)
 )
 
 lazy val reactJSDeps = Seq(
-  libraryDependencies += "com.github.japgolly.scalajs-react" %%% "core"           % "1.0.0",
-  libraryDependencies += "com.github.japgolly.scalajs-react" %%% "extra"          % "1.0.0",
-  libraryDependencies += "com.github.japgolly.scalajs-react" %%% "ext-cats"       % "1.0.0",
-  libraryDependencies += "io.suzaku"                         %%% "diode"          % "1.1.2",
-  libraryDependencies += "io.suzaku"                         %%% "diode-react"    % "1.1.2",
-  libraryDependencies += "com.github.japgolly.scalacss"      %%% "core"           % "0.5.3",
-  libraryDependencies += "com.github.japgolly.scalacss"      %%% "ext-react"      % "0.5.3"
+  libraryDependencies ++= Seq(
+    "com.github.japgolly.scalajs-react" %%% "core"           % sjsReactVersion,
+    "com.github.japgolly.scalajs-react" %%% "extra"          % sjsReactVersion,
+    "com.github.japgolly.scalajs-react" %%% "ext-cats"       % sjsReactVersion,
+    "io.suzaku"                         %%% "diode"          % diodeVersion,
+    "io.suzaku"                         %%% "diode-react"    % diodeVersion,
+    "com.github.japgolly.scalacss"      %%% "core"           % scalaCSSVersion,
+    "com.github.japgolly.scalacss"      %%% "ext-react"      % scalaCSSVersion)
 )
 
 lazy val commonDeps = langFixDeps ++ testingDeps ++ altStdLibDeps ++ circeDeps
@@ -110,13 +133,13 @@ lazy val commonSettings = Seq(
     "-language:experimental.macros",
     "-unchecked",
     "-Xfatal-warnings",
-  "-Xlint",
-  "-Yno-adapted-args",
-  "-Ywarn-dead-code",
-  "-Ywarn-numeric-widen",
-  "-Ywarn-value-discard",
-  "-Ypartial-unification",
-  "-Xfuture"
+    "-Xlint",
+    "-Yno-adapted-args",
+    "-Ywarn-dead-code",
+    "-Ywarn-numeric-widen",
+    "-Ywarn-value-discard",
+    "-Ypartial-unification",
+    "-Xfuture"
   )
 )
 
@@ -137,6 +160,14 @@ lazy val flywaySettings = Seq(
   )
 )
 
+lazy val sjsCrossVersionPatch = Seq(
+  //Work around for https://github.com/scala-js/scala-js/pull/2954
+  // Remove the dependency on the scalajs-compiler
+  libraryDependencies := libraryDependencies.value.filterNot(_.name == "scalajs-compiler"),
+  // And add a custom one
+  libraryDependencies += compilerPlugin("org.scala-js" % "scalajs-compiler" % "0.6.18" cross CrossVersion.patch)
+)
+
 /**
   * Common helper methods factoring out project definition boilerplate
   */
@@ -147,17 +178,26 @@ def soarProject(name: String): Project = {
 }
 
 def soarCrossProject(name: String, tpe: CrossType): CrossProject = {
-  CrossProject(name, file(name), tpe)
+//  val sjsCrossVersionPatch = Seq(
+//    //Work around for https://github.com/scala-js/scala-js/pull/2954
+//    // Remove the dependency on the scalajs-compiler
+//    libraryDependencies := libraryDependencies.value.filterNot(_.name == "scalajs-compiler"),
+//    // And add a custom one
+//    libraryDependencies += compilerPlugin("org.scala-js" % "scalajs-compiler" % "0.6.18" cross CrossVersion.patch)
+//  )
+
+  val proj = CrossProject(name, file(name), tpe)
     .jvmSettings(soarSettings:_*)
     .jsSettings(soarJSSettings:_*)
     .settings(commonDeps:_*)
-//    .settings(
-//      //Work around for https://github.com/scala-js/scala-js/pull/2954
-//      // Remove the dependency on the scalajs-compiler
-//      libraryDependencies := libraryDependencies.value.filterNot(_.name == "scalajs-compiler"),
-//      // And add a custom one
-//      libraryDependencies += compilerPlugin("org.scala-js" % "scalajs-compiler" % "0.6.16" cross CrossVersion.patch)
-//    )
+
+//  //Below is required because pure projects freak out if you mess with the sjs compiler, no idea why
+//  tpe match {
+//    case CrossType.Pure => proj.jsSettings(sjsCrossVersionPatch:_*)
+//    case CrossType.Full => proj.settings(sjsCrossVersionPatch:_*)
+//    case _ => proj
+//  }
+  proj
 }
 
 //Method defining common merge strategy for duplicate files when constructing executable jars using assembly
@@ -197,6 +237,7 @@ def commonAssembly(main: String, jar: String) = Seq(
 //Core module of the project - any commonly depended code will be placed here.
 lazy val core = soarCrossProject("core", CrossType.Pure)
   .settings(name := "Soar Core", moduleName := "soar-core")
+  .jsSettings(sjsCrossVersionPatch:_*)
 
 lazy val coreJS = core.js
 lazy val coreJVM = core.jvm
@@ -219,7 +260,13 @@ lazy val glanceCore = soarCrossProject("glance-core", CrossType.Full)
     moduleName := "soar-glance-core",
     unmanagedSourceDirectories in Compile += baseDirectory.value / "shared" / "main" / "scala")
   .jvmSettings(doobieDeps:_*)
-  .jvmSettings(libraryDependencies += "com.github.pureconfig" %% "pureconfig" % "0.7.0")
+  .jvmSettings(flywaySettings:_*)
+  .jvmSettings(
+    libraryDependencies ++= Seq(
+      "org.flywaydb" % "flyway-core" % "4.0.3",
+      "com.github.pureconfig" %% "pureconfig" % "0.7.0")
+  )
+  .jsSettings(sjsCrossVersionPatch:_*)
 
 lazy val glanceCoreJS = glanceCore.js
 lazy val glanceCoreJVM = glanceCore.jvm
@@ -241,23 +288,22 @@ lazy val glanceWeb = soarCrossProject("glance-web", CrossType.Full)
     name := "Soar Glance Web",
     moduleName := "soar-glance-web",
     unmanagedSourceDirectories in Compile += baseDirectory.value / "shared" / "main" / "scala")
+  .settings(sjsCrossVersionPatch:_*)
   .jvmSettings(commonBackendDeps:_*)
-  .jvmSettings(flywaySettings:_*)
-  .jvmSettings(libraryDependencies += "org.flywaydb" % "flyway-core" % "4.0.3")
   .jsSettings(commonFrontendDeps:_*)
   .jsSettings(
     libraryDependencies ++= Seq (
       //What is the point of having these dependencies in libraryDependencies?
-      "org.webjars" %   "bootstrap"  % "3.3.7-1",
-      "org.webjars" %   "datatables" % "1.10.13"
+      "org.webjars" %   "bootstrap"  % bootstrapVersion,
+      "org.webjars" %   "datatables" % datatablesVersion
     ),
     jsDependencies ++= Seq(
-      "org.webjars.bower" % "react" % "15.5.4" / "react-with-addons.js" minified "react-with-addons.min.js",
-      "org.webjars.bower" % "react" % "15.5.4" / "react-dom.js" minified "react-dom.min.js" dependsOn "react-with-addons.js",
+      "org.webjars.bower" % "react" % reactVersion / "react-with-addons.js" minified "react-with-addons.min.js",
+      "org.webjars.bower" % "react" % reactVersion / "react-dom.js" minified "react-dom.min.js" dependsOn "react-with-addons.js",
       "org.webjars" % "jquery" % "1.11.1" / "jquery.js" minified "jquery.min.js",
-      "org.webjars" % "bootstrap" % "3.3.7-1" / "bootstrap.js" minified "bootstrap.min.js" dependsOn "jquery.js",
-      "org.webjars" % "datatables" % "1.10.13" / "jquery.dataTables.js" minified "jquery.dataTables.min.js" dependsOn "jquery.js",
-      "org.webjars" % "datatables" % "1.10.13" / "dataTables.bootstrap.js" minified "dataTables.bootstrap.min.js" dependsOn "jquery.js",
+      "org.webjars" % "bootstrap" % bootstrapVersion / "bootstrap.js" minified "bootstrap.min.js" dependsOn "jquery.js",
+      "org.webjars" % "datatables" % datatablesVersion / "jquery.dataTables.js" minified "jquery.dataTables.min.js" dependsOn "jquery.js",
+      "org.webjars" % "datatables" % datatablesVersion / "dataTables.bootstrap.js" minified "dataTables.bootstrap.min.js" dependsOn "jquery.js",
       "org.webjars" % "chartjs" % "2.1.3" / "Chart.js" minified "Chart.min.js"
     ),
     scalaJSUseMainModuleInitializer := true)

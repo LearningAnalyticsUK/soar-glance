@@ -24,14 +24,14 @@ import cats._
 import cats.data.OptionT
 import cats.implicits._
 import doobie.imports._
-import fs2._
-import fs2.interop.cats._
-
+import monix.eval.Task
+import monix.cats._
 import scala.concurrent.ExecutionContext.Implicits.global
 import com.typesafe.config.ConfigFactory.parseString
 import pureconfig.loadConfigOrThrow
 import uk.ac.ncl.la.soar.data.{ModuleScore, Student, StudentRecords}
 import uk.ac.ncl.la.soar.{ModuleCode, StudentNumber}
+import Implicits._
 
 class StudentDb private[glance] (xa: Transactor[Task]) extends Repository[Student] {
 
@@ -51,7 +51,8 @@ class StudentDb private[glance] (xa: Transactor[Task]) extends Repository[Studen
 }
 
 object StudentDb extends RepositoryCompanion[Student, StudentDb] {
-  
+
+  //TODO, remove unnecessary DDL now that we use Flyway for migrations
   override val initQ: ConnectionIO[Unit] = {
     sql"""
       CREATE TABLE IF NOT EXISTS students(

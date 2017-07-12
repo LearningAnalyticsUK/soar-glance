@@ -18,8 +18,11 @@
 package uk.ac.ncl.la.soar.glance.web.server
 
 import com.twitter.util.{Future, Promise}
-import fs2.Task
+import monix.eval.Task
+import monix.execution.Scheduler.Implicits.global
 import io.finch.Endpoint
+
+import scala.util.{Failure, Success}
 
 /**
   * Collection of utilities to help with creating REST apis with [[http://finch.io]]
@@ -34,9 +37,9 @@ trait Util {
   implicit class TaskOps[A](task: Task[A]) {
     def toFuture: Future[A] = {
       val promise = Promise[A]
-      task.unsafeRunAsync {
-        case Left(err) => promise.setException(err)
-        case Right(ans) => promise.setValue(ans)
+      task.runOnComplete {
+        case Failure(err) => promise.setException(err)
+        case Success(ans) => promise.setValue(ans)
       }
       promise
     }

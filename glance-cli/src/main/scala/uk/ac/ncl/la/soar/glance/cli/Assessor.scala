@@ -19,7 +19,8 @@ package uk.ac.ncl.la.soar.glance.cli
 
 import cats._
 import cats.implicits._
-import fs2.Task
+import monix.eval.Task
+import monix.cats._
 import uk.ac.ncl.la.soar.{ModuleCode, StudentNumber}
 import uk.ac.ncl.la.soar.data.{ModuleScore, Records, StudentRecords}
 import uk.ac.ncl.la.soar.glance.Survey

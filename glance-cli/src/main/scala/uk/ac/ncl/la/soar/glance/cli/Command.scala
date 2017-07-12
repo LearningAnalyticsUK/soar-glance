@@ -18,7 +18,8 @@
 package uk.ac.ncl.la.soar.glance.cli
 
 import cats.MonadError
-import fs2.Task
+import monix.eval.Task
+import monix.cats._
 
 /**
   * Non-sealed trait which defines a structure for creating cli commands.

@@ -15,6 +15,7 @@ scalaVersion in ThisBuild := "2.11.8"
   * Major dependency versions
   */
 
+
 /**
   * Build dependencies
   *
@@ -66,6 +67,7 @@ lazy val finchDeps = Seq(
 )
 
 //Lazy vals defining dependencies common to modules containing Javascript front ends
+//TODO: Add jsDependencies commands to the below vals
 lazy val scalaJSDeps = Seq(
   libraryDependencies += "org.scala-js" %%% "scalajs-dom" % "0.9.1",
   libraryDependencies += "be.doeraene" %%% "scalajs-jquery" % "0.9.1"

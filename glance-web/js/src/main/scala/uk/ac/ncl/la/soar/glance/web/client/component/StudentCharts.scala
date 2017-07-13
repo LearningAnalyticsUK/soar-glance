@@ -58,7 +58,7 @@ object StudentCharts {
   case class Props(student: Option[StudentRecords[SortedMap, ModuleCode, Double]],
                    filterChoices: NonEmptyVector[Select.Choice[Filter]] = options)
 
-  case class State(selectedFilter: Option[Select.Choice[Filter]])
+  case class State(selectedFilters: Set[Select.Choice[Filter]])
 
   class Backend(bs: BackendScope[Props, State]) {
 
@@ -69,13 +69,13 @@ object StudentCharts {
         ^.id := "detailed",
         p.student.fold[TagMod](<.p(^.className := "chart-placedholder", "Click on a student")) { student =>
           List(
-            drawBars(filtered(student, s.selectedFilter)),
-            drawLines(filtered(student, s.selectedFilter)),
+            drawBars(filtered(student, s.selectedFilters)),
+            drawLines(filtered(student, s.selectedFilters)),
             <.div(
               ^.className := "chart-controls",
               <.div(
                 ^.className := "row",
-                drawFilters(p.filterChoices, s.selectedFilter)
+                drawFilters(p.filterChoices, s.selectedFilters)
               )
             )
           ).toTagMod
@@ -86,8 +86,15 @@ object StudentCharts {
 
     /** Filter Student Records */
     private def filtered(records: StudentRecords[SortedMap, ModuleCode, Double],
-                         filter: Option[Select.Choice[Filter]]) =
-      filter.fold(records.record)(choice => records.record.filter { case (mc, s) => choice.value(mc, s) })
+                         filters: Set[Select.Choice[Filter]]) = {
+
+      //TODO: Composing functions is interesting, but should I apply (lazily) and then reduce rather than applying *as* I
+      // reduce?
+      val combinedFilter = filters.iterator.map(_.value).reduceOption { (fAcc, f) =>
+        (mc: ModuleCode, s: Double) => fAcc(mc, s) && f(mc, s)
+      }
+      combinedFilter.fold(records.record)(choice => records.record.filter { case (mc, s) => choice(mc, s) })
+    }
 
     /** Construct line chart representation of student average over time, as a proof of concept */
     private def drawLines(data: SortedMap[ModuleCode, Double]) = {
@@ -149,7 +156,7 @@ object StudentCharts {
     }
 
     /** Draw filter form group */
-    private def drawFilters(choices: NonEmptyVector[Select.Choice[Filter]], selected: Option[Select.Choice[Filter]]) = {
+    private def drawFilters(choices: NonEmptyVector[Select.Choice[Filter]], selected: Set[Select.Choice[Filter]]) = {
       <.div(
         ^.className := "col-lg-6",
         <.div(
@@ -159,27 +166,39 @@ object StudentCharts {
             Icon.filter(Icon.Small), "Filters:  "),
           <.div(
             ^.className := "bootstrap-tagsinput",
-            selected.fold[TagMod](<.span(^.id := "filters-placeholder", "Active Filters ...")) { s =>
-              <.span(
-                ^.className := "tag label label-info",
-                s.label,
-                <.span(VdomAttr("data-role") := "remove")
-              )
+            if(selected.isEmpty) {
+              <.span(^.id := "filters-placeholder", "Active Filters ...")
+            } else {
+              selected.toTagMod { s =>
+                <.span(
+                  ^.className := "tag label label-info",
+                  s.label,
+                  <.span(
+                    VdomAttr("data-role") := "remove",
+                    ^.onClick --> filterRemove(s)
+                  )
+                )
+              }
             }
           ),
-          Select.component(Select.Props(selected.getOrElse(choices.head),
+          Select.component(Select.Props(selected.headOption.getOrElse(choices.head),
             choices.toVector, filterSelect, "Choose  ".some))
         )
       )
     }
 
     /** Handle filter select */
-    private def filterSelect(selected: Select.Choice[Filter]) = bs.modState(s => State(selected.some))
+    private def filterSelect(selected: Select.Choice[Filter]) =
+      bs.modState(s => s.copy(selectedFilters = s.selectedFilters + selected))
+
+    /** Handle filter remove */
+    private def filterRemove(removed: Select.Choice[Filter]) =
+      bs.modState(s => s.copy(selectedFilters = s.selectedFilters - removed))
 
   }
 
   val component = ScalaComponent.builder[Props]("StudentBars")
-    .initialStateFromProps(p => State(none[Select.Choice[Filter]]))
+    .initialStateFromProps(p => State(Set.empty[Select.Choice[Filter]]))
     .renderBackend[Backend]
     .componentDidMount(scope => scope.backend.mounted(scope.props))
     .build

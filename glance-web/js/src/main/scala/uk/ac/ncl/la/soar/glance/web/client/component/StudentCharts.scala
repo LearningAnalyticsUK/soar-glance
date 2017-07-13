@@ -58,7 +58,7 @@ object StudentCharts {
   case class Props(student: Option[StudentRecords[SortedMap, ModuleCode, Double]],
                    filterChoices: NonEmptyVector[Select.Choice[Filter]] = options)
 
-  case class State(selectedFilter: Select.Choice[Filter])
+  case class State(selectedFilter: Option[Select.Choice[Filter]])
 
   class Backend(bs: BackendScope[Props, State]) {
 
@@ -67,7 +67,7 @@ object StudentCharts {
     def render(p: Props, s: State): VdomElement = {
       <.div(
         ^.id := "detailed",
-        p.student.fold(<.p(^.className := "chart-placedholder", "Click on a student"): TagMod) { student =>
+        p.student.fold[TagMod](<.p(^.className := "chart-placedholder", "Click on a student")) { student =>
           List(
             drawBars(filtered(student, s.selectedFilter)),
             drawLines(filtered(student, s.selectedFilter)),
@@ -86,7 +86,8 @@ object StudentCharts {
 
     /** Filter Student Records */
     private def filtered(records: StudentRecords[SortedMap, ModuleCode, Double],
-                         filter: Select.Choice[Filter]) = records.record.filter { case (mc, s) => filter.value(mc, s) }
+                         filter: Option[Select.Choice[Filter]]) =
+      filter.fold(records.record)(choice => records.record.filter { case (mc, s) => choice.value(mc, s) })
 
     /** Construct line chart representation of student average over time, as a proof of concept */
     private def drawLines(data: SortedMap[ModuleCode, Double]) = {
@@ -148,7 +149,7 @@ object StudentCharts {
     }
 
     /** Draw filter form group */
-    private def drawFilters(choices: NonEmptyVector[Select.Choice[Filter]], selected: Select.Choice[Filter]) = {
+    private def drawFilters(choices: NonEmptyVector[Select.Choice[Filter]], selected: Option[Select.Choice[Filter]]) = {
       <.div(
         ^.className := "col-lg-6",
         <.div(
@@ -156,23 +157,29 @@ object StudentCharts {
           <.div(
             ^.className := "input-group-addon",
             Icon.filter(Icon.Small), "Filters:  "),
-          <.input(
-            ^.`type` := "text",
-            ^.className := "form-control",
-            ^.placeholder := "Active filters...",
-            ^.aria.label := "..."),
-          Select.component(Select.Props(selected, choices.toVector, filterSelect, Some("Choose  ")))
+          <.div(
+            ^.className := "bootstrap-tagsinput",
+            selected.fold[TagMod](<.span(^.id := "filters-placeholder", "Active Filters ...")) { s =>
+              <.span(
+                ^.className := "tag label label-info",
+                s.label,
+                <.span(VdomAttr("data-role") := "remove")
+              )
+            }
+          ),
+          Select.component(Select.Props(selected.getOrElse(choices.head),
+            choices.toVector, filterSelect, "Choose  ".some))
         )
       )
     }
 
     /** Handle filter select */
-    private def filterSelect(selected: Select.Choice[Filter]) = bs.modState(s => State(selected))
+    private def filterSelect(selected: Select.Choice[Filter]) = bs.modState(s => State(selected.some))
 
   }
 
   val component = ScalaComponent.builder[Props]("StudentBars")
-    .initialStateFromProps(p => State(p.filterChoices.head))
+    .initialStateFromProps(p => State(none[Select.Choice[Filter]]))
     .renderBackend[Backend]
     .componentDidMount(scope => scope.backend.mounted(scope.props))
     .build

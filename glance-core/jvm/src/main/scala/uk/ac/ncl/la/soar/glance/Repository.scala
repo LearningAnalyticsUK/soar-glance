@@ -80,11 +80,11 @@ object Repository {
 
     for {
       cfg <- Task(config)
-      _ <- migrate(
-        s"jdbc:postgresql:${cfg.database.name}",
-        cfg.database.user,
-        cfg.database.password
-      )
+//      _ <- migrate(
+//        s"jdbc:postgresql:${cfg.database.name}",
+//        cfg.database.user,
+//        cfg.database.password
+//      )
       xa = DriverManagerTransactor[Task](
         "org.postgresql.Driver",
         s"jdbc:postgresql:${cfg.database.name}",
@@ -96,7 +96,7 @@ object Repository {
       sDb = new SurveyDb(xa)
       rDb = new SurveyResponseDb(xa)
       - <- { println("Initialising Student tables");stDb.init }
-      _ <- { prinln("Initialising Module tables"); mDb.init }
+      _ <- { println("Initialising Module tables"); mDb.init }
       _ <- { println("Initialising Survey tables");sDb.init }
       _ <- { println("Initialising Response tables");rDb.init }
     } yield (stDb, sDb, rDb)

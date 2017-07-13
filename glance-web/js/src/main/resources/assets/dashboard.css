@@ -156,3 +156,15 @@ span.sub-title {
     width: 100%;
     padding: 15px 15px 15px 15px;
 }
+
+.input-group > .bootstrap-tagsinput {
+    border-radius: 0px;
+    position: relative;
+    width: 100%;
+    padding-top: 5px;
+    padding-bottom: 5px;
+}
+
+.chart-controls .input-group-addon {
+    padding-right: 20px;
+}

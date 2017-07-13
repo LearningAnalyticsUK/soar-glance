@@ -50,6 +50,7 @@ object Select {
 
     /** Build Select dom - either vanilla select or ul/li based depending on props override */
     //TODO: Consider whether we should stop using the List datatype even on these internal methods
+    //TODO: Make selected an Option
     private def buildSelect(selected: Choice[A],
                             choices: IndexedSeq[Choice[A]],
                             onChange: Int => Callback,
@@ -65,7 +66,7 @@ object Select {
           VdomAttr("data-toggle") := "dropdown",
           ^.aria.hasPopup := true,
           ^.aria.expanded := false,
-          (contents.getOrElse(choices(selectedIdx).label): String),
+          contents.getOrElse[String](choices(selectedIdx).label),
           <.span(^.className := "caret")
         ),
         <.ul(

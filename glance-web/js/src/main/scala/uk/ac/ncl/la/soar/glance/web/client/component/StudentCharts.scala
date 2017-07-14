@@ -71,8 +71,12 @@ object StudentCharts {
         ^.id := "detailed",
         p.student.fold[TagMod](<.p(^.className := "chart-placedholder", "Click on a student")) { student =>
           List(
-            drawBars(filtered(student, s.selectedFilters), p.cohort, s.cohortComparison),
-            drawLines(filtered(student, s.selectedFilters), p.cohort, s.cohortComparison),
+            drawBars(filtered(student, s.selectedFilters),
+              filtered(p.cohort.toRecord, s.selectedFilters),
+              s.cohortComparison),
+            drawLines(filtered(student, s.selectedFilters),
+              filtered(p.cohort.toRecord, s.selectedFilters),
+              s.cohortComparison),
             <.div(
               ^.className := "chart-controls",
               <.div(
@@ -99,24 +103,35 @@ object StudentCharts {
     }
 
     /** Construct line chart representation of student average over time, as a proof of concept */
-    private def drawLines(data: SortedMap[ModuleCode, Double],
-                          cohortSummary: CohortAttainmentSummary,
+    private def drawLines(studentScores: SortedMap[ModuleCode, Double],
+                          cohortSummary: SortedMap[ModuleCode, Double],
                           drawCohortSummary: Boolean) = {
-      //Apply selected filter
-
-      //Very mutable, but I'm trying to get back into the habit of method local mutability.
-      var total = 0.0
-      var counter = 0.0
-      val aBldr = ListBuffer.empty[Double]
-      for((_, r) <- data) {
-        total += r
-        counter += 1
-        aBldr += (total / counter)
+      //Calculate trend line
+      def trend(data: Iterable[(ModuleCode, Double)]): List[Double] = {
+        //Very mutable, but I'm trying to get back into the habit of method local mutability.
+        var total = 0.0
+        var counter = 0.0
+        val aBldr = ListBuffer.empty[Double]
+        for((_, r) <- data) {
+          total += r
+          counter += 1
+          aBldr += (total / counter)
+        }
+        aBldr.result()
       }
-      val averages = aBldr.result()
+
+      val averages = trend(studentScores)
+
+      val studentDataset = List(ChartDataset(averages, "Average score", ""))
+
+      val datasets = if(drawCohortSummary) {
+        val cohortAverages = trend(cohortSummary)
+        ChartDataset(cohortAverages, "Cohort Average score", "") :: studentDataset
+      } else studentDataset
+
       //List of blank strings required rather than just having no labels as otherwise Chart.js only renders first point
       val labels = averages.map(_ => "")
-      val chartData = ChartData(labels, List(ChartDataset(averages, "Average score")))
+      val chartData = ChartData(labels, datasets)
       val p = Chart.Props("Average Score Over Time", Chart.LineChart, chartData)
 
       <.div(^.className := "chart-container", Chart.component(p))
@@ -124,7 +139,7 @@ object StudentCharts {
 
     /** Construct detailed representation of student scores, including viz */
     private def drawBars(data: SortedMap[ModuleCode, Double],
-                         cohortSummary: CohortAttainmentSummary,
+                         cohortSummary: SortedMap[ModuleCode, Double],
                          drawCohortSummary: Boolean)  = {
       //Create a props object for the chart component based on a StudentRecords object
       //Get the module labels and scores

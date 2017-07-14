@@ -56,21 +56,13 @@ object SurveyView {
     val indexCol = "Student Number"
 
     /** Construct the presentation of the modules as a sorted list to fill some table headings */
-    private def modules(survey: Option[Survey]) = survey.map(_.modules.toList).getOrElse(List.empty).sorted
+    private def modules(survey: Survey) = survey.modules.toList.sorted
 
     /** Construct the full presentation of table headings, including modules */
-    private def headings(survey: Option[Survey]) = indexCol :: modules(survey)
+    private def headings(survey: Survey) = indexCol :: modules(survey)
 
     /** Construct the presentation of the students to fill table rows */
-    private def students(survey: Option[Survey]) = survey.map(_.entries).getOrElse(List.empty)
-
-    /** Construct the cohort attainment summary for the survey
-      * TODO: Finish this method - possibly make it an only once Eval as well - this is expensive and there is no point in recalc
-      */
-    private def cohortSummary(survey: Option[Survey]) =
-      survey.fold(CohortAttainmentSummary(List.empty[StudentRecords[SortedMap, ModuleCode, Double]])) { s =>
-        CohortAttainmentSummary(s.entries)
-      }
+    private def students(survey: Survey) = survey.entries
 
     /** Construct the function which provides the presentation of a table cell, given a StudentRecord and string key */
     private def renderCell(default: String)(student: StudentRecords[SortedMap, ModuleCode, Double], key: String) =
@@ -111,9 +103,11 @@ object SurveyView {
           Icon.search(Icon.Medium),
           <.h2("Detailed View")
         ),
-        StudentCharts.component(
-          StudentCharts.Props(s.selected, cohortSummary(None))
-        )
+        model.render { sm =>
+          StudentCharts.component(
+            StudentCharts.Props(s.selected, sm.summary)
+          )
+        }
       )
     }
 

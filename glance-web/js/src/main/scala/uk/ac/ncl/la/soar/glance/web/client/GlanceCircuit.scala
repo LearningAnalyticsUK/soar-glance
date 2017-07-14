@@ -28,6 +28,7 @@ import diode.react.ReactConnector
 import io.circe._
 import uk.ac.ncl.la.soar.{ModuleCode, StudentNumber}
 import uk.ac.ncl.la.soar.glance.Survey
+import uk.ac.ncl.la.soar.glance.web.client.data.CohortAttainmentSummary
 
 
 /**
@@ -42,7 +43,7 @@ final case class GlanceModel(survey: Pot[SurveyModel])
   * TODO: Work out if all elements have to be wrapped in Option. Understand response may be OK + empty, but does Pot not
   * have the ability to encode this? Otherwise it feels like we're almost creating an option of an option (Pot ~ Option)
   */
-case class SurveyModel(survey: Option[Survey])
+case class SurveyModel(survey: Survey, summary: CohortAttainmentSummary)
 
 /**
   * ADT representing the set of actions which may be taken to update a `SurveyModel`. These actions encapsulate no
@@ -64,8 +65,10 @@ class SurveyHandler[M](modelRW: ModelRW[M, Pot[SurveyModel]]) extends ActionHand
     //case SelectStudent(number) => ??? //Unclear to me if this should be an Action or just handled in the component?
     case InitSurvey(decodedSurveys) =>
       decodedSurveys.fold(
-        e => updated(Failed(e)),
-        s => updated(Ready(SurveyModel(s.headOption)))
+        err => updated(Failed(err)),
+        surveys => surveys.headOption.fold(updated(Empty)) { s =>
+          updated(Ready(SurveyModel(s, CohortAttainmentSummary(s.entries))))
+        }
       )
   }
 }

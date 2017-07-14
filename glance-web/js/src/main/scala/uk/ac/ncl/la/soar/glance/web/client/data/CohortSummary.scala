@@ -44,8 +44,6 @@ sealed abstract class CohortSummary[A: Order] {
   def avgByKey: SortedMap[A, Double] = {
 
     //Nasty hack - why am I having to do this? Implicit resolution is just giving up
-    val evO = implicitly[Order[A]]
-
     val keys = mutable.HashMap.empty[A, (Int, Double)]
 
     for {
@@ -57,8 +55,11 @@ sealed abstract class CohortSummary[A: Order] {
       keys.update(k, deltaTot)
     }
 
-    SortedMap.empty[A, Double](evO.toOrdering) ++ keys.mapValues { case (num, tot) => tot / num }
+    val ev = implicitly[Order[A]]
+    SortedMap.empty[A, Double](ev.toOrdering) ++ keys.mapValues { case (num, tot) => tot / num }
   }
+
+  def toRecord: StudentRecords[SortedMap, A, Double] = StudentRecords("N/A",avgByKey)
 }
 
 case class CohortAttainmentSummary(cohortRecords: List[StudentRecords[SortedMap, ModuleCode, Double]]) extends CohortSummary[ModuleCode]

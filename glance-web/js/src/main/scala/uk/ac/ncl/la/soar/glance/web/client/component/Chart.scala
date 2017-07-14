@@ -184,8 +184,8 @@ object Chart {
     }
 
     //TODO: Perhaps an OptionT stack would work better here?
-    private def removeAllData = bs.state.map{s =>
-      s.chart.foreach{c => removeData(c) }
+    private def removeAllData = bs.state.map{ s =>
+      s.chart.foreach{ c => removeData(c) }
     }
 
     private def removeData(chart: JSChart) = {

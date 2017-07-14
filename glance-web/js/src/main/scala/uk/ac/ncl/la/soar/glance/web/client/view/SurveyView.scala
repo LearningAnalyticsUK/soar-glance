@@ -29,6 +29,7 @@ import uk.ac.ncl.la.soar.data.StudentRecords
 import uk.ac.ncl.la.soar.glance.Survey
 import uk.ac.ncl.la.soar.glance.web.client.SurveyModel
 import uk.ac.ncl.la.soar.glance.web.client.component.{Select, StudentCharts, StudentsTable}
+import uk.ac.ncl.la.soar.glance.web.client.data.CohortAttainmentSummary
 import uk.ac.ncl.la.soar.glance.web.client.style.Icon
 
 import scala.collection.immutable.SortedMap
@@ -62,6 +63,14 @@ object SurveyView {
 
     /** Construct the presentation of the students to fill table rows */
     private def students(survey: Option[Survey]) = survey.map(_.entries).getOrElse(List.empty)
+
+    /** Construct the cohort attainment summary for the survey
+      * TODO: Finish this method - possibly make it an only once Eval as well - this is expensive and there is no point in recalc
+      */
+    private def cohortSummary(survey: Option[Survey]) =
+      survey.fold(CohortAttainmentSummary(List.empty[StudentRecords[SortedMap, ModuleCode, Double]])) { s =>
+        CohortAttainmentSummary(s.entries)
+      }
 
     /** Construct the function which provides the presentation of a table cell, given a StudentRecord and string key */
     private def renderCell(default: String)(student: StudentRecords[SortedMap, ModuleCode, Double], key: String) =
@@ -103,7 +112,7 @@ object SurveyView {
           <.h2("Detailed View")
         ),
         StudentCharts.component(
-          StudentCharts.Props(s.selected)
+          StudentCharts.Props(s.selected, cohortSummary(None))
         )
       )
     }

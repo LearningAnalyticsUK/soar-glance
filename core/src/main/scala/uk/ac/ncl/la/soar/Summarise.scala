@@ -56,11 +56,13 @@ trait Summarise[F[_, _]] extends Any with Serializable { self =>
       case (_, _, q3) if e._2 <= q3 => Q3
       case _ => Q4
     }
+
+  //TODO: Define a whole bunch of basic summary tools over a record: sum, mean, median ...
 }
 
 object Summarise {
 
-  /** TODO: Implement Summarise instance for any type which has a Record */
+  /** TODO: Implement Summarise instance for any type which has a Record  */
 
 
   /** Quartile ADT for records - simple enum essentially. */

@@ -31,6 +31,7 @@ import uk.ac.ncl.la.soar.ModuleCode
 import uk.ac.ncl.la.soar.data.StudentRecords
 import uk.ac.ncl.la.soar.glance.Survey
 import uk.ac.ncl.la.soar.glance.web.client.SurveyModel
+import uk.ac.ncl.la.soar.glance.web.client.data.CohortAttainmentSummary
 import uk.ac.ncl.la.soar.glance.web.client.style.Icon
 
 import scala.collection.immutable.SortedMap
@@ -56,9 +57,10 @@ object StudentCharts {
     )
 
   case class Props(student: Option[StudentRecords[SortedMap, ModuleCode, Double]],
+                   cohort: CohortAttainmentSummary,
                    filterChoices: NonEmptyVector[Select.Choice[Filter]] = options)
 
-  case class State(selectedFilters: Set[Select.Choice[Filter]])
+  case class State(selectedFilters: Set[Select.Choice[Filter]], cohortComparison: Boolean)
 
   class Backend(bs: BackendScope[Props, State]) {
 
@@ -69,8 +71,8 @@ object StudentCharts {
         ^.id := "detailed",
         p.student.fold[TagMod](<.p(^.className := "chart-placedholder", "Click on a student")) { student =>
           List(
-            drawBars(filtered(student, s.selectedFilters)),
-            drawLines(filtered(student, s.selectedFilters)),
+            drawBars(filtered(student, s.selectedFilters), p.cohort, s.cohortComparison),
+            drawLines(filtered(student, s.selectedFilters), p.cohort, s.cohortComparison),
             <.div(
               ^.className := "chart-controls",
               <.div(
@@ -97,7 +99,9 @@ object StudentCharts {
     }
 
     /** Construct line chart representation of student average over time, as a proof of concept */
-    private def drawLines(data: SortedMap[ModuleCode, Double]) = {
+    private def drawLines(data: SortedMap[ModuleCode, Double],
+                          cohortSummary: CohortAttainmentSummary,
+                          drawCohortSummary: Boolean) = {
       //Apply selected filter
 
       //Very mutable, but I'm trying to get back into the habit of method local mutability.
@@ -119,7 +123,9 @@ object StudentCharts {
     }
 
     /** Construct detailed representation of student scores, including viz */
-    private def drawBars(data: SortedMap[ModuleCode, Double])  = {
+    private def drawBars(data: SortedMap[ModuleCode, Double],
+                         cohortSummary: CohortAttainmentSummary,
+                         drawCohortSummary: Boolean)  = {
       //Create a props object for the chart component based on a StudentRecords object
       //Get the module labels and scores
       val mB = ListBuffer.empty[ModuleCode]
@@ -156,6 +162,7 @@ object StudentCharts {
     }
 
     /** Draw filter form group */
+    //TODO: Abstract Multiselect features into its own component at some point
     private def drawFilters(choices: NonEmptyVector[Select.Choice[Filter]], selected: Set[Select.Choice[Filter]]) = {
       <.div(
         ^.className := "col-lg-6",
@@ -198,7 +205,7 @@ object StudentCharts {
   }
 
   val component = ScalaComponent.builder[Props]("StudentBars")
-    .initialStateFromProps(p => State(Set.empty[Select.Choice[Filter]]))
+    .initialStateFromProps(p => State(Set.empty[Select.Choice[Filter]], false))
     .renderBackend[Backend]
     .componentDidMount(scope => scope.backend.mounted(scope.props))
     .build

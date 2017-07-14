@@ -26,7 +26,7 @@ import diode.data._
 import diode.util._
 import diode.react.ReactConnector
 import io.circe._
-import uk.ac.ncl.la.soar.StudentNumber
+import uk.ac.ncl.la.soar.{ModuleCode, StudentNumber}
 import uk.ac.ncl.la.soar.glance.Survey
 
 
@@ -38,6 +38,9 @@ final case class GlanceModel(survey: Pot[SurveyModel])
 /**
   * Container for the survey data (a `glance.Survey`) which is bound to various UI elements throughout the Glance
   * application. There may be other models containing other data, but this is the primary one.
+  *
+  * TODO: Work out if all elements have to be wrapped in Option. Understand response may be OK + empty, but does Pot not
+  * have the ability to encode this? Otherwise it feels like we're almost creating an option of an option (Pot ~ Option)
   */
 case class SurveyModel(survey: Option[Survey])
 

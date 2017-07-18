@@ -168,3 +168,7 @@ span.sub-title {
 .chart-controls .input-group-addon {
     padding-right: 20px;
 }
+
+div#cohort-summary {
+    float: right;
+}

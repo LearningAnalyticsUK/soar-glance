@@ -84,16 +84,16 @@ trait ChartOptions extends js.Object {
 }
 
 object ChartOptions {
-  def apply(responsive: Boolean = true): ChartOptions = {
+  def apply(responsive: Boolean = true, displayLegend: Boolean = false): ChartOptions = {
     js.Dynamic.literal(
       responsive = responsive,
-      legend = legend
+      legend = legend(displayLegend)
     ).asInstanceOf[ChartOptions]
   }
 
-  private val legend: ChartLegendOptions = {
+  private def legend(display: Boolean): ChartLegendOptions = {
     js.Dynamic.literal(
-      display = false
+      display = display
     ).asInstanceOf[ChartLegendOptions]
   }
 }
@@ -106,7 +106,7 @@ trait ChartConfiguration extends js.Object {
 }
 
 object ChartConfiguration {
-  def apply(`type`: String, data: ChartData, options: ChartOptions = ChartOptions(false)): ChartConfiguration = {
+  def apply(`type`: String, data: ChartData, options: ChartOptions = ChartOptions()): ChartConfiguration = {
     js.Dynamic.literal(
       `type` = `type`,
       data = data,
@@ -138,6 +138,7 @@ object Chart {
   case class Props(name: String,
                    style: ChartStyle,
                    data: ChartData,
+                   options: ChartOptions = ChartOptions(),
                    width: Option[Int] = Some(1110),
                    height: Option[Int] = Some(300))
 
@@ -152,8 +153,8 @@ object Chart {
           val ctx = node.asInstanceOf[HTMLCanvasElement].getContext("2d")
           // create the actual chart using the 3rd party component
           p.style match {
-            case LineChart => new JSChart(ctx, ChartConfiguration("line", p.data))
-            case BarChart => new JSChart(ctx, ChartConfiguration("bar", p.data))
+            case LineChart => new JSChart(ctx, ChartConfiguration("line", p.data, p.options))
+            case BarChart => new JSChart(ctx, ChartConfiguration("bar", p.data, p.options))
           }
         }
         _ <- bs.modState(s => State(Some(chart)))

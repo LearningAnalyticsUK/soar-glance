@@ -81,7 +81,8 @@ object StudentCharts {
               ^.className := "chart-controls",
               <.div(
                 ^.className := "row",
-                drawFilters(p.filterChoices, s.selectedFilters)
+                drawFilters(p.filterChoices, s.selectedFilters),
+                drawCheckbox(s.cohortComparison)
               )
             )
           ).toTagMod
@@ -122,17 +123,18 @@ object StudentCharts {
 
       val averages = trend(studentScores)
 
-      val studentDataset = List(ChartDataset(averages, "Average score", ""))
+      val studentDataset = List(ChartDataset(averages, "Average score", "rgba(111, 203, 118, 0.1)", "#47CB50"))
 
       val datasets = if(drawCohortSummary) {
         val cohortAverages = trend(cohortSummary)
-        ChartDataset(cohortAverages, "Cohort Average score", "") :: studentDataset
+        ChartDataset(cohortAverages, "Cohort average score", "") :: studentDataset
       } else studentDataset
 
       //List of blank strings required rather than just having no labels as otherwise Chart.js only renders first point
       val labels = averages.map(_ => "")
       val chartData = ChartData(labels, datasets)
-      val p = Chart.Props("Average Score Over Time", Chart.LineChart, chartData)
+      val p = Chart.Props("Average Score Over Time", Chart.LineChart, chartData,
+        ChartOptions(displayLegend = true))
 
       <.div(^.className := "chart-container", Chart.component(p))
     }
@@ -153,8 +155,16 @@ object StudentCharts {
       val scores = sB.toList
 
       val (fillColours, borderColours) = colourBars(scores)
-      val chartData = ChartData(modules, List(ChartDataset(scores, "Module Scores", fillColours, borderColours)))
-      val p = Chart.Props("Student Module Scores", Chart.BarChart, chartData)
+
+      val studentDataset = List(ChartDataset(scores, "Module Scores", fillColours, borderColours))
+
+      val datasets = if(drawCohortSummary) {
+        ChartDataset(cohortSummary.values.toSeq, "Cohort Module Scores") :: studentDataset
+      } else studentDataset
+
+      val chartData = ChartData(modules, datasets)
+      val p = Chart.Props("Student Module Scores", Chart.BarChart, chartData,
+        ChartOptions(displayLegend = drawCohortSummary))
 
       <.div(^.className := "chart-container", Chart.component(p))
     }
@@ -216,6 +226,34 @@ object StudentCharts {
     /** Handle filter remove */
     private def filterRemove(removed: Select.Choice[Filter]) =
       bs.modState(s => s.copy(selectedFilters = s.selectedFilters - removed))
+
+    /** Handle cohort comparison toggle */
+    private def cohortToggle(e: ReactEventFromInput) = bs.modState(s => s.copy(cohortComparison = !s.cohortComparison))
+
+    /** Draw cohort comparison checkbox */
+    private def drawCheckbox(cohortSummary: Boolean): VdomElement = {
+      <.div(
+        ^.className := "col-lg-3 col-lg-offset-3",
+        <.div(
+          ^.className := "input-group",
+          ^.id := "cohort-summary",
+          <.label(
+            (if(cohortSummary)
+              ^.className := "btn btn-primary"
+            else
+              ^.className := "btn btn-default"),
+            <.input(
+              ^.id := "cohort-summary-toggle",
+              ^.`type` := "checkbox",
+              ^.selected := cohortSummary,
+              ^.onChange ==> cohortToggle
+            ),
+            "  Cohort Summary"
+          )
+        )
+
+      )
+    }
 
   }
 

@@ -75,6 +75,29 @@ object ChartData {
 @js.native
 trait ChartLegendOptions extends js.Object {
   def display: Boolean = js.native
+  def labels: LegendLabelConfiguration = js.native
+}
+
+@js.native
+trait LegendLabelConfiguration extends js.Object {
+  def generateLabels: js.Function1[JSChart, js.Array[ChartLegendItem]] = js.native
+}
+
+@js.native
+trait ChartLegendItem extends js.Object {
+  def text: String = js.native
+  def fillStyle: String = js.native
+  def strokeStyle: String = js.native
+}
+
+object ChartLegendItem {
+  def apply(text: String, fillStyle: String, strokeStyle: String): ChartLegendItem = {
+    js.Dynamic.literal(
+      text = text,
+      fillStyle = fillStyle,
+      strokeStyle = strokeStyle
+    ).asInstanceOf[ChartLegendItem]
+  }
 }
 
 @js.native
@@ -84,18 +107,50 @@ trait ChartOptions extends js.Object {
 }
 
 object ChartOptions {
-  def apply(responsive: Boolean = true, displayLegend: Boolean = false): ChartOptions = {
+  def apply(responsive: Boolean = true,
+            displayLegend: Boolean = false,
+            generateLegend: Option[JSChart => Seq[ChartLegendItem]] = None,
+            yTicksAtZero: Boolean = true): ChartOptions = {
+
     js.Dynamic.literal(
       responsive = responsive,
-      legend = legend(displayLegend)
+      legend = legend(displayLegend, generateLegend),
+      scales = axisConf(yTicksAtZero)
     ).asInstanceOf[ChartOptions]
   }
 
-  private def legend(display: Boolean): ChartLegendOptions = {
-    js.Dynamic.literal(
+  private def legend(display: Boolean, generateLegend: Option[JSChart => Seq[ChartLegendItem]]): ChartLegendOptions = {
+    val lit = js.Dynamic.literal(
       display = display
-    ).asInstanceOf[ChartLegendOptions]
+    )
+    generateLegend.foreach(fn => lit.labels = labelConf(fn))
+    lit.asInstanceOf[ChartLegendOptions]
   }
+
+  private def labelConf(generateLegend: JSChart => Seq[ChartLegendItem]) = {
+    js.Dynamic.literal(
+      generateLabels =
+        generateLegend andThen(_.toJSArray) : js.Function1[JSChart, js.Array[ChartLegendItem]]
+    ).asInstanceOf[LegendLabelConfiguration]
+  }
+
+  private def axisConf(percentages: Boolean) = {
+    val tickLit = js.Dynamic.literal(beginAtZero = percentages)
+    if(percentages) {
+      tickLit.suggestedMax = 100
+//      tickLit.callback = (labelPct: js.Function3[String, Int, js.Array[String], String])
+    }
+
+    js.Dynamic.literal(
+      yAxes = js.Array(
+        js.Dynamic.literal(
+          ticks = tickLit
+        )
+      )
+    )
+  }
+
+  private val labelPct: (String, Int, js.Array[String]) => String = { (value, _, _) => s"$value%" }
 }
 
 @js.native
@@ -124,7 +179,7 @@ trait ChartWithData extends js.Object {
 // define a class to access the Chart.js component
 @js.native
 @JSGlobal("Chart")
-class JSChart(ctx: js.Dynamic, config: ChartConfiguration) extends js.Object with ChartWithData
+class JSChart(ctx: js.Dynamic, val config: ChartConfiguration) extends js.Object with ChartWithData
 
 object Chart {
 

@@ -30,7 +30,7 @@ import japgolly.scalajs.react.vdom.html_<^._
 import uk.ac.ncl.la.soar.ModuleCode
 import uk.ac.ncl.la.soar.data.StudentRecords
 import uk.ac.ncl.la.soar.glance.Survey
-import uk.ac.ncl.la.soar.glance.web.client.SurveyModel
+import uk.ac.ncl.la.soar.glance.web.client.{SurveyModel, component}
 import uk.ac.ncl.la.soar.glance.web.client.data.CohortAttainmentSummary
 import uk.ac.ncl.la.soar.glance.web.client.style.Icon
 
@@ -127,7 +127,7 @@ object StudentCharts {
 
       val datasets = if(drawCohortSummary) {
         val cohortAverages = trend(cohortSummary)
-        ChartDataset(cohortAverages, "Cohort average score", "") :: studentDataset
+        ChartDataset(cohortAverages, "Cohort average score", "rgba(128, 128, 255, 0.1)") :: studentDataset
       } else studentDataset
 
       //List of blank strings required rather than just having no labels as otherwise Chart.js only renders first point
@@ -143,6 +143,24 @@ object StudentCharts {
     private def drawBars(data: SortedMap[ModuleCode, Double],
                          cohortSummary: SortedMap[ModuleCode, Double],
                          drawCohortSummary: Boolean)  = {
+
+      //TODO: Make colours package private constants
+
+      //Generate custom legend for student bars
+      val generateLegends: JSChart => Seq[ChartLegendItem] = { chart =>
+
+        val triColorData = Array(
+          ChartLegendItem("Distinction", "#6FCB76", "#47CB50"),
+          ChartLegendItem("Pass", "#CBCB72", "#CBC754"),
+          ChartLegendItem("Fail", "#CB4243", "#CB3131")
+        )
+
+        if(chart.data.datasets.length > 1)
+          ChartLegendItem("Cohort Module Scores", "#8080FF", "#404080") +: triColorData
+        else
+          triColorData
+      }
+
       //Create a props object for the chart component based on a StudentRecords object
       //Get the module labels and scores
       val mB = ListBuffer.empty[ModuleCode]
@@ -164,7 +182,7 @@ object StudentCharts {
 
       val chartData = ChartData(modules, datasets)
       val p = Chart.Props("Student Module Scores", Chart.BarChart, chartData,
-        ChartOptions(displayLegend = drawCohortSummary))
+        ChartOptions(displayLegend = true, generateLegend = generateLegends.some))
 
       <.div(^.className := "chart-container", Chart.component(p))
     }

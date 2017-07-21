@@ -15,23 +15,12 @@
   * See the License for the specific language governing permissions and
   * limitations under the License.
   */
-package uk.ac.ncl.la.soar.glance
+package uk.ac.ncl.la.soar.db
 
-import java.util.UUID
-import java.time.{Instant, LocalDateTime}
-
-import cats._
-import cats.data.OptionT
-import cats.implicits._
 import doobie.imports._
 import monix.eval.Task
-import monix.cats._
-import scala.concurrent.ExecutionContext.Implicits.global
-import com.typesafe.config.ConfigFactory.parseString
-import pureconfig.loadConfigOrThrow
-import uk.ac.ncl.la.soar.data.{ModuleScore, Student, StudentRecords}
-import uk.ac.ncl.la.soar.{ModuleCode, StudentNumber}
-import Implicits._
+import uk.ac.ncl.la.soar.StudentNumber
+import uk.ac.ncl.la.soar.data.Student
 
 class StudentDb private[glance] (xa: Transactor[Task]) extends Repository[Student] {
 

@@ -17,21 +17,16 @@
   */
 package uk.ac.ncl.la.soar.glance
 
+import java.time.Instant
 import java.util.UUID
-import java.time.{Instant, LocalDateTime}
 
-import cats._
 import cats.data.OptionT
 import cats.implicits._
 import doobie.imports._
 import monix.eval.Task
-import monix.cats._
-import scala.concurrent.ExecutionContext.Implicits.global
-import com.typesafe.config.ConfigFactory.parseString
-import pureconfig.loadConfigOrThrow
-import uk.ac.ncl.la.soar.data.{ModuleScore, StudentRecords}
+import uk.ac.ncl.la.soar.data.ModuleScore
+import uk.ac.ncl.la.soar.db.{Repository, RepositoryCompanion}
 import uk.ac.ncl.la.soar.{ModuleCode, StudentNumber}
-import Implicits._
 
 class SurveyDb private[glance] (xa: Transactor[Task]) extends Repository[Survey] {
 

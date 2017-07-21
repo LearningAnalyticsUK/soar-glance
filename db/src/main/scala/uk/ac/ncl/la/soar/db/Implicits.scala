@@ -1,4 +1,4 @@
-/** soar
+/** Default (Template) Project
   *
   * Copyright (c) 2017 Hugo Firth
   * Email: <me@hugofirth.com/>
@@ -15,7 +15,7 @@
   * See the License for the specific language governing permissions and
   * limitations under the License.
   */
-package uk.ac.ncl.la.soar.glance
+package uk.ac.ncl.la.soar.db
 
 import fs2.util.{Attempt, Catchable, Suspendable}
 import monix.eval.Task
@@ -26,7 +26,7 @@ import scala.util.{Failure, Success}
   * Implicits needed throughout the glance project, mostly typeclass instances
   */
 object Implicits {
-  
+
   implicit object TaskCatchable extends Catchable[Task] with Suspendable[Task] {
     def pure[A](a: A): Task[A] = Task.pure(a)
 

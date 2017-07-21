@@ -15,7 +15,7 @@
   * See the License for the specific language governing permissions and
   * limitations under the License.
   */
-package uk.ac.ncl.la.soar.glance
+package uk.ac.ncl.la.soar.db
 
 import doobie.imports._
 import monix.eval.Task

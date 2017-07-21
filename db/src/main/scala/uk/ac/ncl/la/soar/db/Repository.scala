@@ -1,4 +1,4 @@
-/** soar
+/** Default (Template) Project
   *
   * Copyright (c) 2017 Hugo Firth
   * Email: <me@hugofirth.com/>
@@ -15,22 +15,39 @@
   * See the License for the specific language governing permissions and
   * limitations under the License.
   */
-package uk.ac.ncl.la.soar.glance
+package uk.ac.ncl.la.soar.db
 
-import doobie.util.transactor.DriverManagerTransactor
+import cats._
+import cats.implicits._
+import doobie.imports._
 import monix.eval.Task
+import monix.cats._
 import org.flywaydb.core.Flyway
 import pureconfig._
 
-/** Description of Class
+/**
+  * Repository trait which defines the behaviour of a Repository, retrieving objects from a database
   *
-  * @author hugofirth
+  * TODO: Add teardown
   */
+abstract class Repository[A] {
+
+  type PK
+  type F[B] = Task[B]
+  def M: Monad[F] = Monad[Task]
+
+  val init: F[Unit]
+  val list: F[List[A]]
+  def find(id: PK): F[Option[A]]
+  def save(entry: A): F[Unit]
+  def delete(id: PK): F[Boolean]
+}
+
 object Repository {
 
   //Is this the best/safest way to expose the Repository classes? Not really....
-  lazy val Survey: Task[SurveyDb] = createSchema.map(_._1)
-  lazy val SurveyResponse: Task[SurveyResponseDb] = createSchema.map(_._2)
+  lazy val Student: Task[StudentDb] = createSchema.map(_._1)
+  lazy val Module: Task[ModuleDb] = createSchema.map(_._2)
 
   /** Method to perform db migrations */
   private def migrate(dbUrl: String, user: String, pass: String) = Task {
@@ -40,7 +57,7 @@ object Repository {
   }
 
   /** Init method to set up the database */
-  private val createSchema: Task[(SurveyDb, SurveyResponseDb)] = {
+  private val createSchema: Task[(StudentDb, ModuleDb)] = {
 
     //TODO: Work out if this is even vaguely sane?
     //Lazy config for memoization?
@@ -48,22 +65,21 @@ object Repository {
 
     for {
       cfg <- Task(config)
-      //      _ <- migrate(
-      //        s"jdbc:postgresql:${cfg.database.name}",
-      //        cfg.database.user,
-      //        cfg.database.password
-      //      )
+//      _ <- migrate(
+//        s"jdbc:postgresql:${cfg.database.name}",
+//        cfg.database.user,
+//        cfg.database.password
+//      )
       xa = DriverManagerTransactor[Task](
         "org.postgresql.Driver",
         s"jdbc:postgresql:${cfg.database.name}",
         cfg.database.user,
         cfg.database.password
       )
-      sDb = new SurveyDb(xa)
-      sRDb = new SurveyResponseDb()(xa)
-      - <- { println("Initialising Student tables");sDb.init }
-      _ <- { println("Initialising Module tables");sRDb.init }
-    } yield (sDb, sRDb)
+      stDb = new StudentDb(xa)
+      mDb = new ModuleDb(xa)
+      - <- { println("Initialising Student tables");stDb.init }
+      _ <- { println("Initialising Module tables");mDb.init }
+    } yield (stDb, mDb)
   }
 }
-

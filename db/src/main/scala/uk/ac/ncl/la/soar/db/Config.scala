@@ -1,4 +1,4 @@
-/** soar
+/** Default (Template) Project
   *
   * Copyright (c) 2017 Hugo Firth
   * Email: <me@hugofirth.com/>
@@ -15,11 +15,10 @@
   * See the License for the specific language governing permissions and
   * limitations under the License.
   */
-package uk.ac.ncl.la.soar.glance
+package uk.ac.ncl.la.soar.db
 
 /**
   * Case class defining the expected structure of a config file for the glance project.
   * Note: Investigate the warning which tells me not to define simple case classes like this a package object?
   */
 case class Config(database: DatabaseConfig)
-

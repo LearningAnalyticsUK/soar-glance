@@ -1,4 +1,4 @@
-/** soar
+/** Default (Template) Project
   *
   * Copyright (c) 2017 Hugo Firth
   * Email: <me@hugofirth.com/>
@@ -15,11 +15,18 @@
   * See the License for the specific language governing permissions and
   * limitations under the License.
   */
-package uk.ac.ncl.la.soar.glance
+package uk.ac.ncl.la.soar.db
+
+import doobie.hi.ConnectionIO
 
 /**
-  * Case class defining the expected structure of a config file for the glance project.
-  * Note: Investigate the warning which tells me not to define simple case classes like this a package object?
+  * Trait which defines raw query methods on the companion objects of [[Repository]].
+  * TODO: Decide on the scoping of these methods - public for now but could be `private[glance]`
   */
-case class Config(database: DatabaseConfig)
-
+trait RepositoryCompanion[A, R <: Repository[A]] {
+  val initQ: ConnectionIO[Unit]
+  val listQ: ConnectionIO[List[A]]
+  def findQ(id: R#PK): ConnectionIO[Option[A]]
+  def saveQ(entry: A): ConnectionIO[Unit]
+  def deleteQ(id: R#PK): ConnectionIO[Boolean]
+}

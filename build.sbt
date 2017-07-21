@@ -242,6 +242,29 @@ lazy val core = soarCrossProject("core", CrossType.Pure)
 lazy val coreJS = core.js
 lazy val coreJVM = core.jvm
 
+//Db module of the project - contains all database queries, migrations, definitions etc...
+lazy val db = soarProject("db")
+  .dependsOn(coreJVM)
+  .settings(
+    name := "Soar Db",
+    moduleName := "soar-db",
+    libraryDependencies ++= Seq(
+      "org.flywaydb" % "flyway-core" % "4.0.3",
+      "com.github.pureconfig" %% "pureconfig" % "0.7.0")
+  )
+  .settings(flywaySettings:_*)
+  .settings(doobieDeps:_*)
+
+//Db-clu module of the project - contains import export scripts for the soar database and depends upon the db module
+lazy val dbCli = soarProject("db-cli")
+  .dependsOn(coreJVM, db)
+  .settings(
+    name := "Soar Db Cli",
+    moduleName := "soar-db-cli",
+    libraryDependencies += "com.jsuereth" %% "scala-arm" % "2.0",
+    commonAssembly("uk.ac.ncl.la.soar.model.ScorePredictor", "model.jar"))
+
+
 //Server module of the project - contains the finch API for serving soar data, used by glance, reports etc...
 lazy val server = soarProject("server")
   .dependsOn(coreJVM)
@@ -284,6 +307,7 @@ lazy val glanceCore = soarCrossProject("glance-core", CrossType.Full)
 
 lazy val glanceCoreJS = glanceCore.js
 lazy val glanceCoreJVM = glanceCore.jvm
+  .dependsOn(db)
 
 //TODO: Investigate intermittent heap space OOM error on assembly of this module
 lazy val glanceCli = soarProject("glance-cli")

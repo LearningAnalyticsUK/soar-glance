@@ -61,8 +61,9 @@ object Repository {
 
   //Is this the best/safest way to expose the Repository classes? Not really....
   lazy val Student: Task[StudentDb] = createSchema.map(_._1)
-  lazy val Survey: Task[SurveyDb] = createSchema.map(_._2)
-  lazy val Response: Task[SurveyResponseDb] = createSchema.map(_._3)
+  lazy val Module: Task[ModuleDb] = createSchema.map(_._2)
+  lazy val Survey: Task[SurveyDb] = createSchema.map(_._3)
+  lazy val Response: Task[SurveyResponseDb] = createSchema.map(_._4)
 
   /** Method to perform db migrations */
   private def migrate(dbUrl: String, user: String, pass: String) = Task {
@@ -72,7 +73,7 @@ object Repository {
   }
 
   /** Init method to set up the database */
-  private val createSchema: Task[(StudentDb, SurveyDb, SurveyResponseDb)] = {
+  private val createSchema: Task[(StudentDb, ModuleDb, SurveyDb, SurveyResponseDb)] = {
 
     //TODO: Work out if this is even vaguely sane?
     //Lazy config for memoization?
@@ -96,10 +97,10 @@ object Repository {
       sDb = new SurveyDb(xa)
       rDb = new SurveyResponseDb(xa)
       - <- { println("Initialising Student tables");stDb.init }
-      _ <- { println("Initialising Module tables"); mDb.init }
+      _ <- { println("Initialising Module tables");mDb.init }
       _ <- { println("Initialising Survey tables");sDb.init }
       _ <- { println("Initialising Response tables");rDb.init }
-    } yield (stDb, sDb, rDb)
+    } yield (stDb, mDb, sDb, rDb)
   }
 }
 

@@ -35,6 +35,14 @@ import Implicits._
 
 class SurveyDb private[glance] (xa: Transactor[Task]) extends Repository[Survey] {
 
+  /**
+    * core
+    * server
+    * model
+    * glance
+    * glance-eval
+    * glance-eval-cli
+    */
   import SurveyDb._
 
   type PK = UUID

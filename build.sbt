@@ -17,7 +17,7 @@ lazy val monixVersion = "2.3.0"
 lazy val sparkVersion = "2.1.0"
 lazy val circeVersion = "0.7.0"
 lazy val doobieVersion = "0.4.1"
-lazy val finagleVersion = "0.14.0"
+lazy val finchVersion = "0.15.1"
 lazy val sjsExtVersion = "0.9.1"
 lazy val sjsReactVersion = "1.0.0"
 lazy val diodeVersion = "1.1.2"
@@ -83,8 +83,8 @@ lazy val doobieDeps = Seq(
 
 lazy val finchDeps = Seq(
   libraryDependencies ++= Seq(
-    "com.github.finagle" %% "finch-core" % finagleVersion,
-    "com.github.finagle" %% "finch-circe" % finagleVersion,
+    "com.github.finagle" %% "finch-core" % finchVersion,
+    "com.github.finagle" %% "finch-circe" % finchVersion,
     "com.twitter"        %% "twitter-server" % "1.29.0")
 )
 
@@ -241,6 +241,20 @@ lazy val core = soarCrossProject("core", CrossType.Pure)
 
 lazy val coreJS = core.js
 lazy val coreJVM = core.jvm
+
+//Server module of the project - contains the finch API for serving soar data, used by glance, reports etc...
+lazy val server = soarProject("server")
+  .dependsOn(coreJVM)
+  .settings(
+    name := "Soar Server",
+    moduleName := "soar-server",
+    commonAssembly("uk.ac.ncl.la.soar.server.Main", "server.jar"))
+  .settings(
+    libraryDependencies ++= Seq(
+      "org.flywaydb" % "flyway-core" % "4.0.3",
+      "com.github.pureconfig" %% "pureconfig" % "0.7.0"))
+  .settings(commonBackendDeps:_*)
+  .settings(flywaySettings:_*)
 
 //Module which creates the model training spark job when built
 lazy val model = soarProject("model")

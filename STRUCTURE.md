@@ -5,7 +5,7 @@ This project is divided into a series of sub-modules as follows:
 * **core**: Contains typeclasses, data types and utilities common to all other modules of the **soar**.
 * **model**: Contains spark batch program for generating predictive model for student attainment based upon attainment 
 training data.
-* **db**: Does what it says on the tin. Contains all database queries, migrations etc... used by the rest of **soar** 
+* **db**: Does what it says on the tin. Contains all database queries, db.migrations etc... used by the rest of **soar** 
 (though not __glance-eval*__).
 * **db-cli**: Contains cli tool for bulk import/export to/from the **soar** database.
 * **server**: Contains the finch API for serving **soar** data, used by **glance**, **reports** etc...

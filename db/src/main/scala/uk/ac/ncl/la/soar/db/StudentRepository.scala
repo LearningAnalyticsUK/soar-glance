@@ -17,6 +17,8 @@
   */
 package uk.ac.ncl.la.soar.db
 
+import cats._
+import cats.implicits._
 import doobie.imports._
 import monix.eval.Task
 import uk.ac.ncl.la.soar.StudentNumber
@@ -41,14 +43,8 @@ class StudentDb private[glance] (xa: Transactor[Task]) extends Repository[Studen
 
 object StudentDb extends RepositoryCompanion[Student, StudentDb] {
 
-  //TODO, remove unnecessary DDL now that we use Flyway for migrations
-  override val initQ: ConnectionIO[Unit] = {
-    sql"""
-      CREATE TABLE IF NOT EXISTS students(
-        num VARCHAR(10) PRIMARY KEY
-      );
-    """.update.run.void
-  }
+  //TODO, remove unnecessary DDL now that we use Flyway for db.migrations
+  override val initQ: ConnectionIO[Unit] =  ().pure[ConnectionIO]
 
   override val listQ: ConnectionIO[List[Student]] = sql"SELECT * FROM students;".query[Student].list
 

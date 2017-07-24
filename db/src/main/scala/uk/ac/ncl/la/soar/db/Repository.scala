@@ -24,6 +24,8 @@ import monix.eval.Task
 import monix.cats._
 import org.flywaydb.core.Flyway
 import pureconfig._
+import pureconfig.module.cats.syntax._
+
 
 /**
   * Repository trait which defines the behaviour of a Repository, retrieving objects from a database
@@ -49,7 +51,7 @@ object Repository {
   lazy val Student: Task[StudentDb] = createSchema.map(_._1)
   lazy val Module: Task[ModuleDb] = createSchema.map(_._2)
 
-  /** Method to perform db migrations */
+  /** Method to perform db db.migrations */
   private def migrate(dbUrl: String, user: String, pass: String) = Task {
     val flyway = new Flyway()
     flyway.setDataSource(dbUrl, user, pass)
@@ -59,17 +61,16 @@ object Repository {
   /** Init method to set up the database */
   private val createSchema: Task[(StudentDb, ModuleDb)] = {
 
-    //TODO: Work out if this is even vaguely sane?
-    //Lazy config for memoization?
-    lazy val config = loadConfigOrThrow[Config]
+    //TODO: use loadConfig to Either and lift result into EitherT[Task,...]
+    //TODO: paramaterise over transactor as in gem example then return tuple or HList of repositories
 
     for {
-      cfg <- Task(config)
-//      _ <- migrate(
-//        s"jdbc:postgresql:${cfg.database.name}",
-//        cfg.database.user,
-//        cfg.database.password
-//      )
+      cfg <- Task(loadConfigOrThrow[Config])
+      _ <- migrate(
+        s"jdbc:postgresql:${cfg.database.name}",
+        cfg.database.user,
+        cfg.database.password
+      )
       xa = DriverManagerTransactor[Task](
         "org.postgresql.Driver",
         s"jdbc:postgresql:${cfg.database.name}",

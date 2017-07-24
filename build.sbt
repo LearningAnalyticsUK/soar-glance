@@ -22,6 +22,7 @@ lazy val sjsExtVersion = "0.9.1"
 lazy val sjsReactVersion = "1.0.0"
 lazy val diodeVersion = "1.1.2"
 lazy val scalaCSSVersion = "0.5.3"
+lazy val pureConfigVersion = "0.7.2"
 
 /**
   * Repeated js dependency versions
@@ -153,8 +154,8 @@ lazy val soarJSSettings = commonSettings ++ Seq(
 )
 
 lazy val flywaySettings = Seq(
-  flywayUrl  := "jdbc:postgresql:postgres",
-  flywayUser := "postgres",
+  flywayUrl  := "jdbc:postgresql:soar",
+  flywayUser := "hugofirth",
   flywayLocations := Seq(
     s"filesystem:${baseDirectory.value}/src/main/resources/db/migrations"
   )
@@ -178,14 +179,6 @@ def soarProject(name: String): Project = {
 }
 
 def soarCrossProject(name: String, tpe: CrossType): CrossProject = {
-//  val sjsCrossVersionPatch = Seq(
-//    //Work around for https://github.com/scala-js/scala-js/pull/2954
-//    // Remove the dependency on the scalajs-compiler
-//    libraryDependencies := libraryDependencies.value.filterNot(_.name == "scalajs-compiler"),
-//    // And add a custom one
-//    libraryDependencies += compilerPlugin("org.scala-js" % "scalajs-compiler" % "0.6.18" cross CrossVersion.patch)
-//  )
-
   val proj = CrossProject(name, file(name), tpe)
     .jvmSettings(soarSettings:_*)
     .jsSettings(soarJSSettings:_*)
@@ -242,7 +235,7 @@ lazy val core = soarCrossProject("core", CrossType.Pure)
 lazy val coreJS = core.js
 lazy val coreJVM = core.jvm
 
-//Db module of the project - contains all database queries, migrations, definitions etc...
+//Db module of the project - contains all database queries, db.migrations, definitions etc...
 lazy val db = soarProject("db")
   .dependsOn(coreJVM)
   .settings(
@@ -250,7 +243,9 @@ lazy val db = soarProject("db")
     moduleName := "soar-db",
     libraryDependencies ++= Seq(
       "org.flywaydb" % "flyway-core" % "4.0.3",
-      "com.github.pureconfig" %% "pureconfig" % "0.7.0")
+      "com.github.pureconfig" %% "pureconfig" % pureConfigVersion,
+      "com.github.pureconfig" %% "pureconfig-cats" % pureConfigVersion
+    )
   )
   .settings(flywaySettings:_*)
   .settings(doobieDeps:_*)
@@ -262,7 +257,7 @@ lazy val dbCli = soarProject("db-cli")
     name := "Soar Db Cli",
     moduleName := "soar-db-cli",
     libraryDependencies += "com.jsuereth" %% "scala-arm" % "2.0",
-    commonAssembly("uk.ac.ncl.la.soar.model.ScorePredictor", "model.jar"))
+    commonAssembly("uk.ac.ncl.la.soar.db.cli.Main", "soar-db.jar"))
 
 
 //Server module of the project - contains the finch API for serving soar data, used by glance, reports etc...

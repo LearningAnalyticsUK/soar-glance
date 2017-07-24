@@ -17,6 +17,8 @@
   */
 package uk.ac.ncl.la.soar.db
 
+import cats._
+import cats.implicits._
 import doobie.imports._
 import monix.eval.Task
 import monix.cats._
@@ -43,13 +45,7 @@ class ModuleDb private[glance] (xa: Transactor[Task]) extends Repository[Module]
 
 object ModuleDb extends RepositoryCompanion[Module, ModuleDb] {
 
-  override val initQ: ConnectionIO[Unit] = {
-    sql"""
-      CREATE TABLE IF NOT EXISTS modules(
-        code VARCHAR(8) PRIMARY KEY
-      );
-    """.update.run.map(_ => ())
-  }
+  override val initQ: ConnectionIO[Unit] = ().pure[ConnectionIO]
 
   override val listQ: ConnectionIO[List[Module]] = sql"SELECT * FROM modules;".query[Module].list
 

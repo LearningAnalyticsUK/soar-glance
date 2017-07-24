@@ -32,7 +32,7 @@ object Repository {
   lazy val Survey: Task[SurveyDb] = createSchema.map(_._1)
   lazy val SurveyResponse: Task[SurveyResponseDb] = createSchema.map(_._2)
 
-  /** Method to perform db migrations */
+  /** Method to perform db db.migrations */
   private def migrate(dbUrl: String, user: String, pass: String) = Task {
     val flyway = new Flyway()
     flyway.setDataSource(dbUrl, user, pass)
@@ -60,9 +60,9 @@ object Repository {
         cfg.database.password
       )
       sDb = new SurveyDb(xa)
-      sRDb = new SurveyResponseDb()(xa)
-      - <- { println("Initialising Student tables");sDb.init }
-      _ <- { println("Initialising Module tables");sRDb.init }
+      sRDb = new SurveyResponseDb(xa)
+      - <- { println("Initialising Survey tables");sDb.init }
+      _ <- { println("Initialising Survey tables");sRDb.init }
     } yield (sDb, sRDb)
   }
 }

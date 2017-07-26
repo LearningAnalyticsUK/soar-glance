@@ -22,8 +22,8 @@ import cats.implicits._
 import doobie.imports._
 import monix.eval.Task
 import monix.cats._
-import uk.ac.ncl.la.soar.ModuleCode
-import uk.ac.ncl.la.soar.data.Module
+import uk.ac.ncl.la.soar.{ModuleCode, StudentNumber}
+import uk.ac.ncl.la.soar.data.{Module, ModuleRecords}
 import Implicits._
 
 class ModuleDb private[glance] (xa: Transactor[Task]) extends Repository[Module] {
@@ -38,12 +38,15 @@ class ModuleDb private[glance] (xa: Transactor[Task]) extends Repository[Module]
 
   override def find(id: ModuleCode): Task[Option[Module]] = findQ(id).transact(xa)
 
+  def findRecord(id: ModuleCode): Task[Option[ModuleRecords[Map, StudentNumber, Double]]]
+
   override def save(entry: Module): Task[Unit] = saveQ(entry).transact(xa)
 
   override def delete(id: ModuleCode): Task[Boolean] = deleteQ(id).transact(xa)
+
 }
 
-object ModuleDb extends RepositoryCompanion[Module, ModuleDb] {
+private[db] object ModuleDb extends RepositoryCompanion[Module, ModuleDb] {
 
   override val initQ: ConnectionIO[Unit] = ().pure[ConnectionIO]
 
@@ -57,6 +60,11 @@ object ModuleDb extends RepositoryCompanion[Module, ModuleDb] {
 
   override def deleteQ(id: ModuleCode): ConnectionIO[Boolean] =
     sql"DELETE FROM modules m WHERE m.code = $id;".update.run.map(_ > 0)
+
+  def findRecordQ(id: ModuleCode): ConnectionIO[Option[ModuleRecords[Map, StudentNumber, Double]]] =
+    sql"""
+      SELECT * FROM module_score m WHERE m.code = $id;
+    """
 }
 
 

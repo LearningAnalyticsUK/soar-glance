@@ -17,30 +17,29 @@ CREATE TABLE IF NOT EXISTS stage
 )
 ;
 
--- -- Will add these next two tables in a subsequent migration when they are needed.
--- create table school
--- (
---   code VARCHAR(8) not null
---     CONSTRAINT school_pkey
---     PRIMARY KEY,
---   name VARCHAR(128) not null,
---   faculty_code VARCHAR(8)
--- )
--- ;
---
--- create table programme
--- (
---   code VARCHAR(8) not null
---     CONSTRAINT programme_pkey
---     PRIMARY KEY,
---   title VARCHAR(128) not null,
---   type VARCHAR(8) not null,
---   school_code VARCHAR(8)
---     CONSTRAINT programme_school_code_fkey
---     REFERENCES schools
---     ON DELETE CASCADE
--- )
--- ;
+-- Will add these next two tables in a subsequent migration when they are needed.
+create table school
+(
+  code VARCHAR(16) NOT NULL
+    CONSTRAINT school_pkey
+    PRIMARY KEY,
+  name VARCHAR(128) NOT NULL,
+  faculty_code VARCHAR(16)
+)
+;
+
+create table programme
+(
+  code VARCHAR(16) NOT NULL
+    CONSTRAINT programme_pkey
+    PRIMARY KEY,
+  title VARCHAR(128) NOT NULL,
+  type VARCHAR(16) NOT NULL,
+  school_code VARCHAR(16)
+    CONSTRAINT programme_school_code_fkey
+    REFERENCES school
+)
+;
 
 CREATE TABLE IF NOT EXISTS module
 (
@@ -50,10 +49,26 @@ CREATE TABLE IF NOT EXISTS module
   name VARCHAR(128) NOT NULL,
   stage_id VARCHAR(40) NOT NULL
     CONSTRAINT module_stage_id_fkey
-    REFERENCES stage
+    REFERENCES stage,
+  programme_code VARCHAR(16) NOT NULL
+    CONSTRAINT module_programme_code_fkey
+    REFERENCES programme
 )
 ;
 
+CREATE TABLE IF NOT EXISTS module_programme
+(
+  module_code VARCHAR(16) NOT NULL
+    CONSTRAINT module_programme_module_code_fkey
+    REFERENCES module
+    ON DELETE CASCADE,
+  programme_code VARCHAR(16) NOT NULL
+    CONSTRAINT module_programme_programme_code_fkey
+    REFERENCES programme
+    ON DELETE CASCADE,
+  PRIMARY KEY (module_code, programme_code)
+)
+;
 
 CREATE TABLE IF NOT EXISTS module_score
 (
@@ -76,6 +91,7 @@ CREATE TABLE IF NOT EXISTS module_score
 )
 ;
 
+-- Check if composite UNIQUE requirement on table definition has the same semantics and if so change.
 CREATE INDEX student_score_idx ON module_score (student_num);
 CREATE INDEX module_score_idx ON module_score (module_code);
 
@@ -98,7 +114,7 @@ CREATE TABLE IF NOT EXISTS recap_session
   id UUID NOT NULL
     CONSTRAINT recap_session_pkey
     PRIMARY KEY,
-  start TIMESTAMP WITH TIME ZONE NOT NULL,
+  start_time TIMESTAMP WITH TIME ZONE NOT NULL,
   student_num VARCHAR(16) NOT NULL
     CONSTRAINT recap_session_student_num_fkey
     REFERENCES students
@@ -125,8 +141,9 @@ CREATE TABLE IF NOT EXISTS cluster
 
 CREATE TABLE IF NOT EXISTS cluster_session
 (
-  start TIMESTAMP WITH TIME ZONE NOT NULL,
-  end TIMESTAMP WITH TIME ZONE NOT NULL,
+  start_time TIMESTAMP WITH TIME ZONE NOT NULL,
+  end_time TIMESTAMP WITH TIME ZONE NOT NULL,
+  machine_name VARCHAR(32),
   student_num VARCHAR(16) NOT NULL
     CONSTRAINT cluster_session_student_num_fkey
     REFERENCES students

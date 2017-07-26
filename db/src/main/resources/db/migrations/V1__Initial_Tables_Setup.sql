@@ -1,19 +1,19 @@
-create table student
+CREATE TABLE IF NOT EXISTS student
 (
-  num varchar(10) not null
-    constraint student_pkey
-    primary key
+  num VARCHAR(16) NOT NULL
+    CONSTRAINT student_pkey
+    PRIMARY KEY
 )
 ;
 
-create table stage
+CREATE TABLE IF NOT EXISTS stage
 (
-  id VARCHAR(40) not null
+  id UUID NOT NULL
     CONSTRAINT stage_pkey
     PRIMARY KEY,
   legacy_id INTEGER,
-  num INTEGER not null,
-  study_description VARCHAR(127) not null
+  num INTEGER NOT NULL,
+  study_description VARCHAR(128) NOT NULL
 )
 ;
 
@@ -42,69 +42,100 @@ create table stage
 -- )
 -- ;
 
-create table module
+CREATE TABLE IF NOT EXISTS module
 (
-  code VARCHAR(8) not null
+  code VARCHAR(16) NOT NULL
     CONSTRAINT module_pkey
     PRIMARY KEY,
-  name VARCHAR(127) not null,
-  stage_id VARCHAR(40) not null
+  name VARCHAR(128) NOT NULL,
+  stage_id VARCHAR(40) NOT NULL
     CONSTRAINT module_stage_id_fkey
     REFERENCES stage
 )
 ;
 
 
-create table module_score
+CREATE TABLE IF NOT EXISTS module_score
 (
-  id varchar(40) not null
-    constraint module_score_pkey
-    primary key,
-  student_num varchar(10)
-    constraint module_score_student_num_fkey
-    references students
-    on delete cascade,
-  score numeric(5,2) not null
-    constraint module_score_score_check
-    check (score >= 0.00)
-    constraint module_score_score_check1
-    check (score <= 100.00),
-  module_code varchar(8) not null
-    constraint module_score_module_code_fkey
-    references modules
-    on delete restrict
+  id UUID NOT NULL
+    CONSTRAINT module_score_pkey
+    PRIMARY KEY,
+  student_num VARCHAR(16)
+    CONSTRAINT module_score_student_num_fkey
+    REFERENCES students
+    ON DELETE CASCADE,
+  score NUMERIC(5,2) NOT NULL
+    CONSTRAINT module_score_score_check
+    CHECK (score >= 0.00)
+    CONSTRAINT module_score_score_check1
+    CHECK (score <= 100.00),
+  module_code VARCHAR(16) NOT NULL
+    CONSTRAINT module_score_module_code_fkey
+    REFERENCES modules
+    ON DELETE RESTRICT
 )
 ;
 
-create table recap_item
+CREATE INDEX student_score_idx ON module_score (student_num);
+CREATE INDEX module_score_idx ON module_score (module_code);
+
+CREATE TABLE IF NOT EXISTS recap_item
 (
-  id varchar(40) not null
-    constraint recap_item_pkey
-    primary key,
-  legacy_id integer,
-  name varchar(255),
-  module_code varchar(8) not null
-    constraint recap_item_module_code_fkey
-    references modules
-    on delete cascade
+  id UUID NOT NULL
+    CONSTRAINT recap_item_pkey
+    PRIMARY KEY,
+  legacy_id INTEGER,
+  name VARCHAR(255),
+  module_code VARCHAR(16) NOT NULL
+    CONSTRAINT recap_item_module_code_fkey
+    REFERENCES modules
+    ON DELETE CASCADE
 )
 ;
 
-create table recap_session
+CREATE TABLE IF NOT EXISTS recap_session
 (
-  id VARCHAR(40) not null
+  id UUID NOT NULL
     CONSTRAINT recap_session_pkey
     PRIMARY KEY,
-  start TIMESTAMP WITH TIME ZONE not null,
-  student_num varchar(10) not null
-    constraint recap_session_student_num_fkey
-    references students
-    on delete cascade,
-  recap_item varchar(40) not null
-    constraint recap_session_recap_item_fkey
-    references recap_item
-    on delete cascade,
-  seconds_listened integer
+  start TIMESTAMP WITH TIME ZONE NOT NULL,
+  student_num VARCHAR(16) NOT NULL
+    CONSTRAINT recap_session_student_num_fkey
+    REFERENCES students
+    ON DELETE CASCADE,
+  recap_item UUID NOT NULL
+    CONSTRAINT recap_session_recap_item_fkey
+    REFERENCES recap_item
+    ON DELETE CASCADE,
+  seconds_listened INTEGER
 )
+;
+
+CREATE TABLE IF NOT EXISTS cluster
+(
+  id UUID NOT NULL
+    CONSTRAINT cluster_pkey
+    PRIMARY KEY,
+  legacy_id INTEGER,
+  pc_name VARCHAR(32) NOT NULL,
+  cluster VARCHAR(128) NOT NULL,
+  building VARCHAR(128) NOT NULL
+)
+;
+
+CREATE TABLE IF NOT EXISTS cluster_session
+(
+  start TIMESTAMP WITH TIME ZONE NOT NULL,
+  end TIMESTAMP WITH TIME ZONE NOT NULL,
+  student_num VARCHAR(16) NOT NULL
+    CONSTRAINT cluster_session_student_num_fkey
+    REFERENCES students
+    ON DELETE CASCADE,
+  cluster_id UUID NOT NULL
+    CONSTRAINT cluster_session_cluster_id_fkey
+    REFERENCES cluster
+    ON DELETE CASCADE
+)
+;
 
 

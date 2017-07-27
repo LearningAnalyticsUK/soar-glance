@@ -24,7 +24,8 @@ import monix.eval.Task
 import monix.cats._
 import org.flywaydb.core.Flyway
 import pureconfig._
-import pureconfig.module.cats.syntax._
+import pureconfig.module.cats._
+import Implicits._
 
 
 /**

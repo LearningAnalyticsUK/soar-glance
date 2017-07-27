@@ -26,7 +26,7 @@ import uk.ac.ncl.la.soar.{ModuleCode, StudentNumber}
 import uk.ac.ncl.la.soar.data.{Module, ModuleRecords}
 import Implicits._
 
-class ModuleDb private[glance] (xa: Transactor[Task]) extends Repository[Module] {
+class ModuleDb(xa: Transactor[Task]) extends Repository[Module] {
 
   import ModuleDb._
 
@@ -38,7 +38,7 @@ class ModuleDb private[glance] (xa: Transactor[Task]) extends Repository[Module]
 
   override def find(id: ModuleCode): Task[Option[Module]] = findQ(id).transact(xa)
 
-  def findRecord(id: ModuleCode): Task[Option[ModuleRecords[Map, StudentNumber, Double]]]
+  def findRecord(id: ModuleCode): Task[Option[ModuleRecords[Map, StudentNumber, Double]]] = findRecordQ(id).transact(xa)
 
   override def save(entry: Module): Task[Unit] = saveQ(entry).transact(xa)
 
@@ -61,10 +61,19 @@ private[db] object ModuleDb extends RepositoryCompanion[Module, ModuleDb] {
   override def deleteQ(id: ModuleCode): ConnectionIO[Boolean] =
     sql"DELETE FROM modules m WHERE m.code = $id;".update.run.map(_ > 0)
 
-  def findRecordQ(id: ModuleCode): ConnectionIO[Option[ModuleRecords[Map, StudentNumber, Double]]] =
-    sql"""
-      SELECT * FROM module_score m WHERE m.code = $id;
-    """
+  def findRecordQ(id: ModuleCode): ConnectionIO[Option[ModuleRecords[Map, StudentNumber, Double]]] = {
+    val q =
+      sql"""
+        SELECT m.student_num, m.score FROM module_score m WHERE m.module_code = $id;
+      """.query[(StudentNumber, Double)].list
+
+    q.map {
+      case Nil => None
+      case scores => Some(ModuleRecords[Map, StudentNumber, Double](id, scores.toMap))
+
+    }
+  }
 }
+
 
 

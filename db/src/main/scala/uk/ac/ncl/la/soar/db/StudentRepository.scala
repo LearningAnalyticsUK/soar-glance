@@ -21,10 +21,12 @@ import cats._
 import cats.implicits._
 import doobie.imports._
 import monix.eval.Task
-import uk.ac.ncl.la.soar.StudentNumber
-import uk.ac.ncl.la.soar.data.Student
+import uk.ac.ncl.la.soar.{ModuleCode, StudentNumber}
+import uk.ac.ncl.la.soar.data.{Student, StudentRecords}
 
-class StudentDb private[glance] (xa: Transactor[Task]) extends Repository[Student] {
+import scala.collection.immutable.SortedMap
+
+class StudentDb(xa: Transactor[Task]) extends Repository[Student] {
 
   import StudentDb._
 
@@ -35,6 +37,9 @@ class StudentDb private[glance] (xa: Transactor[Task]) extends Repository[Studen
   override val list: Task[List[Student]] = listQ.transact(xa)
 
   override def find(id: StudentNumber): Task[Option[Student]] = findQ(id).transact(xa)
+
+  def findRecord(id: StudentNumber): Task[Option[StudentRecords[SortedMap, ModuleCode, Double]]] =
+    findRecordQ(id).transact(xa)
 
   override def save(entry: Student): Task[Unit] = saveQ(entry).transact(xa)
 
@@ -50,6 +55,20 @@ object StudentDb extends RepositoryCompanion[Student, StudentDb] {
 
   override def findQ(id: StudentNumber): ConnectionIO[Option[Student]] =
     sql"SELECT * FROM students s WHERE s.num = $id;".query[Student].option
+
+  def findRecordQ(id: StudentNumber): ConnectionIO[Option[StudentRecords[SortedMap, ModuleCode, Double]]] = {
+    val q =
+      sql"""
+        SELECT m.module_code, m.score FROM module_score m WHERE m.student_num = $id;
+      """.query[(ModuleCode, Double)].list
+
+    q.map {
+      case Nil =>
+        None
+      case scores =>
+        Some(StudentRecords[SortedMap, StudentNumber, Double](id, SortedMap.empty[StudentNumber, Double] ++ scores))
+    }
+  }
 
   override def saveQ(entry: Student): ConnectionIO[Unit] =
     sql"INSERT INTO students (num) VALUES (${entry.number});".update.run.void

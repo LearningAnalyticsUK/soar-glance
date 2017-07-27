@@ -17,8 +17,7 @@ CREATE TABLE IF NOT EXISTS stage
 )
 ;
 
--- Will add these next two tables in a subsequent migration when they are needed.
-create table school
+CREATE TABLE IF NOT EXISTS school
 (
   code VARCHAR(16) NOT NULL
     CONSTRAINT school_pkey
@@ -28,7 +27,7 @@ create table school
 )
 ;
 
-create table programme
+CREATE TABLE IF NOT EXISTS programme
 (
   code VARCHAR(16) NOT NULL
     CONSTRAINT programme_pkey

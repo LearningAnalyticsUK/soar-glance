@@ -153,9 +153,9 @@ lazy val soarJSSettings = commonSettings ++ Seq(
   parallelExecution := false
 )
 
-lazy val flywaySettings = Seq(
-  flywayUrl  := "jdbc:postgresql:soar",
-  flywayUser := "hugofirth",
+def flywaySettings(dbName: String) = Seq(
+  flywayUrl  := s"jdbc:postgresql:$dbName",
+  flywayUser := "postgres",
   flywayLocations := Seq(
     s"filesystem:${baseDirectory.value}/src/main/resources/db/migrations"
   )
@@ -247,7 +247,7 @@ lazy val db = soarProject("db")
       "com.github.pureconfig" %% "pureconfig-cats" % pureConfigVersion
     )
   )
-  .settings(flywaySettings:_*)
+  .settings(flywaySettings("soar"):_*)
   .settings(doobieDeps:_*)
 
 //Db-clu module of the project - contains import export scripts for the soar database and depends upon the db module
@@ -272,7 +272,7 @@ lazy val server = soarProject("server")
       "org.flywaydb" % "flyway-core" % "4.0.3",
       "com.github.pureconfig" %% "pureconfig" % "0.7.0"))
   .settings(commonBackendDeps:_*)
-  .settings(flywaySettings:_*)
+  .settings(flywaySettings("soar"):_*)
 
 //Module which creates the model training spark job when built
 lazy val model = soarProject("model")
@@ -292,7 +292,7 @@ lazy val glanceCore = soarCrossProject("glance-core", CrossType.Full)
     moduleName := "soar-glance-core",
     unmanagedSourceDirectories in Compile += baseDirectory.value / "shared" / "main" / "scala")
   .jvmSettings(doobieDeps:_*)
-  .jvmSettings(flywaySettings:_*)
+  .jvmSettings(flywaySettings("glance_eval"):_*)
   .jvmSettings(
     libraryDependencies ++= Seq(
       "org.flywaydb" % "flyway-core" % "4.0.3",

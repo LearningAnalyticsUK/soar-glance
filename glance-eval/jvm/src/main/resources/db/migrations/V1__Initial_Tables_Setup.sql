@@ -113,3 +113,7 @@ create table if not exists survey_response
 )
 ;
 
+REVOKE ALL PRIVILEGES ON ALL TABLES IN SCHEMA public FROM PUBLIC;
+REVOKE ALL PRIVILEGES ON ALL TABLES IN SCHEMA public FROM postgres;
+
+GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO postgres;

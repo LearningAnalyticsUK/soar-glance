@@ -292,7 +292,6 @@ lazy val glanceCore = soarCrossProject("glance-core", CrossType.Full)
     moduleName := "soar-glance-core",
     unmanagedSourceDirectories in Compile += baseDirectory.value / "shared" / "main" / "scala")
   .jvmSettings(doobieDeps:_*)
-  .jvmSettings(flywaySettings("glance_eval"):_*)
   .jvmSettings(
     libraryDependencies ++= Seq(
       "org.flywaydb" % "flyway-core" % "4.0.3",
@@ -350,6 +349,7 @@ lazy val glanceEval = soarCrossProject("glance-eval", CrossType.Full)
     unmanagedSourceDirectories in Compile += baseDirectory.value / "shared" / "main" / "scala")
   .settings(sjsCrossVersionPatch:_*)
   .jvmSettings(commonBackendDeps:_*)
+  .jvmSettings(flywaySettings("glance_eval"):_*)
   .jsSettings(commonFrontendDeps:_*)
   .jsSettings(
     libraryDependencies ++= Seq (
@@ -377,7 +377,7 @@ lazy val glanceEvalJVM = glanceEval.jvm
   .dependsOn(coreJVM, glanceCoreJVM, server)
   .settings(
     (resources in Compile) += (fastOptJS in (glanceEvalJS, Compile)).value.data,
-    mainClass in Compile := Some("uk.ac.ncl.la.soar.glance.web.server.Main"))
+    mainClass in Compile := Some("uk.ac.ncl.la.soar.glance.eval.server.Main"))
   .settings(commonAssembly("uk.ac.ncl.la.soar.glance.web.server.Main", "soar-glance-eval.jar"))
 
 //TODO: Investigate intermittent heap space OOM error on assembly of this module

@@ -55,6 +55,7 @@ object Repository {
         cfg.database.user,
         cfg.database.password
       )
+      _ = println(s"Connecting to ${cfg.database.url + cfg.database.name}, -U ${cfg.database.user} -P ${cfg.database.password}")
       xa = DriverManagerTransactor[Task](
         "org.postgresql.Driver",
         s"${cfg.database.url}${cfg.database.name}",
@@ -64,7 +65,7 @@ object Repository {
       sDb = new SurveyDb(xa)
       sRDb = new SurveyResponseDb(xa)
       - <- { println("Initialising Survey tables");sDb.init }
-      _ <- { println("Initialising Survey tables");sRDb.init }
+      _ <- { println("Initialising Survey response tables");sRDb.init }
     } yield (sDb, sRDb)
   }
 }

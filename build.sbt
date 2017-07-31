@@ -15,7 +15,7 @@ scalaVersion in ThisBuild := "2.11.11-bin-typelevel-4"
 lazy val catsVersion = "0.9.0"
 lazy val monixVersion = "2.3.0"
 lazy val sparkVersion = "2.1.0"
-lazy val circeVersion = "0.7.0"
+lazy val circeVersion = "0.8.0"
 lazy val doobieVersion = "0.4.1"
 lazy val finchVersion = "0.15.1"
 lazy val sjsExtVersion = "0.9.1"
@@ -374,7 +374,7 @@ lazy val glanceEvalJS = glanceEval.js
   .dependsOn(coreJS, glanceCoreJS)
 
 lazy val glanceEvalJVM = glanceEval.jvm
-  .dependsOn(coreJVM, glanceCoreJVM)
+  .dependsOn(coreJVM, glanceCoreJVM, server)
   .settings(
     (resources in Compile) += (fastOptJS in (glanceEvalJS, Compile)).value.data,
     mainClass in Compile := Some("uk.ac.ncl.la.soar.glance.web.server.Main"))
@@ -382,7 +382,7 @@ lazy val glanceEvalJVM = glanceEval.jvm
 
 //TODO: Investigate intermittent heap space OOM error on assembly of this module
 lazy val glanceEvalCli = soarProject("glance-eval-cli")
-  .dependsOn(coreJVM, glanceCoreJVM)
+  .dependsOn(coreJVM, glanceCoreJVM, glanceEvalJVM)
   .settings(
     name := "Soar Glance Eval CLI",
     moduleName := "soar-glance-eval-cli",

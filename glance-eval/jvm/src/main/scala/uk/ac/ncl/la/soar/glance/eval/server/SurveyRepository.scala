@@ -15,7 +15,7 @@
   * See the License for the specific language governing permissions and
   * limitations under the License.
   */
-package uk.ac.ncl.la.soar.glance
+package uk.ac.ncl.la.soar.glance.eval.server
 
 import java.time.Instant
 import java.util.UUID
@@ -26,18 +26,11 @@ import doobie.imports._
 import monix.eval.Task
 import uk.ac.ncl.la.soar.data.ModuleScore
 import uk.ac.ncl.la.soar.db.{Repository, RepositoryCompanion}
+import uk.ac.ncl.la.soar.glance.eval.{Survey, SurveyResponse}
 import uk.ac.ncl.la.soar.{ModuleCode, StudentNumber}
 
 class SurveyDb private[glance] (xa: Transactor[Task]) extends Repository[Survey] {
 
-  /**
-    * core
-    * server
-    * model
-    * glance
-    * glance-eval
-    * glance-eval-cli
-    */
   import SurveyDb._
 
   type PK = UUID
@@ -60,42 +53,7 @@ object SurveyDb extends RepositoryCompanion[Survey, SurveyDb] {
 
   implicit val uuidMeta: Meta[UUID] = Meta[String].nxmap(UUID.fromString, _.toString)
 
-  override val initQ: ConnectionIO[Unit] = {
-    sql"""
-      CREATE TABLE IF NOT EXISTS surveys (
-        id VARCHAR(40) PRIMARY KEY
-      );
-
-      CREATE TABLE IF NOT EXISTS surveys_students (
-        survey_id VARCHAR(40) REFERENCES surveys(id) ON DELETE CASCADE,
-        student_num VARCHAR(10) REFERENCES students(num) ON DELETE CASCADE,
-        PRIMARY KEY (survey_id, student_num)
-      );
-
-      CREATE TABLE IF NOT EXISTS queries (
-        student_num VARCHAR(10) REFERENCES students(num) ON DELETE CASCADE,
-        module_num VARCHAR(8),
-        PRIMARY KEY (student_num, module_num)
-      );
-
-      CREATE TABLE IF NOT EXISTS survey_queries (
-        survey_id VARCHAR(40) REFERENCES surveys(id) ON DELETE CASCADE,
-        student_num VARCHAR(10) NOT NULL,
-        module_num VARCHAR(8) NOT NULL,
-        PRIMARY KEY (survey_id, student_num, module_num),
-        FOREIGN KEY (student_num, module_num) REFERENCES queries(student_num, module_num) ON DELETE CASCADE
-      );
-
-      CREATE TABLE IF NOT EXISTS module_score (
-        id VARCHAR(40) PRIMARY KEY,
-        student_num VARCHAR(10) REFERENCES students(num) ON DELETE CASCADE,
-        score DECIMAL(5,2) NOT NULL,
-        CHECK (score >= 0.00),
-        CHECK (score <= 100.00),
-        module_num VARCHAR(8) NOT NULL
-      );
-    """.update.run.void
-  }
+  override val initQ: ConnectionIO[Unit] = ().pure[ConnectionIO]
 
   override val listQ: ConnectionIO[List[Survey]] = {
     //TODO: The below cannot be the best way to do this? Look into some better SQL foo. Also for SurveyResponseDb listQ
@@ -240,27 +198,7 @@ object SurveyResponseDb extends RepositoryCompanion[SurveyResponse, SurveyRespon
 
   implicit val uuidMeta: Meta[UUID] = Meta[String].nxmap(UUID.fromString, _.toString)
 
-  override val initQ: ConnectionIO[Unit] = {
-    sql"""
-      CREATE TABLE IF NOT EXISTS surveys_respondents (
-        id VARCHAR PRIMARY KEY,
-        survey_id VARCHAR REFERENCES surveys(id) ON DELETE CASCADE,
-        respondent VARCHAR UNIQUE NOT NULL,
-        submitted TIMESTAMP WITH TIME ZONE NOT NULL
-      );
-
-      CREATE TABLE IF NOT EXISTS survey_response (
-        id VARCHAR PRIMARY KEY,
-        respondent_id VARCHAR REFERENCES surveys_respondents(id) ON DELETE CASCADE,
-        student_num VARCHAR(10) NOT NULL,
-        module_num VARCHAR NOT NULL,
-        predicted_score DECIMAL(5,2) NOT NULL,
-        CHECK (predicted_score > 0.00),
-        CHECK (predicted_score < 100.00),
-        FOREIGN KEY (student_num, module_num) REFERENCES queries(student_num, module_num) ON DELETE CASCADE
-      );
-    """.update.run.void
-  }
+  override val initQ: ConnectionIO[Unit] = ().pure[ConnectionIO]
 
   private val listRespondentIdsQ: ConnectionIO[List[UUID]] =
     sql"SELECT r.id FROM surveys_respondents r;".query[UUID].list

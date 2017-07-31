@@ -15,7 +15,7 @@
   * See the License for the specific language governing permissions and
   * limitations under the License.
   */
-package uk.ac.ncl.la.soar.glance.cli
+package uk.ac.ncl.la.soar.glance.eval.cli
 
 import java.nio.charset.StandardCharsets
 import java.nio.file.{Files, Path, Paths, StandardOpenOption}
@@ -28,10 +28,11 @@ import monix.eval.Task
 import monix.cats._
 import resource._
 import uk.ac.ncl.la.soar.{ModuleCode, Record}
-import uk.ac.ncl.la.soar.data.{ModuleScore, StudentRecords}
 import uk.ac.ncl.la.soar.Record._
-import uk.ac.ncl.la.soar.glance.{Repository, Survey}
-import uk.ac.ncl.la.soar.glance.Implicits._
+import uk.ac.ncl.la.soar.data.{ModuleScore, StudentRecords}
+import uk.ac.ncl.la.soar.server.Implicits._
+import uk.ac.ncl.la.soar.glance.eval.Survey
+import uk.ac.ncl.la.soar.glance.eval.server.Repository
 
 import scala.collection.immutable.SortedMap
 import scala.util.{Properties, Random}

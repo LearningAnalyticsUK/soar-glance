@@ -23,7 +23,7 @@ import io.circe.generic.auto._
 import io.finch._
 import io.finch.circe._
 import Util._
-import uk.ac.ncl.la.soar.glance.SurveyDb
+import uk.ac.ncl.la.soar.glance.eval.server.SurveyDb
 
 /**
   * Class defines the REST api for Surveys

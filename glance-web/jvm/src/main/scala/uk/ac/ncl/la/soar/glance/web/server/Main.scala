@@ -20,10 +20,10 @@ package uk.ac.ncl.la.soar.glance.web.server
 import com.twitter.finagle.Http
 import com.twitter.server.TwitterServer
 import com.twitter.util.Await
-import uk.ac.ncl.la.soar.glance.Repository
 import Util._
 import monix.eval.Task
 import org.flywaydb.core.Flyway
+import uk.ac.ncl.la.soar.glance.eval.server.Repository
 
 /**
   * Main class for the glance server

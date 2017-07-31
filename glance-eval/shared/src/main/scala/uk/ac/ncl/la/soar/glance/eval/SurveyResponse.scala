@@ -1,4 +1,4 @@
-/** soar
+/** Default (Template) Project
   *
   * Copyright (c) 2017 Hugo Firth
   * Email: <me@hugofirth.com/>
@@ -15,12 +15,14 @@
   * See the License for the specific language governing permissions and
   * limitations under the License.
   */
-package uk.ac.ncl.la.soar.glance.web.server
+package uk.ac.ncl.la.soar.glance.eval
 
-/** Description of Class
-  *
-  * @author hugofirth
+import java.util.UUID
+
+import uk.ac.ncl.la.soar.StudentNumber
+import uk.ac.ncl.la.soar.data.ModuleScore
+
+/**
+  * Case class representing an a partially answered survey which is being completed by a member of staff.
   */
-class StudentsApi {
-
-}
+case class SurveyResponse(survey: Survey, responses: Map[StudentNumber, ModuleScore], respondent: String, id: UUID)

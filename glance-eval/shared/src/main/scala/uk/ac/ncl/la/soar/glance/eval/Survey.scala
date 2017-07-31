@@ -1,4 +1,4 @@
-/** soar
+/** Default (Template) Project
   *
   * Copyright (c) 2017 Hugo Firth
   * Email: <me@hugofirth.com/>
@@ -15,13 +15,12 @@
   * See the License for the specific language governing permissions and
   * limitations under the License.
   */
-package uk.ac.ncl.la.soar.glance
+package uk.ac.ncl.la.soar.glance.eval
 
 import java.util.UUID
 
 import cats._
 import cats.implicits._
-import io.circe.Decoder.Result
 import uk.ac.ncl.la.soar._
 import uk.ac.ncl.la.soar.data._
 import uk.ac.ncl.la.soar.Record._
@@ -29,36 +28,16 @@ import uk.ac.ncl.la.soar.Record._
 import scala.collection.immutable.SortedMap
 import scala.util.Random
 import io.circe._
+import io.circe.Decoder.Result
 import io.circe.syntax._
 import io.circe.generic.auto._
 
-
-/**
-  * TODO: provide an assess method on the trait which calculates RMSE between response and actual
-  * TODO: provide helper methods like: trainingRecords, groundTruth etc...
-  * TODO: Write some simple tests.
-  * TODO: Clean up with a type alias
-  * TODO: Explicitly represent common modules?
-  * TODO: Refactor away from common ADT for Surveys and responses. Its confusing things
-  */
 /**
   * Case class representing an unanswered survey which will be presented to members of staff to fill out.
   */
 case class Survey(modules: Set[ModuleCode], queries: Map[StudentNumber, ModuleCode],
                   entries: List[StudentRecords[SortedMap, ModuleCode, Double]],
                   id: UUID = UUID.randomUUID)
-
-/**
-  * Case class representing an a partially answered survey which is being completed by a member of staff.
-  */
-case class SurveyResponse(survey: Survey, responses: Map[StudentNumber, ModuleScore], respondent: String, id: UUID)
-
-/**
-  * Boolean extractor to detect completed survey responses
-  */
-object CompletedResponse {
-  def unapply(arg: SurveyResponse): Boolean = arg.responses.size == arg.survey.queries.size
-}
 
 object Survey {
 

@@ -15,13 +15,12 @@
   * See the License for the specific language governing permissions and
   * limitations under the License.
   */
-package uk.ac.ncl.la.soar.glance.web.server
+package uk.ac.ncl.la.soar.glance.eval.server
 
 import com.twitter.finagle.Http
 import com.twitter.server.TwitterServer
 import com.twitter.util.Await
-import uk.ac.ncl.la.soar.glance.Repository
-import Util._
+import uk.ac.ncl.la.soar.server.Implicits._
 import monix.eval.Task
 import org.flywaydb.core.Flyway
 

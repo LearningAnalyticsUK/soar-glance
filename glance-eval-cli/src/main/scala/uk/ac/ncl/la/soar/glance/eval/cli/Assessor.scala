@@ -15,7 +15,7 @@
   * See the License for the specific language governing permissions and
   * limitations under the License.
   */
-package uk.ac.ncl.la.soar.glance.cli
+package uk.ac.ncl.la.soar.glance.eval.cli
 
 import cats._
 import cats.implicits._
@@ -23,7 +23,7 @@ import monix.eval.Task
 import monix.cats._
 import uk.ac.ncl.la.soar.{ModuleCode, StudentNumber}
 import uk.ac.ncl.la.soar.data.{ModuleScore, Records, StudentRecords}
-import uk.ac.ncl.la.soar.glance.Survey
+import uk.ac.ncl.la.soar.glance.eval.Survey
 
 import scala.collection.immutable.SortedMap
 import scala.io.Source

@@ -1,4 +1,4 @@
-/** soar
+/** Default (Template) Project
   *
   * Copyright (c) 2017 Hugo Firth
   * Email: <me@hugofirth.com/>
@@ -15,12 +15,12 @@
   * See the License for the specific language governing permissions and
   * limitations under the License.
   */
-package uk.ac.ncl.la.soar.glance
+package uk.ac.ncl.la.soar.glance.eval.server
 
 import doobie.util.transactor.DriverManagerTransactor
 import monix.eval.Task
 import org.flywaydb.core.Flyway
-import pureconfig._
+import pureconfig.loadConfigOrThrow
 import uk.ac.ncl.la.soar.db.Config
 
 /** Description of Class
@@ -67,4 +67,3 @@ object Repository {
     } yield (sDb, sRDb)
   }
 }
-

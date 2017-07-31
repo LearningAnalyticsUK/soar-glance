@@ -22,6 +22,8 @@
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
     <orderEntry type="library" name="SBT: org.typelevel:scala-library:2.11.11-bin-typelevel-4:jar" level="project" />
+    <orderEntry type="library" name="SBT: io.circe:circe-parser_2.11:0.8.0:jar" level="project" />
+    <orderEntry type="library" name="SBT: io.circe:circe-generic_2.11:0.8.0:jar" level="project" />
     <orderEntry type="library" name="SBT: org.typelevel:scala-reflect:2.11.11-bin-typelevel-4:jar" level="project" />
     <orderEntry type="library" name="SBT: org.typelevel:macro-compat_2.11:1.1.1:jar" level="project" />
     <orderEntry type="library" name="SBT: org.typelevel:machinist_2.11:0.6.1:jar" level="project" />
@@ -69,11 +71,9 @@
     <orderEntry type="library" name="SBT: io.monix:monix-execution_2.11:2.3.0:jar" level="project" />
     <orderEntry type="library" name="SBT: io.monix:monix-eval_2.11:2.3.0:jar" level="project" />
     <orderEntry type="library" name="SBT: io.monix:monix-cats_2.11:2.3.0:jar" level="project" />
-    <orderEntry type="library" name="SBT: io.circe:circe-parser_2.11:0.7.0:jar" level="project" />
     <orderEntry type="library" name="SBT: io.circe:circe-numbers_2.11:0.8.0:jar" level="project" />
     <orderEntry type="library" name="SBT: io.circe:circe-jawn_2.11:0.8.0:jar" level="project" />
     <orderEntry type="library" name="SBT: io.circe:circe-jackson28_2.11:0.8.0:jar" level="project" />
-    <orderEntry type="library" name="SBT: io.circe:circe-generic_2.11:0.7.0:jar" level="project" />
     <orderEntry type="library" name="SBT: io.circe:circe-core_2.11:0.8.0:jar" level="project" />
     <orderEntry type="library" name="SBT: io.catbird:catbird-util_2.11:0.15.0:jar" level="project" />
     <orderEntry type="library" name="SBT: commons-lang:commons-lang:2.6:jar" level="project" />

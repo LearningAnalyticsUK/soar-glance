@@ -15,7 +15,7 @@
   * See the License for the specific language governing permissions and
   * limitations under the License.
   */
-package uk.ac.ncl.la.soar.glance.cli
+package uk.ac.ncl.la.soar.glance.eval.cli
 
 import cats.MonadError
 import monix.eval.Task

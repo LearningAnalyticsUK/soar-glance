@@ -27,7 +27,7 @@ import io.circe._
 import io.circe.generic.auto._
 import io.circe.parser._
 import io.circe.syntax._
-import uk.ac.ncl.la.soar.glance.Survey
+import uk.ac.ncl.la.soar.glance.eval.Survey
 
 /**
   * Object defining methods for talking to remote API and parsing results

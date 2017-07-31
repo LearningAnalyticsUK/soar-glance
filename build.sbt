@@ -393,7 +393,48 @@ lazy val glanceEvalCli = soarProject("glance-eval-cli")
 /**
   * Command Aliases to make using this sbt project from the console a little more palatable
   */
-addCommandAlias("testAll", "; core/test; model/test; glance-core/test")
-addCommandAlias("compileAll", ";coreJS/compile; coreJVM/compile; model/compile; glance-cli/compile; " +
-  "glance-coreJS/compile; glance-coreJVM/compile; glance-webJS/compile; glance-webJVM/compile")
-addCommandAlias("cleanGlance", "; coreJVM/clean; glance-coreJVM/clean; glance-webJVM/clean")
+addCommandAlias("testAll",
+  List(
+   "; coreJS/test",
+   "; coreJVM/test",
+   "; db/test",
+   "; db-cli/test",
+   "; glance-coreJVM/test",
+   "; glance-coreJS/test",
+   "; glance-evalJVM/test",
+   "; glance-evalJS/test",
+   "; glance-eval-cli/test",
+   "; glance-webJS/test",
+   "; glance-webJVM/test",
+   "; model/test",
+   "; server/test").mkString)
+addCommandAlias("cleanAll",
+  List(
+   "; coreJS/clean",
+   "; coreJVM/clean",
+   "; db/clean",
+   "; db-cli/clean",
+   "; glance-coreJVM/clean",
+   "; glance-coreJS/clean",
+   "; glance-evalJVM/clean",
+   "; glance-evalJS/clean",
+   "; glance-eval-cli/clean",
+   "; glance-webJS/clean",
+   "; glance-webJVM/clean",
+   "; model/clean",
+   "; server/clean").mkString)
+addCommandAlias("compileAll",
+  List(
+   "; coreJS/compile",
+   "; coreJVM/compile",
+   "; db/compile",
+   "; db-cli/compile",
+   "; glance-coreJVM/compile",
+   "; glance-coreJS/compile",
+   "; glance-evalJVM/compile",
+   "; glance-evalJS/compile",
+   "; glance-eval-cli/compile",
+//   "; glance-webJS/compile",
+//   "; glance-webJVM/compile",
+   "; model/compile",
+   "; server/compile").mkString)

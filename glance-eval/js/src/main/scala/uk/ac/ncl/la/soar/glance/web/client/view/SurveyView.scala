@@ -26,7 +26,7 @@ import japgolly.scalajs.react._
 import japgolly.scalajs.react.vdom.html_<^._
 import uk.ac.ncl.la.soar.ModuleCode
 import uk.ac.ncl.la.soar.data.StudentRecords
-import uk.ac.ncl.la.soar.glance.Survey
+import uk.ac.ncl.la.soar.glance.eval.Survey
 import uk.ac.ncl.la.soar.glance.web.client.SurveyModel
 import uk.ac.ncl.la.soar.glance.web.client.component.{Select, StudentCharts, StudentsTable}
 import uk.ac.ncl.la.soar.glance.web.client.data.CohortAttainmentSummary

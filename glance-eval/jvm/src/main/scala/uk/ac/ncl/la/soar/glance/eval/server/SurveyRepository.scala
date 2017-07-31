@@ -25,11 +25,13 @@ import cats.implicits._
 import doobie.imports._
 import monix.eval.Task
 import uk.ac.ncl.la.soar.data.ModuleScore
-import uk.ac.ncl.la.soar.db.{Repository, RepositoryCompanion}
+import uk.ac.ncl.la.soar.db.{Repository => DbRepository, RepositoryCompanion}
 import uk.ac.ncl.la.soar.glance.eval.{Survey, SurveyResponse}
 import uk.ac.ncl.la.soar.{ModuleCode, StudentNumber}
+import uk.ac.ncl.la.soar.server.Implicits._
 
-class SurveyDb private[glance] (xa: Transactor[Task]) extends Repository[Survey] {
+
+class SurveyDb private[glance] (xa: Transactor[Task]) extends DbRepository[Survey] {
 
   import SurveyDb._
 
@@ -173,7 +175,7 @@ object SurveyDb extends RepositoryCompanion[Survey, SurveyDb] {
     """.query[(StudentNumber, ModuleCode)].list.map(_.toMap)
 }
 
-class SurveyResponseDb private[glance] (xa: Transactor[Task]) extends Repository[SurveyResponse] {
+class SurveyResponseDb private[glance] (xa: Transactor[Task]) extends DbRepository[SurveyResponse] {
 
   import SurveyResponseDb._
 

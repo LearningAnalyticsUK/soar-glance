@@ -22,6 +22,7 @@ import monix.eval.Task
 import org.flywaydb.core.Flyway
 import pureconfig.loadConfigOrThrow
 import uk.ac.ncl.la.soar.db.Config
+import uk.ac.ncl.la.soar.server.Implicits._
 
 /** Description of Class
   *

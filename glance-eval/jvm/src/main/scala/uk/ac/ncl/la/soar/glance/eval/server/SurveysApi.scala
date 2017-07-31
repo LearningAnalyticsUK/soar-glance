@@ -54,6 +54,6 @@ class SurveysApi(repository: SurveyDb) {
   val service = endpoints.toService
 
   /** Response when a survey with the given id is not found in the database */
-  private[web] def notFound(id: UUID) = NotFound(new RuntimeException(s"Survey not found with id:$id"))
+  private[server] def notFound(id: UUID) = NotFound(new RuntimeException(s"Survey not found with id:$id"))
 
 }

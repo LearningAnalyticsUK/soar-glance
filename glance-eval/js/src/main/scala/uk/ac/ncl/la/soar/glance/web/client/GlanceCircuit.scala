@@ -27,7 +27,7 @@ import diode.util._
 import diode.react.ReactConnector
 import io.circe._
 import uk.ac.ncl.la.soar.{ModuleCode, StudentNumber}
-import uk.ac.ncl.la.soar.glance.Survey
+import uk.ac.ncl.la.soar.glance.eval.Survey
 import uk.ac.ncl.la.soar.glance.web.client.data.CohortAttainmentSummary
 
 

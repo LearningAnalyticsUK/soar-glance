@@ -21,6 +21,7 @@ import doobie.util.transactor.DriverManagerTransactor
 import monix.eval.Task
 import org.flywaydb.core.Flyway
 import pureconfig._
+import uk.ac.ncl.la.soar.db.Config
 
 /** Description of Class
   *
@@ -48,14 +49,14 @@ object Repository {
 
     for {
       cfg <- Task(config)
-      //      _ <- migrate(
-      //        s"jdbc:postgresql:${cfg.database.name}",
-      //        cfg.database.user,
-      //        cfg.database.password
-      //      )
+      _ <- migrate(
+        s"${cfg.database.url}${cfg.database.name}",
+        cfg.database.user,
+        cfg.database.password
+      )
       xa = DriverManagerTransactor[Task](
         "org.postgresql.Driver",
-        s"jdbc:postgresql:${cfg.database.name}",
+        s"${cfg.database.url}${cfg.database.name}",
         cfg.database.user,
         cfg.database.password
       )

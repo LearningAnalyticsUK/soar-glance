@@ -68,13 +68,13 @@ object Repository {
     for {
       cfg <- Task(loadConfigOrThrow[Config])
       _ <- migrate(
-        s"jdbc:postgresql:${cfg.database.name}",
+        s"${cfg.database.url}${cfg.database.name}",
         cfg.database.user,
         cfg.database.password
       )
       xa = DriverManagerTransactor[Task](
         "org.postgresql.Driver",
-        s"jdbc:postgresql:${cfg.database.name}",
+        s"${cfg.database.url}${cfg.database.name}",
         cfg.database.user,
         cfg.database.password
       )

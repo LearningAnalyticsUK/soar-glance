@@ -21,4 +21,4 @@ package uk.ac.ncl.la.soar.db
   *
   * @author hugofirth
   */
-case class DatabaseConfig(name: String, user: String, password: String)
+case class DatabaseConfig(url: String, name: String, user: String, password: String)

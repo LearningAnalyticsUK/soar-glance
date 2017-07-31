@@ -304,18 +304,7 @@ lazy val glanceCoreJS = glanceCore.js
 lazy val glanceCoreJVM = glanceCore.jvm
   .dependsOn(db)
 
-//TODO: Investigate intermittent heap space OOM error on assembly of this module
-lazy val glanceCli = soarProject("glance-cli")
-  .dependsOn(coreJVM, glanceCoreJVM)
-  .settings(
-    name := "Soar Glance CLI",
-    moduleName := "soar-glance-cli",
-    libraryDependencies += "com.jsuereth" %% "scala-arm" % "2.0",
-    commonAssembly("uk.ac.ncl.la.soar.glance.cli.Main", "soar-glance-cli.jar"))
-  .settings(sparkBatchDeps:_*)
-
 //TODO: Fix this so that the js/jvm dependencies are separate and I can build a proper server jar
-
 lazy val glanceWeb = soarCrossProject("glance-web", CrossType.Full)
   .settings(
     name := "Soar Glance Web",
@@ -352,6 +341,54 @@ lazy val glanceWebJVM = glanceWeb.jvm
     (resources in Compile) += (fastOptJS in (glanceWebJS, Compile)).value.data,
     mainClass in Compile := Some("uk.ac.ncl.la.soar.glance.web.server.Main"))
   .settings(commonAssembly("uk.ac.ncl.la.soar.glance.web.server.Main", "soar-glance-web.jar"))
+
+
+lazy val glanceEval = soarCrossProject("glance-eval", CrossType.Full)
+  .settings(
+    name := "Soar Glance Eval",
+    moduleName := "soar-glance-eval",
+    unmanagedSourceDirectories in Compile += baseDirectory.value / "shared" / "main" / "scala")
+  .settings(sjsCrossVersionPatch:_*)
+  .jvmSettings(commonBackendDeps:_*)
+  .jsSettings(commonFrontendDeps:_*)
+  .jsSettings(
+    libraryDependencies ++= Seq (
+      //What is the point of having these dependencies in libraryDependencies?
+      "org.webjars" %   "bootstrap"  % bootstrapVersion,
+      "org.webjars" %   "datatables" % datatablesVersion
+    ),
+    jsDependencies ++= Seq(
+      "org.webjars.bower" % "react" % reactVersion / "react-with-addons.js" minified "react-with-addons.min.js",
+      "org.webjars.bower" % "react" % reactVersion / "react-dom.js" minified "react-dom.min.js" dependsOn "react-with-addons.js",
+      "org.webjars" % "jquery" % "1.11.1" / "jquery.js" minified "jquery.min.js",
+      "org.webjars" % "bootstrap" % bootstrapVersion / "bootstrap.js" minified "bootstrap.min.js" dependsOn "jquery.js",
+      "org.webjars" % "datatables" % datatablesVersion / "jquery.dataTables.js" minified "jquery.dataTables.min.js" dependsOn "jquery.js",
+      "org.webjars" % "datatables" % datatablesVersion / "dataTables.bootstrap.js" minified "dataTables.bootstrap.min.js" dependsOn "jquery.js",
+      "org.webjars" % "chartjs" % "2.1.3" / "Chart.js" minified "Chart.min.js"
+    ),
+    scalaJSUseMainModuleInitializer := true)
+  .enablePlugins(SbtWeb)
+  .enablePlugins(WorkbenchPlugin)
+
+lazy val glanceEvalJS = glanceEval.js
+  .dependsOn(coreJS, glanceCoreJS)
+
+lazy val glanceEvalJVM = glanceEval.jvm
+  .dependsOn(coreJVM, glanceCoreJVM)
+  .settings(
+    (resources in Compile) += (fastOptJS in (glanceEvalJS, Compile)).value.data,
+    mainClass in Compile := Some("uk.ac.ncl.la.soar.glance.web.server.Main"))
+  .settings(commonAssembly("uk.ac.ncl.la.soar.glance.web.server.Main", "soar-glance-eval.jar"))
+
+//TODO: Investigate intermittent heap space OOM error on assembly of this module
+lazy val glanceEvalCli = soarProject("glance-eval-cli")
+  .dependsOn(coreJVM, glanceCoreJVM)
+  .settings(
+    name := "Soar Glance Eval CLI",
+    moduleName := "soar-glance-eval-cli",
+    libraryDependencies += "com.jsuereth" %% "scala-arm" % "2.0",
+    commonAssembly("uk.ac.ncl.la.soar.glance.cli.Main", "soar-glance-eval-cli.jar"))
+  .settings(sparkBatchDeps:_*)
 
 /**
   * Command Aliases to make using this sbt project from the console a little more palatable

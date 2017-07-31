@@ -15,11 +15,12 @@
   * See the License for the specific language governing permissions and
   * limitations under the License.
   */
-package uk.ac.ncl.la.soar.glance
+package uk.ac.ncl.la.soar.glance.web.server
 
-/**
-  * Case class defining the expected structure of a config file for the glance project.
-  * Note: Investigate the warning which tells me not to define simple case classes like this a package object?
+/** Description of Class
+  *
+  * @author hugofirth
   */
-case class Config(database: DatabaseConfig)
+class StudentsApi {
 
+}

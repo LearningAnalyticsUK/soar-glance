@@ -46,7 +46,7 @@ CREATE TABLE IF NOT EXISTS module
     CONSTRAINT module_pkey
     PRIMARY KEY,
   name VARCHAR(128) NOT NULL,
-  stage_id VARCHAR(40) NOT NULL
+  stage_id UUID NOT NULL
     CONSTRAINT module_stage_id_fkey
     REFERENCES stage,
   programme_code VARCHAR(16) NOT NULL
@@ -76,7 +76,7 @@ CREATE TABLE IF NOT EXISTS module_score
     PRIMARY KEY,
   student_num VARCHAR(16)
     CONSTRAINT module_score_student_num_fkey
-    REFERENCES students
+    REFERENCES student
     ON DELETE CASCADE,
   score NUMERIC(5,2) NOT NULL
     CONSTRAINT module_score_score_check
@@ -85,7 +85,7 @@ CREATE TABLE IF NOT EXISTS module_score
     CHECK (score <= 100.00),
   module_code VARCHAR(16) NOT NULL
     CONSTRAINT module_score_module_code_fkey
-    REFERENCES modules
+    REFERENCES module
     ON DELETE RESTRICT
 )
 ;
@@ -103,7 +103,7 @@ CREATE TABLE IF NOT EXISTS recap_item
   name VARCHAR(255),
   module_code VARCHAR(16) NOT NULL
     CONSTRAINT recap_item_module_code_fkey
-    REFERENCES modules
+    REFERENCES module
     ON DELETE CASCADE
 )
 ;
@@ -116,7 +116,7 @@ CREATE TABLE IF NOT EXISTS recap_session
   start_time TIMESTAMP WITH TIME ZONE NOT NULL,
   student_num VARCHAR(16) NOT NULL
     CONSTRAINT recap_session_student_num_fkey
-    REFERENCES students
+    REFERENCES student
     ON DELETE CASCADE,
   recap_item UUID NOT NULL
     CONSTRAINT recap_session_recap_item_fkey
@@ -145,7 +145,7 @@ CREATE TABLE IF NOT EXISTS cluster_session
   machine_name VARCHAR(32),
   student_num VARCHAR(16) NOT NULL
     CONSTRAINT cluster_session_student_num_fkey
-    REFERENCES students
+    REFERENCES student
     ON DELETE CASCADE,
   cluster_id UUID NOT NULL
     CONSTRAINT cluster_session_cluster_id_fkey

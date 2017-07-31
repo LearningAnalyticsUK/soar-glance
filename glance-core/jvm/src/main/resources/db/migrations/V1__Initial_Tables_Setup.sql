@@ -1,4 +1,4 @@
-create table surveys
+create table if not exists surveys
 (
   id varchar(40) not null
     constraint surveys_pkey
@@ -6,7 +6,7 @@ create table surveys
 )
 ;
 
-create table students
+create table if not exists students
 (
   num varchar(10) not null
     constraint students_pkey
@@ -14,7 +14,7 @@ create table students
 )
 ;
 
-create table surveys_students
+create table if not exists surveys_students
 (
   survey_id varchar(40) not null
     constraint surveys_students_survey_id_fkey
@@ -29,7 +29,7 @@ create table surveys_students
 )
 ;
 
-create table queries
+create table if not exists queries
 (
   student_num varchar(10) not null
     constraint queries_student_num_fkey
@@ -41,7 +41,7 @@ create table queries
 )
 ;
 
-create table survey_queries
+create table if not exists survey_queries
 (
   survey_id varchar(40) not null
     constraint survey_queries_survey_id_fkey
@@ -57,7 +57,7 @@ create table survey_queries
 )
 ;
 
-create table module_score
+create table if not exists module_score
 (
   id varchar(40) not null
     constraint module_score_pkey
@@ -75,7 +75,7 @@ create table module_score
 )
 ;
 
-create table surveys_respondents
+create table if not exists surveys_respondents
 (
   id varchar not null
     constraint surveys_respondents_pkey
@@ -91,7 +91,7 @@ create table surveys_respondents
 )
 ;
 
-create table survey_response
+create table if not exists survey_response
 (
   id varchar not null
     constraint survey_response_pkey

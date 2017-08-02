@@ -28,7 +28,7 @@ import uk.ac.ncl.la.soar.ModuleCode
 import uk.ac.ncl.la.soar.data.StudentRecords
 import uk.ac.ncl.la.soar.glance.eval.Survey
 import uk.ac.ncl.la.soar.glance.web.client.SurveyModel
-import uk.ac.ncl.la.soar.glance.web.client.component.{Select, StudentCharts, StudentsTable}
+import uk.ac.ncl.la.soar.glance.web.client.component.{Select, StudentCharts, StudentsDataTable, StudentsSortableTable}
 import uk.ac.ncl.la.soar.glance.web.client.data.CohortAttainmentSummary
 import uk.ac.ncl.la.soar.glance.web.client.style.Icon
 
@@ -39,6 +39,8 @@ import scala.scalajs.js
   * React Component for the SurveyView
   */
 object SurveyView {
+
+  
 
   type Props = ModelProxy[Pot[SurveyModel]]
 
@@ -88,8 +90,8 @@ object SurveyView {
           model.renderFailed(ex => "Error loading survey"),
           model.renderPending(_ > 50, _ => <.p("Loading ...")),
           model.render { sm =>
-            StudentsTable.component(
-              StudentsTable.Props(
+            StudentsDataTable.component(
+              StudentsDataTable.Props(
                 students(sm.survey),
                 headings(sm.survey),
                 renderCell(" "),
@@ -98,6 +100,12 @@ object SurveyView {
             )
           }
         ),
+        <.span(
+          ^.className := "sub-title",
+          Icon.listOl(Icon.Medium),
+          <.h2("Rank students")
+        ),
+        StudentsSortableTable.component(),
         <.span(
           ^.className := "sub-title",
           Icon.search(Icon.Medium),

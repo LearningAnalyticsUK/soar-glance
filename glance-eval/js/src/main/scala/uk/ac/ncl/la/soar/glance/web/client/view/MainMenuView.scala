@@ -33,13 +33,7 @@ object MainMenuView {
 
   private case class MenuItem(idx: Int, label: String, target: Loc, collapsed: Boolean)
 
-  private val menuItems = Seq(
-    MenuItem(1, "Modules", ModuleLoc, collapsed = false),
-    MenuItem(2, "Students", StudentLoc, collapsed = false),
-    MenuItem(3, "About", AboutLoc, collapsed = false),
-    MenuItem(4, "Settings", SettingsLoc, collapsed = true),
-    MenuItem(5, "Logout", SettingsLoc, collapsed = true)
-  )
+  private val menuItems = Seq.empty[MenuItem]
 
   class Backend(bs: BackendScope[Props, Unit]) {
 

@@ -35,7 +35,7 @@ import scala.collection.immutable.SortedMap
 /**
   * Component for listing students in a data table
   */
-object StudentsTable {
+object StudentsDataTable {
 
   case class Props(
     records: Seq[StudentRecords[SortedMap, ModuleCode, Double]],

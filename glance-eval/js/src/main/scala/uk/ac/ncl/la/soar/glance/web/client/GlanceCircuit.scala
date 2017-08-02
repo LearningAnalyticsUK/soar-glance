@@ -27,7 +27,7 @@ import diode.util._
 import diode.react.ReactConnector
 import io.circe._
 import uk.ac.ncl.la.soar.{ModuleCode, StudentNumber}
-import uk.ac.ncl.la.soar.glance.eval.Survey
+import uk.ac.ncl.la.soar.glance.eval.{Survey, SurveyResponse}
 import uk.ac.ncl.la.soar.glance.web.client.data.CohortAttainmentSummary
 
 
@@ -52,6 +52,7 @@ case class SurveyModel(survey: Survey, summary: CohortAttainmentSummary)
 sealed trait SurveyAction extends Action
 final case class InitSurvey(survey: Either[Error, List[Survey]]) extends SurveyAction
 final case class SelectStudent(id: StudentNumber) extends SurveyAction
+final case class SubmitSurveyResponse(response: SurveyResponse) extends SurveyAction
 case object RefreshSurvey extends SurveyAction
 
 /**

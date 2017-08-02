@@ -55,7 +55,6 @@ object Repository {
         cfg.database.user,
         cfg.database.password
       )
-      _ = println(s"Connecting to ${cfg.database.url + cfg.database.name}, -U ${cfg.database.user} -P ${cfg.database.password}")
       xa = DriverManagerTransactor[Task](
         "org.postgresql.Driver",
         s"${cfg.database.url}${cfg.database.name}",

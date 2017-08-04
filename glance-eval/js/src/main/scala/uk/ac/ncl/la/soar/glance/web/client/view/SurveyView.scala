@@ -75,15 +75,10 @@ object SurveyView {
         case k => student.record.get(k).fold(default)(_.toString)
       }
 
-    def render(p: Props, s: State): VdomElement = {
-      //Get the necessary data from the model
-      //This is a bit of a nested Mess - TODO: Make sure we're understanding the model construction properly
-      val model = p()
+    private val trainingTable = ScalaComponent.builder[Pot[SurveyModel]]("TrainingTable")
+      .render($ => {
+        val model = $.props
 
-      val trainingTable = {
-        <.div(
-          ^.className := "row border-between",
-          ^.id := "training",
           <.div(
             ^.className := "col-md-6",
             <.span(
@@ -105,19 +100,27 @@ object SurveyView {
                 )
               }
             )
+          )
+      })
+      .build
+
+    private val rankingTable = ScalaComponent.builder[Pot[SurveyModel]]("RankingTable")
+      .render($ => {
+        val model = $.props
+
+        <.div(
+          ^.className := "col-md-6",
+          ^.id := "ranking",
+          <.span(
+            ^.className := "sub-title",
+            Icon.listOl(Icon.Medium),
+            <.h2("Rank students")
           ),
-          <.div(
-            ^.className := "col-md-6",
-            ^.id := "ranking",
-            <.span(
-              ^.className := "sub-title",
-              Icon.listOl(Icon.Medium),
-              <.h2("Rank students")
-            ),
-            model.render { sm =>
+          model.render { sm =>
 
-              val rankModule = sm.survey.queries.values.head
-
+            val rankModule = sm.survey.queries.values.head
+            <.div(
+              ^.className := "table-responsive",
               StudentsSortableTable.component(
                 StudentsSortableTable.Props(
                   rankModule, //TODO: Fix the hack by restructuring Survey
@@ -127,10 +130,16 @@ object SurveyView {
                   handleStudentClick(bs)
                 )
               )
-            },
-          )
+            )
+          }
         )
-      }
+      })
+      .build
+
+    def render(p: Props, s: State): VdomElement = {
+      //Get the necessary data from the model
+      //This is a bit of a nested Mess - TODO: Make sure we're understanding the model construction properly
+      val model = p()
 
       val detailedView = {
         <.div(
@@ -148,7 +157,28 @@ object SurveyView {
         )
       }
 
-      <.div(List(trainingTable, detailedView).toTagMod)
+      <.div(
+        model.render { sm =>
+
+          val rankModule = sm.survey.queries.values.head
+          <.div(
+            ^.className := "alert alert-success",
+            ^.role := "alert",
+            <.strong("Welcome"),
+            " Please rank students on the right by how you believe they will perform in the module ",
+            <.strong(rankModule),
+            ". Higher is better."
+          )
+        },
+        <.div(
+          ^.className := "row border-between",
+          ^.id := "training",
+          trainingTable(model),
+          rankingTable(model)
+        ),
+        detailedView
+      )
+
     }
 
   }

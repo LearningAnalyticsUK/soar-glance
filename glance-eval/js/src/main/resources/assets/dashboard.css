@@ -7,6 +7,16 @@ body {
     padding-top: 50px;
 }
 
+@media (min-width: 1500px) {
+    .container {
+        width: 1470px;
+    }
+}
+
+.container#app{
+    padding-top: 15px;
+}
+
 
 /*
  * Global add-ons
@@ -155,9 +165,6 @@ span.sub-title {
     display: none;
 }
 
-#ranking {
-    overflow: auto;
-}
 
 .long-heading {
     text-align: center;

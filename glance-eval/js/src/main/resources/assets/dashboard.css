@@ -141,6 +141,41 @@ span.sub-title {
     background-color: #fcf8e3;
 }
 
+.border-between > [class*='col-']:before {
+    background: #e3e3e3;
+    bottom: 0;
+    content: " ";
+    left: 0;
+    position: absolute;
+    width: 1px;
+    top: 0;
+}
+
+.border-between > [class*='col-']:first-child:before {
+    display: none;
+}
+
+#ranking {
+    overflow: auto;
+}
+
+.long-heading {
+    text-align: center;
+    white-space: nowrap;
+    vertical-align: middle !important;
+    width: 2em;
+    height: 60px;
+}
+
+.long-heading > span {
+    display: block;
+    -ms-transform: rotate(-70deg); /* IE 9 */
+    -webkit-transform: rotate(-70deg); /* Chrome, Safari, Opera */
+    transform: rotate(-70deg);
+    margin-left: -6em;
+    margin-right: -6em;
+}
+
 
 /*
  * Style Chart containers and placeholders

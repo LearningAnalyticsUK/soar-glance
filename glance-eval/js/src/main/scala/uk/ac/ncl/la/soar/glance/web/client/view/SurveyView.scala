@@ -24,7 +24,7 @@ import diode.react.ReactPot._
 import diode.react._
 import japgolly.scalajs.react._
 import japgolly.scalajs.react.vdom.html_<^._
-import uk.ac.ncl.la.soar.ModuleCode
+import uk.ac.ncl.la.soar.{ModuleCode, StudentNumber}
 import uk.ac.ncl.la.soar.data.StudentRecords
 import uk.ac.ncl.la.soar.glance.eval.Survey
 import uk.ac.ncl.la.soar.glance.web.client.SurveyModel
@@ -39,7 +39,6 @@ import scala.scalajs.js
   * React Component for the SurveyView
   */
 object SurveyView {
-
   
 
   type Props = ModelProxy[Pot[SurveyModel]]
@@ -66,6 +65,9 @@ object SurveyView {
     /** Construct the presentation of the students to fill table rows */
     private def students(survey: Survey) = survey.entries
 
+    /** Construct the presentation of the query students to fill the rankable table rows */
+    private def queryStudents(survey: Survey) = survey.entries.filter( r => survey.queries.contains(r.number) )
+
     /** Construct the function which provides the presentation of a table cell, given a StudentRecord and string key */
     private def renderCell(default: String)(student: StudentRecords[SortedMap, ModuleCode, Double], key: String) =
       key match {
@@ -78,45 +80,75 @@ object SurveyView {
       //This is a bit of a nested Mess - TODO: Make sure we're understanding the model construction properly
       val model = p()
 
-      //TODO: Investigate Diode Pot conditional rendering. Doesn't render message on fail
-      <.div(
-        ^.id := "training",
-        <.span(
-          ^.className := "sub-title",
-          Icon.list(Icon.Medium),
-          <.h2("Training Data")),
+      val trainingTable = {
         <.div(
-          ^.className := "table-responsive",
-          model.renderFailed(ex => "Error loading survey"),
-          model.renderPending(_ > 50, _ => <.p("Loading ...")),
-          model.render { sm =>
-            StudentsDataTable.component(
-              StudentsDataTable.Props(
-                students(sm.survey),
-                headings(sm.survey),
-                renderCell(" "),
-                handleStudentClick(bs)
+          ^.className := "row border-between",
+          ^.id := "training",
+          <.div(
+            ^.className := "col-md-6",
+            <.span(
+              ^.className := "sub-title",
+              Icon.list(Icon.Medium),
+              <.h2("Training Data")),
+            <.div(
+              ^.className := "table-responsive",
+              model.renderFailed(ex => "Error loading survey"),
+              model.renderPending(_ > 50, _ => <.p("Loading ...")),
+              model.render { sm =>
+                StudentsDataTable.component(
+                  StudentsDataTable.Props(
+                    students(sm.survey),
+                    headings(sm.survey),
+                    renderCell(" "),
+                    handleStudentClick(bs)
+                  )
+                )
+              }
+            )
+          ),
+          <.div(
+            ^.className := "col-md-6",
+            ^.id := "ranking",
+            <.span(
+              ^.className := "sub-title",
+              Icon.listOl(Icon.Medium),
+              <.h2("Rank students")
+            ),
+            model.render { sm =>
+
+              val rankModule = sm.survey.queries.values.head
+
+              StudentsSortableTable.component(
+                StudentsSortableTable.Props(
+                  rankModule, //TODO: Fix the hack by restructuring Survey
+                  queryStudents(sm.survey).take(10),
+                  headings(sm.survey),
+                  renderCell(" "),
+                  handleStudentClick(bs)
+                )
               )
+            },
+          )
+        )
+      }
+
+      val detailedView = {
+        <.div(
+          ^.className := "row",
+          <.span(
+            ^.className := "sub-title",
+            Icon.search(Icon.Medium),
+            <.h2("Detailed View")
+          ),
+          model.render { sm =>
+            StudentCharts.component(
+              StudentCharts.Props(s.selected, sm.summary)
             )
           }
-        ),
-        <.span(
-          ^.className := "sub-title",
-          Icon.listOl(Icon.Medium),
-          <.h2("Rank students")
-        ),
-        StudentsSortableTable.component(),
-        <.span(
-          ^.className := "sub-title",
-          Icon.search(Icon.Medium),
-          <.h2("Detailed View")
-        ),
-        model.render { sm =>
-          StudentCharts.component(
-            StudentCharts.Props(s.selected, sm.summary)
-          )
-        }
-      )
+        )
+      }
+
+      <.div(List(trainingTable, detailedView).toTagMod)
     }
 
   }

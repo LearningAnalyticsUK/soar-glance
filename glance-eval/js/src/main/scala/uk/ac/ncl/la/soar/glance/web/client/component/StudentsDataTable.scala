@@ -60,7 +60,13 @@ object StudentsDataTable {
         ^.id := "training-table",
         <.thead(
           <.tr(
-            TagMod.fromTraversableOnce(props.headings.map(<.td(_)))
+            props.headings.toList match {
+              case hd :: tl =>
+                (<.td(hd) :: tl.map { h =>
+                  <.td(^.className := "long-heading", <.span(h)) }).toTagMod
+              case a =>
+                a.toTagMod
+            }
           )
         ),
         <.tbody(

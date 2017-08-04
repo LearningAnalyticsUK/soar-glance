@@ -27,76 +27,68 @@ import scala.collection.immutable.SortedMap
 
 object StudentsSortableTable {
 
-  case class Props(rankModule: ModuleCode,
-                   queryRecords: Seq[StudentRecords[SortedMap, ModuleCode, Double]],
-                   headings: Seq[String],
-                   renderCell: (StudentRecords[SortedMap, ModuleCode, Double], ModuleCode) => String,
-                   selectStudent: StudentRecords[SortedMap, ModuleCode, Double] => Callback)
+  type Record = StudentRecords[SortedMap, ModuleCode, Double]
 
-  type State = List[StudentRecords[SortedMap, ModuleCode, Double]]
+  case class Props(rankModule: ModuleCode,
+                   queryRecords: List[Record],
+                   headings: List[String],
+                   renderCell: (Record, String) => String,
+                   selectStudent: Record => Callback)
+
 
   // As in original SortableComponent
-  class Backend(bs: BackendScope[Props, List[String]]) {
+  class Backend(bs: BackendScope[Props, List[Record]]) {
 
-    // Equivalent of ({value}) => <li>{value}</li> in original demo
-    private val itemView = ScalaComponent.builder[String]("liView")
-      .render(d => {
-        <.div(
-          ^.className := "react-sortable-item",
-          SortableView.handle,
-          <.span(s"${d.props}")
-        )
-      })
-      .build
-
-
-    // As in original demo
-    private val sortableItem = SortableElement.wrap(itemView)
-
-    // Equivalent of the `({items}) =>` lambda passed to SortableContainer in original demo
-    private val listView = ScalaComponent.builder[List[String]]("listView")
-      .render(d => {
-        <.div(
-          ^.className := "react-sortable-list",
-          d.props.zipWithIndex.toTagMod {
-            case (value, index) =>
-              sortableItem(SortableElement.Props(index = index))(value)
-          }
-        )
-      })
-      .build
-
-    private val tableView = ScalaComponent.builder[Props]("TableView")
+    private def tableView(wrappedP: Props) = ScalaComponent.builder[List[Record]]("TableView")
       .render(bs => {
         <.table(
-          ^.className := "react-sortable-list table table-striped table-bordered table-hover",
+          ^.className := "react-sortable-list table table-bordered table-hover",
           ^.id := "ranking-table",
           <.thead(
             <.tr(
-              TagMod.fromTraversableOnce(bs.props.headings.map(<.td(_)))
+              wrappedP.headings.toList match {
+                case hd :: tl =>
+                  (<.td(" ") :: <.td(hd) :: tl.map { h =>
+                    <.td(^.className := "long-heading", <.span(h)) }).toTagMod
+                case a =>
+                  a.toTagMod
+              }
             )
           ),
           <.tbody(
-            TagMod.fromTraversableOnce(bs.state.map(itemTrView(bs.props, _)))
+            bs.props.zipWithIndex.toTagMod { case (value, index) =>
+              sortableTr(wrappedP)(SortableElement.Props(index = index))(value)
+            }
           )
         )
       })
       .build
 
-    private def itemTrView(p: Props, record: StudentRecords[SortedMap, ModuleCode, Double]) = {
-      <.tr(
-        ^.className := "react-sortable-item",
-        ^.onClick --> p.selectStudent(record),
-        SortableView.handle,
-        p.renderCell(record, p.rankModule)
-      )
-    }
+    private def trView(wrappedP: Props) = ScalaComponent.builder[Record]("TrView")
+      .render(bs => {
+        //Get the row columns for the given record
+        val columns = wrappedP.headings.map(h => wrappedP.renderCell(bs.props, h))
+
+        <.tr(
+          ^.className := "react-sortable-item",
+          TagMod.fromTraversableOnce(<.td(SortableView.handle) :: columns.map { c =>
+            <.td(
+              ^.onClick --> wrappedP.selectStudent(bs.props),
+              c
+            )
+          }
+          )
+        )
+      })
+      .build
+
+    private def sortableTr(p: Props) = SortableElement.wrap(trView(p))
 
     // As in original demo
-    private val sortableTable = SortableContainer.wrap(tableView)
+    private def sortableTable(p: Props) = SortableContainer.wrap(tableView(p))
 
-    def render(props: Props, items: State) = {
-      sortableTable(
+    def render(props: Props, items: List[Record]) = {
+      sortableTable(props)(
         SortableContainer.Props(
           onSortEnd = p =>
             bs.modState(
@@ -109,7 +101,6 @@ object StudentsSortableTable {
     }
   }
 
-  val defaultItems = Range(0, 10).map("Item " + _).toList
 
   val component = ScalaComponent.builder[Props]("SortableContainerDemo")
     .initialStateFromProps(p => p.queryRecords)
@@ -118,27 +109,3 @@ object StudentsSortableTable {
 
 }
 
-//object StudentSortableRowView {
-//
-//  case class Props(rankModule: ModuleCode,
-//                   record: StudentRecords[SortedMap, ModuleCode, Double],
-//                   renderCell: (StudentRecords[SortedMap, ModuleCode, Double], ModuleCode) => String,
-//                   selectStudent: StudentRecords[SortedMap, ModuleCode, Double] => Callback)
-//
-//
-//  val component = ScalaComponent.builder[Props]("StudentSortableRow")
-//    .stateless
-//    .render(bs => {
-//      <.tr(
-//        ^.className := "react-sortable-item",
-//        ^.onClick --> bs.props.selectStudent(bs.props.record),
-//        SortableView.handle,
-//        bs.props.renderCell(bs.props.record, bs.props.rankModule)
-//      )
-//    })
-//    .build
-//}
-
-object StudentSortableTableView {
-
-}

@@ -68,7 +68,12 @@ object Main extends js.JSApp {
       // here we use plain Bootstrap class names as these are specific to the top level layout defined here
       <.nav(^.className := "navbar navbar-inverse navbar-fixed-top",
         <.div(^.className := "container",
-          <.div(^.className := "navbar-header", <.span(^.className := "navbar-brand", ^.id := "title", "SOAR Glance - Evaluation")),
+          <.div(^.className := "navbar-header",
+            <.span(
+              ^.className := "navbar-brand",
+              ^.id := "title",
+              <.img(^.src := "assets/ncl-shield.png"),
+              "SOAR Glance - Evaluation")),
           <.div(^.className := "collapse navbar-collapse",
             MainMenuView.component(
               MainMenuView.Props(c, r.page)

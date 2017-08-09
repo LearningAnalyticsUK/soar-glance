@@ -55,6 +55,16 @@ ul#main-menu > li.active > a {
     font-family: Helvetica, sans-serif;
 }
 
+.navbar #title > img {
+    max-height: 40px;
+    max-width: 40px;
+    width: auto;
+    height: auto;
+    margin-top: -10px;
+    margin-right: 5px;
+    float: left;
+}
+
 .navbar-fixed-top {
     border: 0;
 }

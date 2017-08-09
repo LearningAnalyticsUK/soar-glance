@@ -85,7 +85,7 @@ object SurveyDb extends RepositoryCompanion[Survey, SurveyDb] {
     //First, break out the pieces of the Survey which correspond to tables
     val Survey(_, queries, records, sId) = entry
     //First add a survey id. As this is a unary type which is generated there really isn't a concept of collision
-    val addSurveyQ = sql"INSERT INTO surveys (id) VALUES ($sId);".update.run
+    val addSurveyQ = sql"INSERT INTO survey (id) VALUES ($sId);".update.run
     //Once we have added the survey id, add students and surveys_students
 
     //Then, break down the records into a series of modulescores and add those.
@@ -99,7 +99,7 @@ object SurveyDb extends RepositoryCompanion[Survey, SurveyDb] {
     //TODO: Should this be extracted to the StudentDb companion?
     val addStudentSQL =
       """
-        INSERT INTO students (num) VALUES (?) ON CONFLICT (num) DO NOTHING;
+        INSERT INTO student (num) VALUES (?) ON CONFLICT (num) DO NOTHING;
       """
     val studRows = records.map(_.number)
     val addStudentsQ = Update[(StudentNumber)](addStudentSQL).updateMany(studRows)
@@ -107,7 +107,7 @@ object SurveyDb extends RepositoryCompanion[Survey, SurveyDb] {
     //Next, add survey entries
     val addEntrySQL =
       """
-        INSERT INTO surveys_students (survey_id, student_num)
+        INSERT INTO survey_student (survey_id, student_num)
         VALUES (?, ?) ON CONFLICT (survey_id, student_num) DO NOTHING;
       """
     val entryRows = records.map(r => (sId, r.number))
@@ -122,11 +122,11 @@ object SurveyDb extends RepositoryCompanion[Survey, SurveyDb] {
     val addModuleScoreQ = Update[(UUID, StudentNumber, Double, ModuleCode)](moduleScoreSQL).updateMany(mSRows)
 
     //Finally add the queries
-    val addQuerySQL = "INSERT INTO queries (student_num, module_num) VALUES (?, ?) ON CONFLICT DO NOTHING;"
+    val addQuerySQL = "INSERT INTO query (student_num, module_num) VALUES (?, ?) ON CONFLICT DO NOTHING;"
 
     val addSurveyQuerySQL =
       """
-        INSERT INTO survey_queries (survey_id, student_num, module_num)
+        INSERT INTO survey_query (survey_id, student_num, module_num)
         VALUES (?, ?, ?) ON CONFLICT (survey_id, student_num, module_num) DO NOTHING;
       """
 
@@ -144,19 +144,19 @@ object SurveyDb extends RepositoryCompanion[Survey, SurveyDb] {
   }
 
   override def deleteQ(id: UUID): ConnectionIO[Boolean] =
-    sql"DELETE FROM surveys WHERE id = $id;".update.run.map(_ > 0)
+    sql"DELETE FROM survey WHERE id = $id;".update.run.map(_ > 0)
 
-  private lazy val listSurveyIdsQ: ConnectionIO[List[UUID]] = sql"SELECT s.id FROM surveys s;".query[UUID].list
+  private lazy val listSurveyIdsQ: ConnectionIO[List[UUID]] = sql"SELECT s.id FROM survey s;".query[UUID].list
 
   private def findSurveyIdQ(id: UUID): ConnectionIO[Option[UUID]] =
     sql"""
-      SELECT s.id FROM surveys s WHERE s.id = $id;
+      SELECT s.id FROM survey s WHERE s.id = $id;
     """.query[UUID].option
 
   private def listScoresForSurveyQ(id: UUID): ConnectionIO[List[ModuleScore]] = {
     val query = sql"""
         SELECT ss.student_num, ms.module_num, ms.score
-        FROM surveys_students ss, module_score ms
+        FROM survey_student ss, module_score ms
         WHERE ss.survey_id = $id
         AND ms.student_num = ss.student_num;
       """.query[(StudentNumber, ModuleCode, Double)]
@@ -170,7 +170,7 @@ object SurveyDb extends RepositoryCompanion[Survey, SurveyDb] {
   private def listQueriesForSurveyQ(id: UUID): ConnectionIO[Map[StudentNumber, ModuleCode]] =
     sql"""
       SELECT sq.student_num, sq.module_num
-      FROM survey_queries sq
+      FROM survey_query sq
       WHERE sq.survey_id = $id;
     """.query[(StudentNumber, ModuleCode)].list.map(_.toMap)
 }
@@ -203,7 +203,7 @@ object SurveyResponseDb extends RepositoryCompanion[SurveyResponse, SurveyRespon
   override val initQ: ConnectionIO[Unit] = ().pure[ConnectionIO]
 
   private val listRespondentIdsQ: ConnectionIO[List[UUID]] =
-    sql"SELECT r.id FROM surveys_respondents r;".query[UUID].list
+    sql"SELECT r.id FROM survey_respondent r;".query[UUID].list
 
   override val listQ: ConnectionIO[List[SurveyResponse]] = {
     for {
@@ -214,7 +214,7 @@ object SurveyResponseDb extends RepositoryCompanion[SurveyResponse, SurveyRespon
 
   override def findQ(id: UUID): ConnectionIO[Option[SurveyResponse]] = {
 
-    val selectRespondents = sql"SELECT * FROM surveys_respondents r WHERE r.id = $id;".query[RespondentRow].option
+    val selectRespondents = sql"SELECT * FROM survey_respondent r WHERE r.id = $id;".query[RespondentRow].option
 
     def selectResponses(id: UUID) =
       sql"""
@@ -252,14 +252,14 @@ object SurveyResponseDb extends RepositoryCompanion[SurveyResponse, SurveyRespon
     //Insert entry in respondents table
     val addRespondentQ =
       sql"""
-         INSERT INTO surveys_respondents (id, survey_id, respondent, submitted)
+         INSERT INTO survey_respondent (id, survey_id, respondent, submitted)
          VALUES (${entry.id}, ${entry.survey.id}, ${entry.respondent}, CURRENT_TIMESTAMP);
       """.update.run
 
     //Then batch insert entries in responses table
     val addResponseSQL =
       """
-        INSERT INTO survey_responses (id, respondent_id, student_num, module_num, predicted_score)
+        INSERT INTO survey_response (id, respondent_id, student_num, module_num, predicted_score)
         VALUES (?, ?, ?, ?, ?);
       """
     val responseRows = entry.responses.iterator.map({  case (student, ModuleScore(_, module, score)) =>
@@ -275,10 +275,10 @@ object SurveyResponseDb extends RepositoryCompanion[SurveyResponse, SurveyRespon
   }
 
   override def deleteQ(id: UUID): ConnectionIO[Boolean] =
-    sql"DELETE FROM surveys_respondents WHERE id = $id;".update.run.map(_ > 0)
+    sql"DELETE FROM survey_respondent WHERE id = $id;".update.run.map(_ > 0)
 
   private def findRespondentIdQ(id: UUID): ConnectionIO[Option[UUID]] =
-    sql"SELECT ssrs.id FROM surveys_respondents ssrs WHERE ssrs.id = $id;".query[UUID].option
+    sql"SELECT ssrs.id FROM survey_respondent ssrs WHERE ssrs.id = $id;".query[UUID].option
 
 }
 

@@ -18,6 +18,7 @@
 package uk.ac.ncl.la.soar.glance.eval.server
 
 import java.time.Instant
+import java.sql.Timestamp
 import java.util.UUID
 
 import cats.data.OptionT
@@ -195,16 +196,16 @@ class SurveyResponseDb private[glance] (xa: Transactor[Task]) extends DbReposito
 object SurveyResponseDb extends RepositoryCompanion[SurveyResponse, SurveyResponseDb] {
 
   /** Type aliases for Db rows */
-  type RespondentRow = (UUID, UUID, String, Instant)
-  type ResponseRow = (UUID, UUID, StudentNumber, ModuleCode, Double)
+  type ResponseRow = (UUID, String, UUID, Timestamp, Double)
 
   implicit val uuidMeta: Meta[UUID] = Meta[String].nxmap(UUID.fromString, _.toString)
 
   override val initQ: ConnectionIO[Unit] = ().pure[ConnectionIO]
 
   private val listRespondentIdsQ: ConnectionIO[List[UUID]] =
-    sql"SELECT r.id FROM survey_respondent r;".query[UUID].list
+    sql"SELECT r.id FROM survey_response r;".query[UUID].list
 
+  //TODO: Fix this, its crazy! We should just do one select. 
   override val listQ: ConnectionIO[List[SurveyResponse]] = {
     for {
       ids <- listRespondentIdsQ

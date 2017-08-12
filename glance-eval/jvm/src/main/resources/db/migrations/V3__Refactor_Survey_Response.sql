@@ -1,0 +1,28 @@
+DROP TABLE survey_respondent;
+
+CREATE EXTENSION IF NOT EXISTS citext;
+
+ALTER TABLE survey_response
+  ALTER COLUMN id TYPE VARCHAR(40),
+  DROP CONSTRAINT survey_response_respondent_id_fkey,
+  RENAME COLUMN respondent_id TO respondent_email,
+  ALTER COLUMN respondent_email TYPE citext,
+  ADD COLUMN survey_id VARCHAR(40) CONSTRAINT survey_response_survey_id_fkey REFERENCES survey ON DELETE CASCADE,
+  DROP CONSTRAINT survey_response_student_num_fkey,
+  DROP COLUMN student_num,
+  DROP COLUMN module_num,
+  DROP CONSTRAINT survey_response_predicted_score_check,
+  DROP CONSTRAINT survey_response_predicted_score_check1,
+  DROP COLUMN predicted_score,
+  ADD COLUMN time_started TIMESTAMP WITH TIME ZONE NOT NULL,
+  ADD COLUMN time_finished TIMESTAMP WITH TIME ZONE NOT NULL,
+  ADD COLUMN notes TEXT;
+
+CREATE TABLE IF NOT EXISTS student_rank
+(
+  student_num VARCHAR(10) CONSTRAINT student_rank_student_num_fkey REFERENCES student,
+  response_id VARCHAR(40) CONSTRAINT student_rank_response_id_fkey REFERENCES survey_response ON DELETE CASCADE,
+  rank INT,
+  CONSTRAINT student_rank_response_key UNIQUE (response_id, rank)
+)
+;

@@ -21,13 +21,14 @@ import java.time.Instant
 import java.sql.Timestamp
 import java.util.UUID
 
-import cats.data.OptionT
+import cats._
+import cats.data._
 import cats.implicits._
 import doobie.imports._
 import monix.eval.Task
 import uk.ac.ncl.la.soar.data.ModuleScore
-import uk.ac.ncl.la.soar.db.{Repository => DbRepository, RepositoryCompanion}
-import uk.ac.ncl.la.soar.glance.eval.{Survey, SurveyResponse}
+import uk.ac.ncl.la.soar.db.{RepositoryCompanion, Repository => DbRepository}
+import uk.ac.ncl.la.soar.glance.eval.{CompleteResponse, Survey, SurveyResponse}
 import uk.ac.ncl.la.soar.{ModuleCode, StudentNumber}
 import uk.ac.ncl.la.soar.server.Implicits._
 
@@ -196,7 +197,8 @@ class SurveyResponseDb private[glance] (xa: Transactor[Task]) extends DbReposito
 object SurveyResponseDb extends RepositoryCompanion[SurveyResponse, SurveyResponseDb] {
 
   /** Type aliases for Db rows */
-  type ResponseRow = (UUID, String, UUID, Timestamp, Double)
+  type ResponseRow = (UUID, String, UUID, Timestamp, Timestamp, String)
+  type RankRow = (StudentNumber, Int)
 
   implicit val uuidMeta: Meta[UUID] = Meta[String].nxmap(UUID.fromString, _.toString)
 
@@ -205,81 +207,112 @@ object SurveyResponseDb extends RepositoryCompanion[SurveyResponse, SurveyRespon
   private val listRespondentIdsQ: ConnectionIO[List[UUID]] =
     sql"SELECT r.id FROM survey_response r;".query[UUID].list
 
-  //TODO: Fix this, its crazy! We should just do one select. 
   override val listQ: ConnectionIO[List[SurveyResponse]] = {
+    val rowsQ: ConnectionIO[List[(ResponseRow, Option[RankRow])]] =
+      sql"""
+        SELECT rsp, rnk.student_num, rnk.rank,
+        FROM survey_response rsp
+        LEFT OUTER JOIN student_rank rnk
+        ON rnk.response_id = rsp.id;
+      """.query[(ResponseRow, Option[StudentNumber], Option[Int])].map({
+        case (rsp, stud, rank) => (rsp, (stud |@| rank).map( _ -> _ ))
+      }).list
+
     for {
-      ids <- listRespondentIdsQ
-      surveyOpts <- ids.traverse(findQ)
-    } yield surveyOpts.flatten
+      rows <- rowsQ
+      completeResponse <- responsesFromRows(rows)
+    } yield completeResponse
   }
+
+  private def responsesFromRows(rows: List[(ResponseRow, Option[RankRow])]): ConnectionIO[List[CompleteResponse]] = {
+
+    val groupedRows = rows.groupBy(_._1).mapValues(_.flatMap(_._2))
+    val withRanks = groupedRows.mapValues(_.sortBy(_._2).map(_._1).toVector)
+
+    withRanks.toList.traverse({ case (row, ranks) => responseFromRow(row, ranks) }).map(_.flatten)
+  }
+
+  private def responseFromRow(row: ResponseRow, ranks: Vector[StudentNumber]): ConnectionIO[Option[CompleteResponse]] = {
+    val (id, respondent, surveyId, start, finish, notes) = row
+
+    //Get survey
+    //TODO: get the survey db side with a join rather than programme side like this.
+    val surveyOpt = OptionT(SurveyDb.findQ(surveyId))
+    //Build the CompleteResponse
+    surveyOpt.map { survey =>
+      CompleteResponse(survey, ranks, respondent, start.toInstant, finish.toInstant, id)
+    }.value
+  }
+
 
   override def findQ(id: UUID): ConnectionIO[Option[SurveyResponse]] = {
 
-    val selectRespondents = sql"SELECT * FROM survey_respondent r WHERE r.id = $id;".query[RespondentRow].option
+    //TODO: Factor common query parts into fragments
+    //Also groupBy can't ge the best way surely?
+//    val rowQ =
+//      sql"""
+//        SELECT rsp, rnk.student_num, rnk.rank,
+//        FROM survey_response rsp
+//        WHERE rsp.id = $id
+//        LEFT OUTER JOIN student_rank rnk
+//        ON rnk.response_id = rsp.id;
+//      """.query[(ResponseRow, Option[StudentNumber], Option[Int])].map({
+//        case (rsp, stud, rank) => (rsp, (stud |@| rank).map( _ -> _ ))
+//      }).list.map(_.groupBy(_._1))
+//
+//
+//    val result = for {
+//      rows <- rowQ
+//      (response, unsortedRanks) <- rows.groupBy(_._1).mapValues(_.flatMap(_._2))
+//      ranks = unsortedRanks.sortBy(_._2).map(_._1).toVector
+//      completeResponse <- responseFromRow(response, ranks)
+//    } yield completeResponse
 
-    def selectResponses(id: UUID) =
-      sql"""
-      SELECT (rs.student_num, rs.module_num, rs.predicted_score)
-      FROM survey_response rs
-      WHERE rs.respondent_id = $id
-      """.query[(StudentNumber, ModuleCode, Double)].list
 
+//    result.map()
     //Assign query to action as we need to use OptionT transformer which we'll need to unwrap at the end.
-    val action = for {
-      respondent <- OptionT(selectRespondents)
-      survey <- OptionT(SurveyDb.findQ(respondent._2))
-      responses <- OptionT.liftF(selectResponses(respondent._1))
-    } yield {
-      //Turn the response rows into a responses map as expected for the SurveyResponse constructor
-      val responsesMap = responses.iterator.flatMap({ case (stud,mod,sc) =>
-        ModuleScore(stud,mod,sc)
-      }).map({ case m @ ModuleScore(stud,_, _) =>
-        stud -> m
-      }).toMap
-
-      SurveyResponse(survey, responsesMap, respondent._3, id)
-    }
-    action.value
+    ???
   }
 
   override def saveQ(entry: SurveyResponse): ConnectionIO[Unit] = {
 
-    //Get the retrieve survey Id from nested survey in entry
-    val sId = entry.id
-
-    //Get responses from entry
-    val responses = entry.responses
-
-    //Insert entry in respondents table
-    val addRespondentQ =
-      sql"""
-         INSERT INTO survey_respondent (id, survey_id, respondent, submitted)
-         VALUES (${entry.id}, ${entry.survey.id}, ${entry.respondent}, CURRENT_TIMESTAMP);
-      """.update.run
-
-    //Then batch insert entries in responses table
-    val addResponseSQL =
-      """
-        INSERT INTO survey_response (id, respondent_id, student_num, module_num, predicted_score)
-        VALUES (?, ?, ?, ?, ?);
-      """
-    val responseRows = entry.responses.iterator.map({  case (student, ModuleScore(_, module, score)) =>
-      (UUID.randomUUID, entry.id, student, module, score)
-    }).toList
-    val addResponsesQ = Update[ResponseRow](addResponseSQL).updateMany(responseRows)
-
-    //Actually construct the combined query program
-    for {
-      _ <- addRespondentQ
-      _ <- addResponsesQ
-    } yield ()
+//    //Get the retrieve survey Id from nested survey in entry
+//    val sId = entry.id
+//
+//    //Get responses from entry
+//    val responses = entry.responses
+//
+//    //Insert entry in respondents table
+//    val addRespondentQ =
+//      sql"""
+//         INSERT INTO survey_respondent (id, survey_id, respondent, submitted)
+//         VALUES (${entry.id}, ${entry.survey.id}, ${entry.respondent}, CURRENT_TIMESTAMP);
+//      """.update.run
+//
+//    //Then batch insert entries in responses table
+//    val addResponseSQL =
+//      """
+//        INSERT INTO survey_response (id, respondent_id, student_num, module_num, predicted_score)
+//        VALUES (?, ?, ?, ?, ?);
+//      """
+//    val responseRows = entry.responses.iterator.map({  case (student, ModuleScore(_, module, score)) =>
+//      (UUID.randomUUID, entry.id, student, module, score)
+//    }).toList
+//    val addResponsesQ = Update[ResponseRow](addResponseSQL).updateMany(responseRows)
+//
+//    //Actually construct the combined query program
+//    for {
+//      _ <- addRespondentQ
+//      _ <- addResponsesQ
+//    } yield ()
+    ???
   }
 
-  override def deleteQ(id: UUID): ConnectionIO[Boolean] =
-    sql"DELETE FROM survey_respondent WHERE id = $id;".update.run.map(_ > 0)
+  override def deleteQ(id: UUID): ConnectionIO[Boolean] = ???
+//    sql"DELETE FROM survey_respondent WHERE id = $id;".update.run.map(_ > 0)
 
-  private def findRespondentIdQ(id: UUID): ConnectionIO[Option[UUID]] =
-    sql"SELECT ssrs.id FROM survey_respondent ssrs WHERE ssrs.id = $id;".query[UUID].option
+  private def findRespondentIdQ(id: UUID): ConnectionIO[Option[UUID]] = ???
+//    sql"SELECT ssrs.id FROM survey_respondent ssrs WHERE ssrs.id = $id;".query[UUID].option
 
 }
 

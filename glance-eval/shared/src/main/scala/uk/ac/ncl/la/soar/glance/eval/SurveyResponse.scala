@@ -17,12 +17,23 @@
   */
 package uk.ac.ncl.la.soar.glance.eval
 
+import java.time.Instant
 import java.util.UUID
 
 import uk.ac.ncl.la.soar.StudentNumber
-import uk.ac.ncl.la.soar.data.ModuleScore
 
 /**
-  * Case class representing an a partially answered survey which is being completed by a member of staff.
+  * Case class representing an a survey which is completed by a member of staff.
   */
-case class SurveyResponse(survey: Survey, responses: Map[StudentNumber, ModuleScore], respondent: String, id: UUID)
+sealed trait SurveyResponse
+case class IncompleteResponse(survey: Survey,
+                              ranks: IndexedSeq[StudentNumber],
+                              respondent: String,
+                              start: Instant,
+                              id: UUID) extends SurveyResponse
+case class CompleteResponse(survey: Survey,
+                            ranks: IndexedSeq[StudentNumber],
+                            respondent: String,
+                            start: Instant,
+                            finish: Instant,
+                            id: UUID) extends SurveyResponse

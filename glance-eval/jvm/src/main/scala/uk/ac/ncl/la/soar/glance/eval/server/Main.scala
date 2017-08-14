@@ -22,7 +22,11 @@ import com.twitter.server.TwitterServer
 import com.twitter.util.Await
 import uk.ac.ncl.la.soar.server.Implicits._
 import monix.eval.Task
-import org.flywaydb.core.Flyway
+import cats._
+import cats.implicits._
+import cats.data._
+import io.finch._
+import io.finch.circe._
 
 /**
   * Main class for the glance server
@@ -31,10 +35,14 @@ object Main extends TwitterServer {
 
   def main(): Unit = {
 
-    //TODO: Neaten up - perhaps introduce limited point free style to clarify
-    val api = Await.result(Repository.Survey.map(new SurveysApi(_)).toFuture)
+    val surveysTask = Repository.Survey.map(new SurveysApi(_)).memoize
+    val responsesTask = Repository.SurveyResponse.map(new SurveyResponsesApi(_)).memoize
 
-    val server = Http.server.serve(":8080", api.service)
+    val (surveysApi, responsesApi) = Await.result(surveysTask.zip(responsesTask).toFuture)
+
+    val service = (surveysApi.endpoints :+: responsesApi.endpoints).toService
+
+    val server = Http.server.serve(":8080", service)
 
     //Explicitly return Unit to supress discarded non unit value error
     onExit { server.close(); () }

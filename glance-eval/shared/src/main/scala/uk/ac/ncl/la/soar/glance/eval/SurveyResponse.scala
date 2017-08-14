@@ -23,17 +23,28 @@ import java.util.UUID
 import uk.ac.ncl.la.soar.StudentNumber
 
 /**
-  * Case class representing an a survey which is completed by a member of staff.
+  * ADT representing an a survey which is completed by a member of staff.
   */
-sealed trait SurveyResponse
+sealed trait SurveyResponse {
+  def survey: Survey
+  def ranks: IndexedSeq[StudentNumber]
+  def respondent: String
+  def start: Instant
+  def id: UUID
+  def notes: String
+}
+
 case class IncompleteResponse(survey: Survey,
                               ranks: IndexedSeq[StudentNumber],
                               respondent: String,
                               start: Instant,
-                              id: UUID) extends SurveyResponse
+                              id: UUID,
+                              notes: String) extends SurveyResponse
+
 case class CompleteResponse(survey: Survey,
                             ranks: IndexedSeq[StudentNumber],
                             respondent: String,
                             start: Instant,
                             finish: Instant,
-                            id: UUID) extends SurveyResponse
+                            id: UUID,
+                            notes: String) extends SurveyResponse

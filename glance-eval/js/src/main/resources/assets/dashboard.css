@@ -221,6 +221,15 @@ span.sub-title {
     padding-right: 20px;
 }
 
+.form-inline > * {
+    margin-right: 3px;
+    margin-left: 3px;
+}
+
+.form-inline label {
+    margin-right: 3px;
+}
+
 div#cohort-summary {
     float: right;
 }

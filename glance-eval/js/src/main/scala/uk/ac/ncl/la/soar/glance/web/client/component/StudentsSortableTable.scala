@@ -45,8 +45,6 @@ object StudentsSortableTable {
 
     private def tableView(wrappedP: Props) = ScalaComponent.builder[List[Record]]("TableView")
       .render(bs => {
-
-
         <.table(
           ^.className := "react-sortable-list table table-bordered table-hover",
           ^.id := "ranking-table",

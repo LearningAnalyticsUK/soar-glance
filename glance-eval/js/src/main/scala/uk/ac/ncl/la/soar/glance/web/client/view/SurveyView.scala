@@ -43,16 +43,31 @@ object SurveyView {
 
   type Props = ModelProxy[Pot[SurveyModel]]
 
-  case class State(selected: Option[StudentRecords[SortedMap, ModuleCode, Double]])
+  //TODO: Start thinking about moving this state to the Circuit model, not just external (remote) resources.
+  case class State(selectedL: Option[StudentRecords[SortedMap, ModuleCode, Double]],
+                   selectedR: Option[StudentRecords[SortedMap, ModuleCode, Double]],
+                   selectingR: Boolean)
 
   class Backend(bs: BackendScope[Props, State]) {
 
     def mounted(props: Props) = Callback {}
 
-    def handleStudentClick(bs: BackendScope[Props, State])
-                          (student: StudentRecords[SortedMap, ModuleCode, Double]) = {
-      bs.modState(s => s.copy(selected = Some(student)))
+    def handleStudentClick(student: StudentRecords[SortedMap, ModuleCode, Double]) =
+      bs.modState { s =>
+        if(s.selectingR)
+          s.copy(selectedR = student.some)
+        else
+          s.copy(selectedL = student.some)
+      }
+
+    def handleClearStudent = bs.modState { s =>
+      if(s.selectingR)
+        s.copy(selectedR = None)
+      else
+        s.copy(selectedL = None)
     }
+
+    def handleToggleSelecting(right: Boolean) = bs.modState(s => s.copy(selectingR = right))
 
     val indexCol = "Student Number"
 
@@ -75,6 +90,7 @@ object SurveyView {
         case k => student.record.get(k).fold(default)(_.toString)
       }
 
+    //TODO: Lookup React-collapse. Preferrably do not render unless expanded. For now we just don't show the training table
     private val trainingTable = ScalaComponent.builder[Pot[SurveyModel]]("TrainingTable")
       .render($ => {
         val model = $.props
@@ -95,7 +111,7 @@ object SurveyView {
                     students(sm.survey),
                     headings(sm.survey),
                     renderCell(" "),
-                    handleStudentClick(bs)
+                    handleStudentClick
                   )
                 )
               }
@@ -127,7 +143,7 @@ object SurveyView {
                   queryStudents(sm.survey).take(10),
                   headings(sm.survey),
                   renderCell(" "),
-                  handleStudentClick(bs)
+                  handleStudentClick
                 )
               )
             )
@@ -151,7 +167,14 @@ object SurveyView {
           ),
           model.render { sm =>
             StudentCharts.component(
-              StudentCharts.Props(s.selected, sm.summary)
+              StudentCharts.Props(
+                s.selectedL,
+                s.selectedR,
+                s.selectingR,
+                handleClearStudent,
+                handleToggleSelecting,
+                sm.summary
+              )
             )
           }
         )
@@ -159,7 +182,6 @@ object SurveyView {
 
       <.div(
         model.render { sm =>
-
           val rankModule = sm.survey.queries.values.head
           <.div(
             ^.className := "alert alert-success",
@@ -170,12 +192,6 @@ object SurveyView {
             ". Higher is better."
           )
         },
-//        <.div(
-//          ^.className := "row border-between",
-//          ^.id := "training",
-//          trainingTable(model),
-//          rankingTable(model)
-//        ),
         <.div(
           ^.className := "row",
           ^.id := "training",
@@ -189,7 +205,7 @@ object SurveyView {
   }
 
   val component = ScalaComponent.builder[ModelProxy[Pot[SurveyModel]]]("SurveyView")
-    .initialStateFromProps(p => State(None))
+    .initialStateFromProps(p => State(None, None, selectingR = false))
     .renderBackend[Backend]
     .componentDidMount(scope => scope.backend.mounted(scope.props))
     .build

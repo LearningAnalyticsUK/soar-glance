@@ -54,7 +54,11 @@ object StudentCharts {
       )
     )
 
-  case class Props(student: Option[StudentRecords[SortedMap, ModuleCode, Double]],
+  case class Props(studentL: Option[StudentRecords[SortedMap, ModuleCode, Double]],
+                   studentR: Option[StudentRecords[SortedMap, ModuleCode, Double]],
+                   selectingR: Boolean,
+                   handleClearStudent: Callback,
+                   toggleSelecting: (Boolean) => Callback,
                    cohort: CohortAttainmentSummary,
                    filterChoices: NonEmptyVector[Select.Choice[Filter]] = options)
 
@@ -67,24 +71,30 @@ object StudentCharts {
     def render(p: Props, s: State): VdomElement = {
       <.div(
         ^.id := "detailed",
-        p.student.fold[TagMod](<.p(^.className := "chart-placedholder", "Click on a student")) { student =>
+        p.studentL.fold[TagMod](<.p(^.className := "chart-placedholder", "Click on a student")) { student =>
           List(
-            drawBars(filtered(student, s.selectedFilters),
-              filtered(p.cohort.toRecord, s.selectedFilters),
-              s.cohortComparison),
-            drawLines(filtered(student, s.selectedFilters),
-              filtered(p.cohort.toRecord, s.selectedFilters),
-              s.cohortComparison),
             <.div(
               ^.className := "chart-controls",
               <.div(
                 ^.className := "row",
                 drawFilters(p.filterChoices, s.selectedFilters),
+                drawStudComparisonControls(
+                  p.studentL,
+                  p.studentR,
+                  p.toggleSelecting,
+                  p.selectingR,
+                  p.handleClearStudent
+                ),
                 drawCheckbox(s.cohortComparison)
               )
-            )
+            ),
+            drawBars(filtered(student, s.selectedFilters),
+              filtered(p.cohort.toRecord, s.selectedFilters),
+              s.cohortComparison),
+            drawLines(filtered(student, s.selectedFilters),
+              filtered(p.cohort.toRecord, s.selectedFilters),
+              s.cohortComparison)
           ).toTagMod
-
         }
       )
     }
@@ -206,7 +216,7 @@ object StudentCharts {
     //TODO: Abstract Multiselect features into its own component at some point
     private def drawFilters(choices: NonEmptyVector[Select.Choice[Filter]], selected: Set[Select.Choice[Filter]]) = {
       <.div(
-        ^.className := "col-lg-6",
+        ^.className := "col-md-5",
         <.div(
           ^.className := "input-group",
           <.div(
@@ -246,18 +256,77 @@ object StudentCharts {
     /** Handle cohort comparison toggle */
     private def cohortToggle(e: ReactEventFromInput) = bs.modState(s => s.copy(cohortComparison = !s.cohortComparison))
 
+    /** Draw student to student comparison controls */
+
+    private def drawStudComparisonControls(selected: Option[StudentRecords[SortedMap, ModuleCode, Double]],
+                                           compareTo: Option[StudentRecords[SortedMap, ModuleCode, Double]],
+                                           toggleSelect: Boolean => Callback,
+                                           selectingR: Boolean,
+                                           handleClearStudent: Callback) = {
+      <.div(
+        ^.className := "col-md-6",
+        <.form(
+          ^.className := "form-inline",
+          <.div(
+            if(selectingR) {
+              ^.className := "input-group"
+            } else {
+              ^.className := "input-group has-success"
+            },
+            <.label(
+              ^.`for` := "selectedStudentL",
+              "Selected student"
+            ),
+            <.input(
+              ^.`type` := "text",
+              ^.className := "form-control",
+              ^.id := "selectedStudentL",
+              ^.placeholder := "Student Number",
+              selected.whenDefined(s => ^.value := s.number),
+              ^.onClick --> toggleSelect(false)
+            )
+          ),
+          <.div(
+            if(selectingR) {
+              ^.className := "input-group has-success"
+            } else {
+              ^.className := "input-group"
+            },
+            <.label(^.`for` := "selectedStudentR", "Compared to"),
+            <.input(
+              ^.`type` := "text",
+              ^.className := "form-control",
+              ^.id := "selectedStudentR",
+              ^.placeholder := "Student Number",
+              compareTo.whenDefined(s => ^.value := s.number),
+              ^.onClick --> toggleSelect(true)
+            ),
+            <.span(
+              ^.className := "input-group-btn",
+              <.button(
+                ^.className := "btn btn-default",
+                ^.`type` := "button",
+                Icon.times(Icon.Small),
+                ^.onClick --> { toggleSelect(true) >> handleClearStudent >> toggleSelect(false) }
+              )
+            )
+          )
+        )
+      )
+    }
+
     /** Draw cohort comparison checkbox */
     private def drawCheckbox(cohortSummary: Boolean): VdomElement = {
       <.div(
-        ^.className := "col-lg-3 col-lg-offset-3",
+        ^.className := "col-md-1",
         <.div(
           ^.className := "input-group",
           ^.id := "cohort-summary",
           <.label(
-            (if(cohortSummary)
+            if(cohortSummary)
               ^.className := "btn btn-primary"
             else
-              ^.className := "btn btn-default"),
+              ^.className := "btn btn-default",
             <.input(
               ^.id := "cohort-summary-toggle",
               ^.`type` := "checkbox",
@@ -274,7 +343,7 @@ object StudentCharts {
   }
 
   val component = ScalaComponent.builder[Props]("StudentBars")
-    .initialStateFromProps(p => State(Set.empty[Select.Choice[Filter]], false))
+    .initialStateFromProps(p => State(Set.empty[Select.Choice[Filter]], cohortComparison = false))
     .renderBackend[Backend]
     .componentDidMount(scope => scope.backend.mounted(scope.props))
     .build

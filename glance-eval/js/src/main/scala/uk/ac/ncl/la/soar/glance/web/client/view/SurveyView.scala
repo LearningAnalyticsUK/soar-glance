@@ -109,7 +109,7 @@ object SurveyView {
         val model = $.props
 
         <.div(
-          ^.className := "col-md-6",
+          ^.className := "col-md-12",
           ^.id := "ranking",
           <.span(
             ^.className := "sub-title",
@@ -170,10 +170,15 @@ object SurveyView {
             ". Higher is better."
           )
         },
+//        <.div(
+//          ^.className := "row border-between",
+//          ^.id := "training",
+//          trainingTable(model),
+//          rankingTable(model)
+//        ),
         <.div(
-          ^.className := "row border-between",
+          ^.className := "row",
           ^.id := "training",
-          trainingTable(model),
           rankingTable(model)
         ),
         detailedView

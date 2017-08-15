@@ -17,6 +17,8 @@
   */
 package uk.ac.ncl.la.soar.glance.web.client.component
 
+import cats._
+import cats.implicits._
 import japgolly.scalajs.react._
 import japgolly.scalajs.react.vdom.html_<^._
 import uk.ac.ncl.la.soar.data.StudentRecords
@@ -33,23 +35,34 @@ object StudentsSortableTable {
                    queryRecords: List[Record],
                    headings: List[String],
                    renderCell: (Record, String) => String,
-                   selectStudent: Record => Callback)
+                   selectStudent: Record => Callback) {
 
+    val rankModuleIdx = headings.indexWhere(_ == rankModule)
+  }
 
   // As in original SortableComponent
   class Backend(bs: BackendScope[Props, List[Record]]) {
 
     private def tableView(wrappedP: Props) = ScalaComponent.builder[List[Record]]("TableView")
       .render(bs => {
+
+
         <.table(
           ^.className := "react-sortable-list table table-bordered table-hover",
           ^.id := "ranking-table",
           <.thead(
             <.tr(
-              wrappedP.headings.toList match {
+              wrappedP.headings match {
                 case hd :: tl =>
-                  (<.td(" ") :: <.td(hd) :: tl.map { h =>
-                    <.td(^.className := "long-heading", <.span(h)) }).toTagMod
+                  (<.th(" ") :: <.th(hd) :: tl.map { h =>
+                    <.th(
+                      if(h == wrappedP.rankModule) {
+                        ^.className := "warning long-heading"
+                      } else {
+                        ^.className := "long-heading"
+                      },
+                      <.span(h))
+                  }).toTagMod
                 case a =>
                   a.toTagMod
               }
@@ -69,15 +82,17 @@ object StudentsSortableTable {
         //Get the row columns for the given record
         val columns = wrappedP.headings.map(h => wrappedP.renderCell(bs.props, h))
 
+        val renderedColumns = columns.iterator.zipWithIndex.map({ case (c, idx) =>
+          <.td(
+            (^.className := "warning").when(idx == wrappedP.rankModuleIdx),
+            ^.onClick --> wrappedP.selectStudent(bs.props),
+            c
+          )
+        }).toList
+
         <.tr(
           ^.className := "react-sortable-item",
-          TagMod.fromTraversableOnce(<.td(SortableView.handle) :: columns.map { c =>
-            <.td(
-              ^.onClick --> wrappedP.selectStudent(bs.props),
-              c
-            )
-          }
-          )
+          TagMod.fromTraversableOnce(<.td(SortableView.handle) :: renderedColumns)
         )
       })
       .build

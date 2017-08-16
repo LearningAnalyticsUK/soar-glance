@@ -33,7 +33,7 @@ import uk.ac.ncl.la.soar.glance.web.client.data.CohortAttainmentSummary
 import uk.ac.ncl.la.soar.glance.web.client.style.Icon
 
 import scala.collection.immutable.SortedMap
-import scala.collection.mutable.ListBuffer
+import scala.collection.mutable.{ArrayBuffer, ListBuffer}
 import scala.scalajs.js
 
 /**
@@ -89,9 +89,11 @@ object StudentCharts {
               )
             ),
             drawBars(filtered(student, s.selectedFilters),
+              p.studentR.map(filtered(_, s.selectedFilters)),
               filtered(p.cohort.toRecord, s.selectedFilters),
               s.cohortComparison),
             drawLines(filtered(student, s.selectedFilters),
+              p.studentR.map(filtered(_, s.selectedFilters)),
               filtered(p.cohort.toRecord, s.selectedFilters),
               s.cohortComparison)
           ).toTagMod
@@ -113,6 +115,7 @@ object StudentCharts {
 
     /** Construct line chart representation of student average over time, as a proof of concept */
     private def drawLines(studentScores: SortedMap[ModuleCode, Double],
+                          comparedStudentScores: Option[SortedMap[ModuleCode, Double]],
                           cohortSummary: SortedMap[ModuleCode, Double],
                           drawCohortSummary: Boolean) = {
       //Calculate trend line
@@ -131,12 +134,19 @@ object StudentCharts {
 
       val averages = trend(studentScores)
 
-      val studentDataset = List(ChartDataset(averages, "Average score", "rgba(111, 203, 118, 0.1)", "#47CB50"))
+      //Create the dataset for the clicked student
+      val datasets = ListBuffer(ChartDataset(averages, "Average score", "rgba(111, 203, 118, 0.1)", "#47CB50"))
 
-      val datasets = if(drawCohortSummary) {
+      //Create the dataset for the compared student if it exists
+      comparedStudentScores.foreach { sc =>
+        datasets += ChartDataset(trend(sc), "Compared student average score", "rgba(128, 128, 255, 0.1)")
+      }
+
+      //Create the dataset for the cohort summary if requested
+      if(drawCohortSummary) {
         val cohortAverages = trend(cohortSummary)
-        ChartDataset(cohortAverages, "Cohort average score", "rgba(128, 128, 255, 0.1)") :: studentDataset
-      } else studentDataset
+        datasets += ChartDataset(cohortAverages, "Cohort average score", "rgba(159, 159, 159, 0.2)", "#606060")
+      }
 
       //List of blank strings required rather than just having no labels as otherwise Chart.js only renders first point
       val labels = averages.map(_ => "")
@@ -149,6 +159,7 @@ object StudentCharts {
 
     /** Construct detailed representation of student scores, including viz */
     private def drawBars(data: SortedMap[ModuleCode, Double],
+                         comparedStudentScores: Option[SortedMap[ModuleCode, Double]],
                          cohortSummary: SortedMap[ModuleCode, Double],
                          drawCohortSummary: Boolean)  = {
 
@@ -157,16 +168,20 @@ object StudentCharts {
       //Generate custom legend for student bars
       val generateLegends: JSChart => Seq[ChartLegendItem] = { chart =>
 
-        val triColorData = Array(
+        val legendItems = ArrayBuffer(
           ChartLegendItem("Distinction", "#6FCB76", "#47CB50"),
           ChartLegendItem("Pass", "#CBCB72", "#CBC754"),
           ChartLegendItem("Fail", "#CB4243", "#CB3131")
         )
 
-        if(chart.data.datasets.length > 1)
-          ChartLegendItem("Cohort Module Scores", "#8080FF", "#404080") +: triColorData
-        else
-          triColorData
+        // Stringly typed :'( why Javascript?
+        if(chart.data.datasets.length >= 2 && chart.data.datasets.exists(ds => ds.label == "compared"))
+          legendItems += ChartLegendItem("Compared Student Scores", "#8080FF", "#404080")
+
+        if(chart.data.datasets.length >= 2 && chart.data.datasets.exists(ds => ds.label == "cohort"))
+          legendItems += ChartLegendItem("Cohort Module Scores", "#9F9F9F", "#606060")
+
+        legendItems
       }
 
       //Create a props object for the chart component based on a StudentRecords object
@@ -182,11 +197,16 @@ object StudentCharts {
 
       val (fillColours, borderColours) = colourBars(scores)
 
-      val studentDataset = List(ChartDataset(scores, "Module Scores", fillColours, borderColours))
+      val datasets = ListBuffer.empty[ChartDataset]
 
-      val datasets = if(drawCohortSummary) {
-        ChartDataset(cohortSummary.values.toSeq, "Cohort Module Scores") :: studentDataset
-      } else studentDataset
+      //Create the dataset for the clicked student
+      datasets += ChartDataset(scores, "student", fillColours, borderColours)
+
+      //Add the cohort summary if its been selected
+      if(drawCohortSummary) datasets += ChartDataset(cohortSummary.values.toSeq, "cohort", "#9F9F9F", "#606060")
+
+      //Draw a comparison student if one exists
+      comparedStudentScores.foreach { sc => datasets += ChartDataset(sc.values.toSeq, "compared") }
 
       val chartData = ChartData(modules, datasets)
       val p = Chart.Props("Student Module Scores", Chart.BarChart, chartData,
@@ -264,50 +284,58 @@ object StudentCharts {
                                            selectingR: Boolean,
                                            handleClearStudent: Callback) = {
       <.div(
-        ^.className := "col-md-6",
-        <.form(
-          ^.className := "form-inline",
+        ^.className := "col-md-5",
+        <.div(
+          ^.className := "row",
           <.div(
-            if(selectingR) {
-              ^.className := "input-group"
-            } else {
-              ^.className := "input-group has-success"
-            },
+            ^.className := "col-md-5",
             <.label(
+              ^.className := "sr-only",
               ^.`for` := "selectedStudentL",
               "Selected student"
             ),
-            <.input(
-              ^.`type` := "text",
-              ^.className := "form-control",
-              ^.id := "selectedStudentL",
-              ^.placeholder := "Student Number",
-              selected.whenDefined(s => ^.value := s.number),
-              ^.onClick --> toggleSelect(false)
+            <.div(
+              if(selectingR) {
+                ^.className := "input-group"
+              } else {
+                ^.className := "input-group has-success"
+              },
+              <.div(^.className := "input-group-addon", "Select Student"),
+              <.div(
+                ^.className := "form-control",
+                ^.id := "selectedStudentL",
+                selected.fold[TagMod]("Student Number")(s => s.number),
+                ^.onClick --> toggleSelect(false)
+              )
             )
           ),
           <.div(
-            if(selectingR) {
-              ^.className := "input-group has-success"
-            } else {
-              ^.className := "input-group"
-            },
-            <.label(^.`for` := "selectedStudentR", "Compared to"),
-            <.input(
-              ^.`type` := "text",
-              ^.className := "form-control",
-              ^.id := "selectedStudentR",
-              ^.placeholder := "Student Number",
-              compareTo.whenDefined(s => ^.value := s.number),
-              ^.onClick --> toggleSelect(true)
-            ),
-            <.span(
-              ^.className := "input-group-btn",
-              <.button(
-                ^.className := "btn btn-default",
-                ^.`type` := "button",
-                Icon.times(Icon.Small),
-                ^.onClick --> { toggleSelect(true) >> handleClearStudent >> toggleSelect(false) }
+            ^.className := "col-md-7",
+            <.label(
+              ^.className := "sr-only",
+              ^.`for` := "selectedStudentR",
+              "Compared to"),
+            <.div(
+              if(selectingR) {
+                ^.className := "input-group has-success"
+              } else {
+                ^.className := "input-group"
+              },
+              <.div(^.className := "input-group-addon", "Compared to"),
+              <.div(
+                ^.className := "form-control",
+                ^.id := "selectedStudentR",
+                compareTo.fold[TagMod]("Student Number")(s => s.number),
+                ^.onClick --> toggleSelect(true)
+              ),
+              <.div(
+                ^.className := "input-group-btn",
+                <.button(
+                  ^.className := "btn btn-default",
+                  ^.`type` := "button",
+                  <.strong("X"),
+                  ^.onClick --> { toggleSelect(true) >> handleClearStudent >> toggleSelect(false) }
+                )
               )
             )
           )
@@ -318,7 +346,7 @@ object StudentCharts {
     /** Draw cohort comparison checkbox */
     private def drawCheckbox(cohortSummary: Boolean): VdomElement = {
       <.div(
-        ^.className := "col-md-1",
+        ^.className := "col-md-1 col-md-offset-1",
         <.div(
           ^.className := "input-group",
           ^.id := "cohort-summary",

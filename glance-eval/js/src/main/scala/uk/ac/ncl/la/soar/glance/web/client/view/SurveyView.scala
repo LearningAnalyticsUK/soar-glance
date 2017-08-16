@@ -61,10 +61,13 @@ object SurveyView {
       }
 
     def handleClearStudent = bs.modState { s =>
-      if(s.selectingR)
+      if(s.selectingR) {
+        println("selectingR: true, modding selectedR to None")
         s.copy(selectedR = None)
-      else
+      } else {
+        println("selectedR: false, modding selectedL to None")
         s.copy(selectedL = None)
+      }
     }
 
     def handleToggleSelecting(right: Boolean) = bs.modState(s => s.copy(selectingR = right))

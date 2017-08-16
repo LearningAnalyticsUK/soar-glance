@@ -60,15 +60,13 @@ object SurveyView {
           s.copy(selectedL = student.some)
       }
 
-    def handleClearStudent = bs.modState { s =>
-      if(s.selectingR) {
-        println("selectingR: true, modding selectedR to None")
-        s.copy(selectedR = None)
-      } else {
-        println("selectedR: false, modding selectedL to None")
-        s.copy(selectedL = None)
+    def handleClearStudent =
+      bs.modState { s =>
+        if(s.selectingR)
+          s.copy(selectedR = None)
+        else
+          s.copy(selectedL = None)
       }
-    }
 
     def handleToggleSelecting(right: Boolean) = bs.modState(s => s.copy(selectingR = right))
 
@@ -128,7 +126,6 @@ object SurveyView {
         val model = $.props
 
         <.div(
-          ^.className := "col-md-12",
           ^.id := "ranking",
           <.span(
             ^.className := "sub-title",
@@ -162,7 +159,6 @@ object SurveyView {
 
       val detailedView = {
         <.div(
-          ^.className := "row",
           <.span(
             ^.className := "sub-title",
             Icon.search(Icon.Medium),
@@ -190,13 +186,12 @@ object SurveyView {
             ^.className := "alert alert-success",
             ^.role := "alert",
             <.strong("Welcome"),
-            " Please rank students on the right by how you believe they will perform in the module ",
+            " Please rank students below by how you believe they will perform in the module ",
             <.strong(rankModule),
             ". Higher is better."
           )
         },
         <.div(
-          ^.className := "row",
           ^.id := "training",
           rankingTable(model)
         ),

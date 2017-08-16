@@ -51,7 +51,7 @@ object SurveyResponse {
             respondent: String,
             start: Instant,
             id: UUID,
-            notes: String) = IncompleteResponse(survey, ranks, respondent, start, id, notes)
+            notes: String): SurveyResponse = IncompleteResponse(survey, ranks, respondent, start, id, notes)
 
   /** Typeclass instances for SurveResponse */
   private implicit val encodeInstant: Encoder[Instant] = Encoder.encodeString.contramap[Instant](_.toString)

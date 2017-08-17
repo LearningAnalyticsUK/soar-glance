@@ -48,7 +48,7 @@ object Generator extends Command[GeneratorConfig, Unit] {
   override def run(conf: GeneratorConfig): Task[Unit] = {
     for {
       scores <- parseScores(conf.recordsPath)
-      surveys <- Task.now(Survey.generate(scores, conf.elided, conf.modules, conf.common, conf.seed))
+      surveys <- Task.now(Survey.generate(scores, conf.elided, conf.modules, conf.seed))
       db <- Repository.Survey
       _ <- { println("Finished creating tables.");surveys.traverse(db.save) }
     } yield ()

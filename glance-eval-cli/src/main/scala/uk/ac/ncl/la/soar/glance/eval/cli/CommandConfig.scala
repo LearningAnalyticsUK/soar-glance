@@ -25,6 +25,7 @@ sealed trait CommandConfig
 
 /** Config "bag" case class for the survey generator and accompanying scopt parser
   *
+  * TODO: Remove common Option[String]
   * @author hugofirth
   */
 final case class GeneratorConfig(recordsPath: String = "", outputPath: String = "", elided: Int = 10,

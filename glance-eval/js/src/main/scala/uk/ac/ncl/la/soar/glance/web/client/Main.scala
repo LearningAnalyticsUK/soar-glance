@@ -28,7 +28,7 @@ import japgolly.scalajs.react.extra.OnUnmount
 import japgolly.scalajs.react.vdom.html_<^._
 import org.scalajs.dom
 import uk.ac.ncl.la.soar.glance.web.client.style.GlobalStyle
-import uk.ac.ncl.la.soar.glance.web.client.view.{MainMenuView, SurveyView}
+import uk.ac.ncl.la.soar.glance.web.client.view.{MainMenuView, SurveyCompleteView, SurveyView}
 
 import scala.scalajs.js
 import scalacss.DevDefaults._
@@ -44,22 +44,24 @@ object Main extends js.JSApp {
 
   /** Define the locations (views) used in this application */
   sealed trait Loc
-  case object StudentLoc extends Loc
-  case object ModuleLoc extends Loc
   case object AboutLoc extends Loc
-  case object SettingsLoc extends Loc
+
+  sealed trait SurveyLoc extends Loc
+  case object SurveyFormLoc extends SurveyLoc
+  case object SurveyCompleteLoc extends SurveyLoc
 
   /** Lets initialise the router config */
   val routerConfig: RouterConfig[Loc] = RouterConfigDsl[Loc].buildConfig({ dsl =>
     import dsl._
 
     val surveyConnector: ReactConnectProxy[Pot[SurveyModel]] = GlanceCircuit.connect(_.survey)
-    //Construct student list Route
+    //Construct routes
     val listRt =
-      staticRoute(root, StudentLoc) ~> renderR(ctl => surveyConnector(p => SurveyView.component(p)))
+      (staticRoute(root, SurveyFormLoc) ~> renderR(ctl => surveyConnector(p => SurveyView.component(SurveyView.Props(p, ctl.narrow[Main.SurveyLoc]))))
+        | staticRoute("#thanks", SurveyCompleteLoc) ~> renderR(ctl => SurveyCompleteView.component()))
 
     //Construct and return final routing table, adding a "Not Found" behaviour
-    listRt.notFound(redirectToPage(StudentLoc)(Redirect.Replace))
+    listRt.notFound(redirectToPage(AboutLoc)(Redirect.Replace))
   }).renderWith(layout)
 
   // base layout for all pages

@@ -57,6 +57,8 @@ class SurveyDb private[glance] (xa: Transactor[Task]) extends DbRepository[Surve
 
 object SurveyDb extends RepositoryCompanion[Survey, SurveyDb] {
 
+  type SurveyRow = (UUID, ModuleCode)
+  
   implicit val uuidMeta: Meta[UUID] = Meta[String].nxmap(UUID.fromString, _.toString)
 
   override val initQ: ConnectionIO[Unit] = ().pure[ConnectionIO]
@@ -71,15 +73,16 @@ object SurveyDb extends RepositoryCompanion[Survey, SurveyDb] {
 
   override def findQ(id: UUID): ConnectionIO[Option[Survey]] = {
     //TODO: work out how to take advantage of the first query for early bail out
+    
     for {
-      ident <- findSurveyIdQ(id)
+      sr <- findSurveyRowQ(id)
       scores <- listScoresForSurveyQ(id)
       qs <- listQueriesForSurveyQ(id)
     } yield {
       val moduleSet = scores.iterator.map(_.module).toSet
       //In memory group by potentially fine, but fs2 Stream has own groupBy operator. TODO: Check fs2.Stream.groupBy
       val records = Survey.groupByStudents(scores)
-      ident.map(id => Survey(moduleSet, qs, records, id))
+      sr.map { case (id, rankModule) => Survey(moduleSet, rankModule, qs, records, id) }
     }
   }
 
@@ -87,9 +90,9 @@ object SurveyDb extends RepositoryCompanion[Survey, SurveyDb] {
   //TODO: This seems like a lot of imperative brittle boilerplate. Am I really doing this right?
   override def saveQ(entry: Survey): ConnectionIO[Unit] = {
     //First, break out the pieces of the Survey which correspond to tables
-    val Survey(_, queries, records, sId) = entry
+    val Survey(_, rankModule, queries, records, sId) = entry
     //First add a survey id. As this is a unary type which is generated there really isn't a concept of collision
-    val addSurveyQ = sql"INSERT INTO survey (id) VALUES ($sId);".update.run
+    val addSurveyQ = sql"INSERT INTO survey (id, module_num) VALUES ($sId, $rankModule);".update.run
     //Once we have added the survey id, add students and surveys_students
 
     //Then, break down the records into a series of modulescores and add those.
@@ -125,25 +128,20 @@ object SurveyDb extends RepositoryCompanion[Survey, SurveyDb] {
     val mSRows = mS.map({ case ModuleScore(stud, module, score) => (UUID.randomUUID, stud, score, module) })
     val addModuleScoreQ = Update[(UUID, StudentNumber, Double, ModuleCode)](moduleScoreSQL).updateMany(mSRows)
 
-    //Finally add the queries
-    val addQuerySQL = "INSERT INTO query (student_num, module_num) VALUES (?, ?) ON CONFLICT DO NOTHING;"
-
     val addSurveyQuerySQL =
       """
-        INSERT INTO survey_query (survey_id, student_num, module_num)
-        VALUES (?, ?, ?) ON CONFLICT (survey_id, student_num, module_num) DO NOTHING;
+        INSERT INTO survey_query (survey_id, student_num)
+        VALUES (?, ?) ON CONFLICT (survey_id, student_num) DO NOTHING;
       """
 
-    val qRows = queries.toList
-    val sQRows = queries.iterator.map({ case (stud, module) => (sId, stud, module) }).toList
+    val sQRows = queries.iterator.map(stud => (sId, stud)).toList
 
-    val addQueryQ = Update[(StudentNumber, ModuleCode)](addQuerySQL).updateMany(qRows)
-    val addSQueryQ = Update[(UUID, StudentNumber, ModuleCode)](addSurveyQuerySQL).updateMany(sQRows)
+    val addSQueryQ = Update[(UUID, StudentNumber)](addSurveyQuerySQL).updateMany(sQRows)
 
     //Return combined query
     for{
       _ <- addSurveyQ *> addStudentsQ
-      _ <- addEntryQ *> addModuleScoreQ *> addQueryQ *> addSQueryQ
+      _ <- addEntryQ *> addModuleScoreQ *> addSQueryQ
     } yield ()
   }
 
@@ -152,10 +150,10 @@ object SurveyDb extends RepositoryCompanion[Survey, SurveyDb] {
 
   private lazy val listSurveyIdsQ: ConnectionIO[List[UUID]] = sql"SELECT s.id FROM survey s;".query[UUID].list
 
-  private def findSurveyIdQ(id: UUID): ConnectionIO[Option[UUID]] =
+  private def findSurveyRowQ(id: UUID): ConnectionIO[Option[SurveyRow]] =
     sql"""
-      SELECT s.id FROM survey s WHERE s.id = $id;
-    """.query[UUID].option
+      SELECT s.id, s.module_num FROM survey s WHERE s.id = $id;
+    """.query[SurveyRow].option
 
   private def listScoresForSurveyQ(id: UUID): ConnectionIO[List[ModuleScore]] = {
     val query = sql"""
@@ -171,12 +169,12 @@ object SurveyDb extends RepositoryCompanion[Survey, SurveyDb] {
       .list
   }
 
-  private def listQueriesForSurveyQ(id: UUID): ConnectionIO[Map[StudentNumber, ModuleCode]] =
+  private def listQueriesForSurveyQ(id: UUID): ConnectionIO[List[StudentNumber]] =
     sql"""
-      SELECT sq.student_num, sq.module_num
+      SELECT sq.student_num
       FROM survey_query sq
       WHERE sq.survey_id = $id;
-    """.query[(StudentNumber, ModuleCode)].list.map(_.toMap)
+    """.query[StudentNumber].list
 }
 
 class SurveyResponseDb private[glance] (xa: Transactor[Task]) extends DbRepository[SurveyResponse] {

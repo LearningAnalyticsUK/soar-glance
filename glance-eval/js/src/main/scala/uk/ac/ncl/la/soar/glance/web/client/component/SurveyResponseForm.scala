@@ -90,7 +90,7 @@ object SurveyResponseForm {
   val component = ScalaComponent.builder[Props]("SurveyResponseForm")
     .initialStateFromProps({ p =>
       val s =  p.survey
-      IncompleteResponse(s, s.queries.keysIterator.toVector, "", Date.now, UUID.randomUUID, "")
+      IncompleteResponse(s, s.queries.toVector, "", Date.now, UUID.randomUUID, "")
     })
     .renderBackend[Backend]
     .build

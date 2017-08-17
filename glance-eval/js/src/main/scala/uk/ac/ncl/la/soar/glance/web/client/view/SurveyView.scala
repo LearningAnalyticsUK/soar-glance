@@ -23,11 +23,12 @@ import diode.data._
 import diode.react.ReactPot._
 import diode.react._
 import japgolly.scalajs.react._
+import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.html_<^._
 import uk.ac.ncl.la.soar.{ModuleCode, StudentNumber}
 import uk.ac.ncl.la.soar.data.StudentRecords
 import uk.ac.ncl.la.soar.glance.eval.Survey
-import uk.ac.ncl.la.soar.glance.web.client.{SubmitSurveyResponse, SurveyModel}
+import uk.ac.ncl.la.soar.glance.web.client.{Main, SubmitSurveyResponse, SurveyModel}
 import uk.ac.ncl.la.soar.glance.web.client.component._
 import uk.ac.ncl.la.soar.glance.web.client.data.CohortAttainmentSummary
 import uk.ac.ncl.la.soar.glance.web.client.style.Icon
@@ -41,7 +42,7 @@ import scala.scalajs.js
 object SurveyView {
   
 
-  type Props = ModelProxy[Pot[SurveyModel]]
+  case class Props(proxy: ModelProxy[Pot[SurveyModel]], ctrl: RouterCtl[Main.SurveyLoc])
 
   //TODO: Start thinking about moving this state to the Circuit model, not just external (remote) resources.
   case class State(selectedL: Option[StudentRecords[SortedMap, ModuleCode, Double]],
@@ -134,13 +135,13 @@ object SurveyView {
           ),
           model.render { sm =>
 
-            val rankModule = sm.survey.queries.values.head
+            val rankModule = sm.survey.moduleToRank
             <.div(
               ^.className := "table-responsive",
               StudentsSortableTable.component(
                 StudentsSortableTable.Props(
                   rankModule, //TODO: Fix the hack by restructuring Survey
-                  queryStudents(sm.survey).take(10),
+                  queryStudents(sm.survey),
                   headings(sm.survey),
                   renderCell(" "),
                   handleStudentClick
@@ -155,7 +156,7 @@ object SurveyView {
     def render(p: Props, s: State): VdomElement = {
       //Get the necessary data from the model
       //This is a bit of a nested Mess - TODO: Make sure we're understanding the model construction properly
-      val model = p()
+      val model = p.proxy()
 
       lazy val detailedView = {
         <.div(
@@ -188,7 +189,12 @@ object SurveyView {
           ),
           model.render { sm =>
             SurveyResponseForm.component(
-              SurveyResponseForm.Props(sm.survey, response => p.dispatchCB(SubmitSurveyResponse(response)))
+              SurveyResponseForm.Props(
+                sm.survey,
+                response => {
+                  p.proxy.dispatchCB(SubmitSurveyResponse(response)) >> p.ctrl.set(Main.SurveyCompleteLoc)
+                }
+              )
             )
           }
         )
@@ -196,7 +202,7 @@ object SurveyView {
 
       <.div(
         model.render { sm =>
-          val rankModule = sm.survey.queries.values.head
+          val rankModule = sm.survey.moduleToRank
           <.div(
             ^.className := "alert alert-success",
             ^.role := "alert",
@@ -218,10 +224,25 @@ object SurveyView {
 
   }
 
-  val component = ScalaComponent.builder[ModelProxy[Pot[SurveyModel]]]("SurveyView")
+  val component = ScalaComponent.builder[Props]("SurveyView")
     .initialStateFromProps(p => State(None, None, selectingR = false))
     .renderBackend[Backend]
     .componentDidMount(scope => scope.backend.mounted(scope.props))
     .build
 
 }
+
+/**
+  * React Component for the SurveyCompleteView, shown after a Survey is submitted
+  */
+object SurveyCompleteView {
+  val component = ScalaComponent.builder[Unit]("Survey Complete")
+    .renderStatic({
+      <.div(
+        ^.className := "placeholders",
+        <.h4("Thank you for completing a survey")
+      )
+    })
+    .build
+}
+

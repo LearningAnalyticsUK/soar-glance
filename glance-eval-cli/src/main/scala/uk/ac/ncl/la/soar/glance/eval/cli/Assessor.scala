@@ -90,8 +90,9 @@ object Assessor extends Command[AssessorConfig, Unit] {
       records <- scores.traverse(scoresToStudentRecord(_:_*)).toRight("Incorrectly formatted survey csv. Empty entry!")
       //Map the right hand side of scores to a Survey
       //TODO: Parse map of queries from meta.json - below is a filler
-      queries <- Either.right(Map.empty[StudentNumber, ModuleCode])
-    } yield Survey(columns.toSet, queries, records)
+      rankModule <- Either.right("")
+      queries <- Either.right(List.empty[StudentNumber])
+    } yield Survey(columns.toSet, rankModule, queries, records)
   }
 
   /** Converts a list fo ModuleScores to a StudentRecord - be aware that this student record uses the student id

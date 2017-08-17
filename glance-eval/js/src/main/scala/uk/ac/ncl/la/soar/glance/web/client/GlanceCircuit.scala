@@ -53,6 +53,7 @@ case class SurveyModel(survey: Survey, summary: CohortAttainmentSummary)
 
 sealed trait NavigationAction extends Action
 final case class RedirectTo(loc: Main.Loc) extends NavigationAction
+final case class SetLoc(loc: Main.Loc) extends SurveyAction
 
 /**
   * ADT representing the set of actions which may be taken to update a `SurveyModel`. These actions encapsulate no
@@ -64,6 +65,19 @@ final case class SelectStudent(id: StudentNumber) extends SurveyAction
 final case class SubmitSurveyResponse(response: SurveyResponse) extends SurveyAction
 case object RefreshSurvey extends SurveyAction
 case object DoNothing extends SurveyAction
+
+/**
+  * Handles actions related to Navigation
+  */
+class NavigationHandler[M](modelRW: ModelRW[M, NavigationModel]) extends ActionHandler(modelRW) {
+
+  override def handle = {
+    case RedirectTo(loc) =>
+      effectOnly(Effect(modelRW.value.router.set(loc).map(_ => SetLoc(loc)).toFuture))
+    case SetLoc(loc) =>
+      updated(modelRW.value.copy(currentLoc = loc))
+  }
+}
 
 /**
   * Handles actions related to Surveys

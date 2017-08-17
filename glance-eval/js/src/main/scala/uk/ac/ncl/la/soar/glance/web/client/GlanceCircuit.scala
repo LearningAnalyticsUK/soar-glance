@@ -29,12 +29,17 @@ import io.circe._
 import uk.ac.ncl.la.soar.{ModuleCode, StudentNumber}
 import uk.ac.ncl.la.soar.glance.eval.{Survey, SurveyResponse}
 import uk.ac.ncl.la.soar.glance.web.client.data.CohortAttainmentSummary
-
+import japgolly.scalajs.react.extra.router.{Action => RouterAction, RouterCtl}
 
 /**
   * Hierarchical definition of Application model, composing various other models.
   */
 final case class GlanceModel(survey: Pot[SurveyModel])
+
+/**
+  * Container for the navigation state, including currently resolved Loc etc...
+  */
+case class NavigationModel(router: RouterCtl[Main.Loc], currentLoc: Main.Loc)
 
 /**
   * Container for the survey data (a `glance.Survey`) which is bound to various UI elements throughout the Glance
@@ -45,6 +50,10 @@ final case class GlanceModel(survey: Pot[SurveyModel])
   */
 case class SurveyModel(survey: Survey, summary: CohortAttainmentSummary)
 
+
+sealed trait NavigationAction extends Action
+final case class RedirectTo(loc: Main.Loc) extends NavigationAction
+
 /**
   * ADT representing the set of actions which may be taken to update a `SurveyModel`. These actions encapsulate no
   * behaviour. Instead the behaviour is defined in a handler/interpreter method provided in the `GlanceCircuit` object.
@@ -54,6 +63,7 @@ final case class InitSurvey(survey: Either[Error, List[Survey]]) extends SurveyA
 final case class SelectStudent(id: StudentNumber) extends SurveyAction
 final case class SubmitSurveyResponse(response: SurveyResponse) extends SurveyAction
 case object RefreshSurvey extends SurveyAction
+case object DoNothing extends SurveyAction
 
 /**
   * Handles actions related to Surveys
@@ -71,6 +81,9 @@ class SurveyHandler[M](modelRW: ModelRW[M, Pot[SurveyModel]]) extends ActionHand
           updated(Ready(SurveyModel(s, CohortAttainmentSummary(s.entries))))
         }
       )
+    case SubmitSurveyResponse(response) =>
+      effectOnly(Effect(ApiClient.postResponse(response).map(_ => DoNothing)))
+    case DoNothing => noChange
   }
 }
 

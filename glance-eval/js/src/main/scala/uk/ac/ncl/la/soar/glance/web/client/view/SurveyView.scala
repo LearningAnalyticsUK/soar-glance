@@ -27,8 +27,8 @@ import japgolly.scalajs.react.vdom.html_<^._
 import uk.ac.ncl.la.soar.{ModuleCode, StudentNumber}
 import uk.ac.ncl.la.soar.data.StudentRecords
 import uk.ac.ncl.la.soar.glance.eval.Survey
-import uk.ac.ncl.la.soar.glance.web.client.SurveyModel
-import uk.ac.ncl.la.soar.glance.web.client.component.{Select, StudentCharts, StudentsDataTable, StudentsSortableTable}
+import uk.ac.ncl.la.soar.glance.web.client.{SubmitSurveyResponse, SurveyModel}
+import uk.ac.ncl.la.soar.glance.web.client.component._
 import uk.ac.ncl.la.soar.glance.web.client.data.CohortAttainmentSummary
 import uk.ac.ncl.la.soar.glance.web.client.style.Icon
 
@@ -157,7 +157,7 @@ object SurveyView {
       //This is a bit of a nested Mess - TODO: Make sure we're understanding the model construction properly
       val model = p()
 
-      val detailedView = {
+      lazy val detailedView = {
         <.div(
           <.span(
             ^.className := "sub-title",
@@ -179,6 +179,21 @@ object SurveyView {
         )
       }
 
+      lazy val submissionForm = {
+        <.div(
+          <.span(
+            ^.className := "sub-title",
+            Icon.save(Icon.Medium),
+            <.h2("Submit Survey")
+          ),
+          model.render { sm =>
+            SurveyResponseForm.component(
+              SurveyResponseForm.Props(sm.survey, response => p.dispatchCB(SubmitSurveyResponse(response)))
+            )
+          }
+        )
+      }
+
       <.div(
         model.render { sm =>
           val rankModule = sm.survey.queries.values.head
@@ -195,7 +210,8 @@ object SurveyView {
           ^.id := "training",
           rankingTable(model)
         ),
-        detailedView
+        detailedView,
+        submissionForm
       )
 
     }

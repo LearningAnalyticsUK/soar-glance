@@ -34,12 +34,15 @@ import io.circe.generic.semiauto._
 
 /**
   * ADT representing an a survey which is completed by a member of staff.
+  *
+  * Note: Have to use Doubles for times because Javascript ... figure out a better solution to this. Longs better, Instants
+  * preferable. Facade type on one side with implicit conversions?
   */
 sealed trait SurveyResponse {
   def survey: Survey
   def ranks: IndexedSeq[StudentNumber]
   def respondent: String
-  def start: Instant
+  def start: Double
   def id: UUID
   def notes: String
 }
@@ -49,17 +52,11 @@ object SurveyResponse {
   def apply(survey: Survey,
             ranks: IndexedSeq[StudentNumber],
             respondent: String,
-            start: Instant,
+            start: Double,
             id: UUID,
             notes: String): SurveyResponse = IncompleteResponse(survey, ranks, respondent, start, id, notes)
 
   /** Typeclass instances for SurveResponse */
-  private implicit val encodeInstant: Encoder[Instant] = Encoder.encodeString.contramap[Instant](_.toString)
-
-  private implicit val decodeInstant: Decoder[Instant] = Decoder.decodeString.emap { str =>
-    Either.catchNonFatal(Instant.parse(str)).leftMap(t => "Instant")
-  }
-
   implicit val encodeSurveyResponse: Encoder[SurveyResponse] = new Encoder[SurveyResponse] {
     final def apply(a: SurveyResponse): Json = Json.obj(
       "id" -> a.id.toString.asJson,
@@ -89,7 +86,7 @@ object SurveyResponse {
         survey <- c.downField("survey").as[Survey]
         ranks <- c.downField("ranks").as[Vector[StudentNumber]]
         respondent <- c.downField("respondent").as[String]
-        start <- c.downField("start").as[Instant]
+        start <- c.downField("start").as[Double]
         notes <- c.downField("notes").as[String]
       } yield { id: UUID =>
         IncompleteResponse(survey, ranks, respondent, start, id, notes)
@@ -101,14 +98,14 @@ object SurveyResponse {
 case class IncompleteResponse(survey: Survey,
                               ranks: IndexedSeq[StudentNumber],
                               respondent: String,
-                              start: Instant,
+                              start: Double,
                               id: UUID,
                               notes: String) extends SurveyResponse
 
 case class CompleteResponse(survey: Survey,
                             ranks: IndexedSeq[StudentNumber],
                             respondent: String,
-                            start: Instant,
-                            finish: Instant,
+                            start: Double,
+                            finish: Double,
                             id: UUID,
                             notes: String) extends SurveyResponse

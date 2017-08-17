@@ -25,7 +25,7 @@ import diode.react.ModelProxy
 import japgolly.scalajs.react._
 import japgolly.scalajs.react.vdom.html_<^._
 import uk.ac.ncl.la.soar.StudentNumber
-import uk.ac.ncl.la.soar.glance.eval.{Survey, SurveyResponse}
+import uk.ac.ncl.la.soar.glance.eval.{IncompleteResponse, Survey, SurveyResponse}
 import uk.ac.ncl.la.soar.glance.web.client.SurveyModel
 import uk.ac.ncl.la.soar.glance.web.client.style.Icon
 
@@ -37,11 +37,23 @@ import scala.scalajs.js.Date
   */
 object SurveyResponseForm {
 
-  type Props = Survey
+  case class Props(survey: Survey, submitHandler: State => Callback)
 
-  type State = SurveyResponse
+  type State = IncompleteResponse
+
+  sealed trait FormField
+  case object EmailField extends FormField
+  case object NotesField extends FormField
 
   class Backend(bs: BackendScope[Props, State]) {
+
+    private def formValueChange(field: FormField)(e: ReactEventFromInput) = {
+      val text = e.target.value
+      field match {
+        case EmailField => bs.modState(s => s.copy(respondent = text))
+        case NotesField => bs.modState(s => s.copy(notes = text))
+      }
+    }
 
     def render(p: Props, s: State): VdomElement = {
       <.form(
@@ -52,7 +64,8 @@ object SurveyResponseForm {
             ^.`type` := "email",
             ^.className := "form-control",
             ^.id := "emailInput",
-            ^.placeholder := "Email"
+            ^.placeholder := "Email",
+            ^.onChange ==> formValueChange(EmailField)
           ),
         ),
         <.div(
@@ -60,20 +73,25 @@ object SurveyResponseForm {
           <.label(^.`for` := "notesInput", "Please enter your notes about this experiment..."),
           <.textarea(
             ^.className := "form-control",
-            ^.rows := 3
+            ^.rows := 3,
+            ^.onChange ==> formValueChange(NotesField)
           )
         ),
         <.button(
-          ^.`type` := "submit",
-          ^.className := "btn btn-primary",
-          "Submit"
+          ^.`type` := "button",
+          ^.className := "btn btn-primary pull-right",
+          "Submit",
+          ^.onClick --> p.submitHandler(s)
         )
       )
     }
   }
 
   val component = ScalaComponent.builder[Props]("SurveyResponseForm")
-    .initialStateFromProps(p => SurveyResponse(p, p.queries.keysIterator.toVector, "", Instant.now, UUID.randomUUID, ""))
+    .initialStateFromProps({ p =>
+      val s =  p.survey
+      IncompleteResponse(s, s.queries.keysIterator.toVector, "", Date.now, UUID.randomUUID, "")
+    })
     .renderBackend[Backend]
     .build
 

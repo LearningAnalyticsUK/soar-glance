@@ -199,11 +199,11 @@ class SurveyResponseDb private[glance] (xa: Transactor[Task]) extends DbReposito
 object SurveyResponseDb extends RepositoryCompanion[SurveyResponse, SurveyResponseDb] {
 
   /** Type aliases for Db rows */
-  type ResponseRow = (UUID, String, UUID, Instant, Instant, String)
+  type ResponseRow = (UUID, String, UUID, Double, Double, String)
   type RankRow = (StudentNumber, Int)
 
   implicit val uuidMeta: Meta[UUID] = Meta[String].nxmap(UUID.fromString, _.toString)
-  implicit val InstantMeta: Meta[Instant] = Meta[Timestamp].nxmap(_.toInstant, Timestamp.from)
+//  implicit val InstantMeta: Meta[Instant] = Meta[Timestamp].nxmap(_.toInstant, Timestamp.from)
 
   override val initQ: ConnectionIO[Unit] = ().pure[ConnectionIO]
 
@@ -269,16 +269,20 @@ object SurveyResponseDb extends RepositoryCompanion[SurveyResponse, SurveyRespon
     } yield completeResponse.headOption
   }
 
+  //TODO: Return persisted Response
   override def saveQ(entry: SurveyResponse): ConnectionIO[Unit] = {
 
     //Get the retrieve survey Id from nested survey in entry
     val sId = entry.survey.id
 
+    //Cast the start time from Double to Timestamp
+    val startTs = new Timestamp(entry.start.toLong)
+
     //Insert entry in respondents table
     val addResponseQ =
       sql"""
          INSERT INTO survey_response (id, respondent_email, survey_id, time_started, time_finished, notes)
-         VALUES (${entry.id}, ${entry.survey.id}, ${entry.respondent}, ${entry.start}, CURRENT_TIMESTAMP, ${entry.notes});
+         VALUES (${entry.id}, ${entry.respondent}, ${entry.survey.id}, $startTs, CURRENT_TIMESTAMP, ${entry.notes});
       """.update.run
 
     //Then batch insert entries in student_ranks table

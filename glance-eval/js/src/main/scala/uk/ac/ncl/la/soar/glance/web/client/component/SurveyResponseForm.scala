@@ -55,10 +55,21 @@ object SurveyResponseForm {
       }
     }
 
+    private val emailRegex = """^[a-zA-Z0-9\.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$""".r
+
+    private def validEmail(e: String): Boolean = {
+      if (e.trim.isEmpty)
+        false
+      else if (emailRegex.findFirstMatchIn(e).isDefined)
+        true
+      else
+        false
+    }
+
     def render(p: Props, s: State): VdomElement = {
       <.form(
         <.div(
-          ^.className := "form-group",
+          ^.className := (if (validEmail(s.respondent)) "form-group" else "form-group has-error"),
           <.label(^.`for` := "emailInput", "University Email"),
           <.input(
             ^.`type` := "email",
@@ -81,6 +92,7 @@ object SurveyResponseForm {
           ^.`type` := "button",
           ^.className := "btn btn-primary pull-right",
           "Submit",
+          (^.disabled := true).when(!validEmail(s.respondent)),
           ^.onClick --> p.submitHandler(s)
         )
       )

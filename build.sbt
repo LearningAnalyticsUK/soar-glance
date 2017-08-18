@@ -23,6 +23,7 @@ lazy val sjsReactVersion = "1.0.0"
 lazy val diodeVersion = "1.1.2"
 lazy val scalaCSSVersion = "0.5.3"
 lazy val pureConfigVersion = "0.7.2"
+lazy val kantanVersion = "0.2.1"
 
 /**
   * Repeated js dependency versions
@@ -46,9 +47,9 @@ lazy val langFixDeps = Seq(
 
 lazy val testingDeps = Seq(
   libraryDependencies ++= Seq(
-    "org.scalatest" %%% "scalatest" % "3.0.1" % "test",
-    "org.scalacheck" %%% "scalacheck" % "1.13.4" % "test",
-    "org.typelevel" %%% "discipline" % "0.7.2" % "test")
+    "org.scalatest" %%% "scalatest" % "3.0.3" % "test",
+    "org.scalacheck" %%% "scalacheck" % "1.13.5" % "test",
+    "org.typelevel" %%% "discipline" % "0.7.3" % "test")
 )
 
 lazy val altStdLibDeps = Seq(
@@ -73,6 +74,14 @@ lazy val circeDeps = Seq(
     "io.circe" %%% "circe-generic" % circeVersion,
     "io.circe" %%% "circe-core" % circeVersion,
     "io.circe" %%% "circe-parser" % circeVersion)
+)
+
+lazy val kantanDeps = Seq(
+  libraryDependencies ++= Seq(
+    "com.nrinaudo" %% "kantan.csv-java8" % kantanVersion,
+    "com.nrinaudo" %% "kantan.csv-cats" % kantanVersion,
+    "com.nrinaudo" %% "kantan.csv-generic" % kantanVersion
+  )
 )
 
 lazy val doobieDeps = Seq(
@@ -109,7 +118,7 @@ lazy val reactJSDeps = Seq(
 )
 
 lazy val commonDeps = langFixDeps ++ testingDeps ++ altStdLibDeps ++ circeDeps
-lazy val commonBackendDeps = doobieDeps ++ finchDeps
+lazy val commonBackendDeps = doobieDeps ++ finchDeps ++ kantanDeps
 lazy val commonFrontendDeps = scalaJSDeps ++ reactJSDeps
 
 

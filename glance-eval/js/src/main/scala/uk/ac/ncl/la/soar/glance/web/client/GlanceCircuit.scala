@@ -37,11 +37,6 @@ import japgolly.scalajs.react.extra.router.{Action => RouterAction, RouterCtl}
 final case class GlanceModel(survey: Pot[SurveyModel])
 
 /**
-  * Container for the navigation state, including currently resolved Loc etc...
-  */
-case class NavigationModel(router: RouterCtl[Main.Loc], currentLoc: Main.Loc)
-
-/**
   * Container for the survey data (a `glance.Survey`) which is bound to various UI elements throughout the Glance
   * application. There may be other models containing other data, but this is the primary one.
   *
@@ -49,11 +44,6 @@ case class NavigationModel(router: RouterCtl[Main.Loc], currentLoc: Main.Loc)
   * have the ability to encode this? Otherwise it feels like we're almost creating an option of an option (Pot ~ Option)
   */
 case class SurveyModel(survey: Survey, summary: CohortAttainmentSummary)
-
-
-sealed trait NavigationAction extends Action
-final case class RedirectTo(loc: Main.Loc) extends NavigationAction
-final case class SetLoc(loc: Main.Loc) extends SurveyAction
 
 /**
   * ADT representing the set of actions which may be taken to update a `SurveyModel`. These actions encapsulate no
@@ -65,19 +55,6 @@ final case class SelectStudent(id: StudentNumber) extends SurveyAction
 final case class SubmitSurveyResponse(response: SurveyResponse) extends SurveyAction
 case object RefreshSurvey extends SurveyAction
 case object DoNothing extends SurveyAction
-
-/**
-  * Handles actions related to Navigation
-  */
-class NavigationHandler[M](modelRW: ModelRW[M, NavigationModel]) extends ActionHandler(modelRW) {
-
-  override def handle = {
-    case RedirectTo(loc) =>
-      effectOnly(Effect(modelRW.value.router.set(loc).map(_ => SetLoc(loc)).toFuture))
-    case SetLoc(loc) =>
-      updated(modelRW.value.copy(currentLoc = loc))
-  }
-}
 
 /**
   * Handles actions related to Surveys
@@ -100,7 +77,6 @@ class SurveyHandler[M](modelRW: ModelRW[M, Pot[SurveyModel]]) extends ActionHand
     case DoNothing => noChange
   }
 }
-
 
 /**
   * `GlanceCircuit` object provides an instance of the application's [[GlanceModel]], along with handlers for various

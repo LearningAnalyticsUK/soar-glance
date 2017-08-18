@@ -22,7 +22,27 @@ import uk.ac.ncl.la.soar.{ModuleCode, StudentNumber}
 
 import scala.util.control.Exception._
 
-/** General purpose Record Struct */
+/** Records for information about student marks and attainment */
+final class Score private(val score: Double)
+final class ScoreWeight private(val weight: Double)
+
+/** Score companion. Contains constructor */
+object Score {
+  def apply(score: Double): Option[Score] = if (score >= 0 && score <= 100) Some(new Score(score)) else None
+}
+
+/** ScoreWeight companion. Contains constructor */
+object ScoreWeight {
+  def apply(weight: Double): Option[ScoreWeight] = if (weight >= 0 && weight <= 1) Some(new ScoreWeight(weight)) else None
+}
+
+//Create a (Score, ScoreWeight) Monoid?
+
+
+/** General purpose struct storing component mark for module. */
+final class ComponentMark private(val student: StudentNumber, val module: ModuleCode, val score: Double, val weight: Double)
+
+/** General purpose Struct storing final mark for attained for a module by a given student */
 final class ModuleScore private(val student: StudentNumber, val module: ModuleCode, val score: Double)
 
 /** Record Companion */
@@ -38,6 +58,11 @@ object ModuleScore {
   def unapply(arg: ModuleScore): Option[(StudentNumber, ModuleCode, Double)] =
     Some((arg.student, arg.module, arg.score))
 
+
+  //The code below is largely used to parse module scores from csv files. As we have brought in the Kantan dependency
+  // this should no longer be necessary. At some point in the future lets remove the parse methods below and include TC
+  // instances for Circe/Kantan/Scoded Encoders/Decoders
+  //TODO: Port csv parsing to Kantan
   def parse(lines: Iterator[String], sep: Char): Iterator[ModuleScore] = lines.flatMap(parseLine(_, sep))
 
   def parseStrict[E](lines: Iterator[String], sep: Char, err: (String, Int) => E): Either[E, List[ModuleScore]] = {

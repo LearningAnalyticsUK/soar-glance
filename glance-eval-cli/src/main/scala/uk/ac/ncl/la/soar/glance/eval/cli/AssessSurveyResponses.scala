@@ -29,7 +29,7 @@ import scala.collection.immutable.SortedMap
 import scala.io.Source
 
 /**
-  * Job which reads in the completed survey CSVs created earlier using [[Generator]].
+  * Job which reads in the completed survey CSVs created earlier using [[GenerateSurveys]].
   *
   * TODO: genericise on Monad TC, also look into using Task and how best to do a Task[ Either[ ] ]
   *
@@ -42,12 +42,12 @@ import scala.io.Source
   *
   * https://www.reddit.com/r/scala/comments/5clxku/scalaz_task_taska_versus_taskeithera_b/
   */
-object Assessor extends Command[AssessorConfig, Unit] {
+object AssessSurveyResponses extends Command[AssessConfig, Unit] {
 
   //TODO: Make a Meta struct (or Type Alias to Map) which will be populated from the meta.json file which is going to
   // have to be generated for each survey folder.
 
-  def run(conf: AssessorConfig): Task[Unit] = {
+  def run(conf: AssessConfig): Task[Unit] = {
     ???
   }
 

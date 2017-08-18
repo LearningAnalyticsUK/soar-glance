@@ -17,9 +17,21 @@
   */
 package uk.ac.ncl.la.soar.data
 
-import uk.ac.ncl.la.soar.ModuleCode
+/**
+  * Simple struct type representing a programme of study
+  */
+sealed trait StudyType
+case object PG extends StudyType
+case object UG extends StudyType
+
+case class Study(id: Int, code: String, title: String, studyType: StudyType, school: School)
 
 /**
-  * General purpose struct type representing modules
+  * Simple struct type representing university school
   */
-case class Module(code: ModuleCode)
+case class School(code: String, title: String, facultyCode: String)
+
+/**
+  * Simple struct type representing the stage of a student's study
+  */
+case class Stage(id: Int, number: Int, description: String)

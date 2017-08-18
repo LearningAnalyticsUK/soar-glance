@@ -35,6 +35,7 @@ sealed trait Records[F[_, _], A, B] { self =>
 
   /** Produce a CSV string from a record instance */
   //TODO: Convert this to another (lower priority) show instance. Could do away with meta columns too
+  //TODO: Port to KantanEncoder
   def toCSV[M <: Records[F, A, B]](metaColumns: List[M => String], keyColumns: List[A], sep: String = ","): String = {
     val recMap = record.toMap
     val es = keyColumns.map { c => recMap.get(c).fold(" ")(_.toString) }
@@ -83,6 +84,8 @@ object Records {
 
   /** Typeclass instances for StudentRecord */
   implicit def recordShow[F[_, _]: Record, A, B: Order]: Show[Records[F, A, B]] = Show.fromToString
+
+  //TODO: Add Circe Encoder/Decoder
 
 }
 

@@ -53,7 +53,7 @@ case class CompletedWork(a: Int) extends Action
 case class MetTutor(a: Int) extends Action
 
 /** These grammar terms are less important initially */
-case class Progressed(a: Int) extends Action
-case class CompletedModule(a: Int) extends Action
+case class Progressed(code: String) extends Action
+case class CompletedModule(code: ModuleCode, progression: Progressed) extends Action
 case class AttendedLecture(a: Int) extends Action
 

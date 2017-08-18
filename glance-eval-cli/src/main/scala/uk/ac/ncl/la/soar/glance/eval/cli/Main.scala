@@ -45,8 +45,10 @@ object Main {
 
     //TODO: Fix the horrible pattern match anon function below. Uses type annotations....
     conf.flatMap {
-      case a: GeneratorConfig => Generator.run(a)
-      case a: AssessorConfig => Assessor.run(a)
+      case a: GenerateConfig => GenerateSurveys.run(a)
+      case a: AssessConfig => AssessSurveyResponses.run(a)
+      case a: TansformConfig => TransformData.run(a)
+      case a: LoadSupportConfig => Task.unit
     } runOnComplete {
       case Failure(e) =>
         //In the event of an error, log and crash out.

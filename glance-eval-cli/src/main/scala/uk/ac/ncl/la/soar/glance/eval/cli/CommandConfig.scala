@@ -17,40 +17,66 @@
   */
 package uk.ac.ncl.la.soar.glance.eval.cli
 
+import java.time.Year
+
 import scopt._
 import uk.ac.ncl.la.soar.ModuleCode
+
+import scala.util.Try
 
 /** ADT for Config types */
 sealed trait CommandConfig
 
-/** Config "bag" case class for the survey generator and accompanying scopt parser
-  *
+/**
+  * Config "bag" case class for the survey generator and accompanying scopt parser
   * TODO: Remove common Option[String]
-  * @author hugofirth
   */
-final case class GeneratorConfig(recordsPath: String = "", outputPath: String = "", elided: Int = 10,
-                                 modules: Seq[String] = Seq.empty[String], common: Option[String] = None, seed: Int = 1921437) extends CommandConfig
+final case class GenerateConfig(recordsPath: String = "",
+                                outputPath: String = "",
+                                elided: Int = 10,
+                                modules: Seq[String] = Seq.empty[String],
+                                common: Option[String] = None,
+                                seed: Int = 1921437) extends CommandConfig
 
-/** Config "bag" case class for the survey evaluator and accompanying scopt parser.
-  *
-  * @author hugofirth
+/**
+  * Config "bag" case class for the survey evaluator and accompanying scopt parser.
   */
-final case class AssessorConfig(inputPath: String = "", outputPath: String = "", modelPath: String = "",
-                                metric: String = "rmse") extends CommandConfig
+final case class AssessConfig(inputPath: String = "",
+                              outputPath: String = "",
+                              modelPath: String = "",
+                              metric: String = "rmse") extends CommandConfig
+
+/**
+  * Config "bag" case class for the job which transforms Soar data csv's and its accompanying scopt parser.
+  */
+final case class TansformConfig(clusterPath: String = "",
+                                recapPath: String = "",
+                                nessMarkPath: String = "",
+                                outputPath: String = "",
+                                prefix: String = "",
+                                start: String = "",
+                                stage: Int = 0) extends CommandConfig
+
+/**
+  * Config "bag" case class for the job which loads transformed soar data to support surveys. Also the parser ...
+  */
+final case class LoadSupportConfig(inputPath: String = "") extends CommandConfig
 
 object CommandConfig {
 
   /** Factory method for Config objects - similar to scopt commands, but they seem inflexible */
   def apply(args: Array[String]): Option[CommandConfig] = args.headOption.flatMap {
-    case "generate" => generatorParser.parse(args.tail, GeneratorConfig())
-    case "assess" => assessorParser.parse(args.tail, AssessorConfig())
+    case "generate" => generateParser.parse(args.tail, GenerateConfig())
+    case "assess" => assessParser.parse(args.tail, AssessConfig())
+    case "transform" => transformParser.parse(args.tail, TansformConfig())
+    case "load-support" => loadParser.parse(args.tail, LoadSupportConfig())
     case _ => None
   }
 
   /** Package private helper object for parsing command line arguments, provided by scopt */
-  private[cli] val generatorParser = new OptionParser[GeneratorConfig]("SoarEvalGen") {
+  private[cli] val generateParser = new OptionParser[GenerateConfig]("SoarEvalGen") {
     //Define the header for the command line display text
-    head("Soar Evaluation Survey generator", "0.1.x")
+    head("Soar Evaluation Survey Generator", "0.1.x")
 
     //Define the individual command line options
     opt[String]('i', "input").required().valueName("<file>")
@@ -86,9 +112,9 @@ object CommandConfig {
         "records to elide.")
   }
 
-  private[cli] val assessorParser = new OptionParser[AssessorConfig]("SoarEvalAssess") {
+  private[cli] val assessParser = new OptionParser[AssessConfig]("SoarEvalAssess") {
     //Define the header for the command line display text
-    head("Soar Evaluation Survey assessor", "0.1.x")
+    head("Soar Evaluation Survey Assessor", "0.1.x")
 
     //Define the individual command line options
     opt[String]('i', "input").required().valueName("<directory>")
@@ -109,6 +135,55 @@ object CommandConfig {
       .action((x, c) => c.copy(metric = x))
       .text("metric is an optional parameter specifying the metric to be used in the comparison between predictive " +
         "model and surveys. Default is rmse.")
+  }
+
+  private[cli] val transformParser = new OptionParser[TansformConfig]("SoarEvalTransform") {
+    //Define the header for the command line display text
+    head("Soar Evaluation Data Transformer", "0.1.x")
+
+    //Define the individual command line options
+    opt[String]('c', "cluster-sessions").required().valueName("<file>")
+      .action((x, c) => c.copy(clusterPath = x))
+      .text("cluster-sessions is a required .csv file containing student sessions using University clusters " +
+        "Format \"SessionStartTimestamp, SessionEndTimestamp, StudentId, StudyId, StageId, MachineName\"")
+
+    opt[String]('r', "recap-sessions").required().valueName("<file>")
+      .action((x, c) => c.copy(recapPath = x))
+      .text("recap-sessions is a required .csv file containing student sessions using the ReCap video lecture service " +
+        "Format \"SessionStartTime, RecapId, StudentId, StudyId, StageId, SecondsListened\"")
+
+    opt[String]('m', "marks").required().valueName("<file>")
+      .action((x, c) => c.copy(nessMarkPath = x))
+      .text("marks is a required .csv file containing student marks " +
+        "Format \"StudentId, StudyId, StageId, AcademicYear, ProgressionCode, ModuleCode, ModuleMark, ComponentText, " +
+        "ComponentAttempt, ComonentMark, Weighting, TimestampDue\"")
+
+    opt[String]('o', "output").required().valueName("<directory>")
+      .action((x, c) => c.copy(outputPath = x))
+      .text("output is a required parameter specifying the directory to write transformed data to.")
+
+    opt[String]('p', "prefix").required().valueName("e.g. CSC")
+      .action((x, c) => c.copy(prefix = x))
+      .text("prefix is a required parameter which indicates the module code prefix for which we should transform marks")
+
+    opt[String]('y', "year").required().valueName("e.g. 2015")
+      .action((x, c) => c.copy(start = x))
+      .text("year is a required parameter which indicates the earliest academic year for which to transform marks")
+
+    opt[Int]('s', "stage").required().valueName("e.g. 2")
+      .action((x, c) => c.copy(stage = x))
+      .text("stage is a required parameter which indicates the earliest academic stage for which to transform marks")
+  }
+
+  private[cli] val loadParser = new OptionParser[LoadSupportConfig]("SoarEvalLoadSupport") {
+    //Define the header for the command line display text
+    head("Soar Evaluation Support Data Loader", "0.1.x")
+
+    //Define the individual command line options
+    opt[String]('i', "input").required().valueName("<directory>")
+      .action((x, c) => c.copy(inputPath = x))
+      .text("input is a required directory containing the .csvs for transformed support data, generated by the " +
+        "transform job")
   }
 }
 

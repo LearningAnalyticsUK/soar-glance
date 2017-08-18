@@ -15,11 +15,12 @@
   * See the License for the specific language governing permissions and
   * limitations under the License.
   */
-package uk.ac.ncl.la.soar.data
+package uk.ac.ncl.la.soar.glance.eval.cli
 
-import uk.ac.ncl.la.soar.ModuleCode
-
-/**
-  * General purpose struct type representing modules
+/** Description of Class
+  *
+  * @author hugofirth
   */
-case class Module(code: ModuleCode)
+object LoadSupportData {
+
+}

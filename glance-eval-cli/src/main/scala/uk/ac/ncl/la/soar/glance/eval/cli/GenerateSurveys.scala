@@ -42,10 +42,10 @@ import scala.util.{Properties, Random}
   * Job which generates csv based "surveys" which present student module scores in a table and elides certain results
   * so that they may be filled in (predicted) later by domain experts (module leaders).
   */
-object Generator extends Command[GeneratorConfig, Unit] {
+object GenerateSurveys extends Command[GenerateConfig, Unit] {
 
 
-  override def run(conf: GeneratorConfig): Task[Unit] = {
+  override def run(conf: GenerateConfig): Task[Unit] = {
     for {
       scores <- parseScores(conf.recordsPath)
       surveys <- Task.now(Survey.generate(scores, conf.elided, conf.modules, conf.seed))
@@ -55,7 +55,7 @@ object Generator extends Command[GeneratorConfig, Unit] {
   }
 
   /** Retrieve and parse all ModuleScores from provided file if possible */
-  private def parseScores[F[_]](recordsPath: String): Task[List[ModuleScore]] = Task.delay {
+  private def parseScores(recordsPath: String): Task[List[ModuleScore]] = Task.delay {
 
     //Read in ModuleScore CSV
     val lines = Source.fromFile(recordsPath).getLines()

@@ -43,7 +43,21 @@ object ScoreWeight {
 final class ComponentMark private(val student: StudentNumber, val module: ModuleCode, val score: Double, val weight: Double)
 
 /** General purpose Struct storing final mark for attained for a module by a given student */
-final class ModuleScore private(val student: StudentNumber, val module: ModuleCode, val score: Double)
+final class ModuleScore private(val student: StudentNumber, val module: ModuleCode, val score: Double) {
+
+  override def equals(other: Any): Boolean = other match {
+    case that: ModuleScore =>
+      student == that.student &&
+        module == that.module &&
+        score == that.score
+    case _ => false
+  }
+
+  override def hashCode(): Int = {
+    val state = Seq(student.hashCode, module.hashCode, score.hashCode)
+    state.foldLeft(0)((a, b) => 31 * a + b)
+  }
+}
 
 /** Record Companion */
 object ModuleScore {

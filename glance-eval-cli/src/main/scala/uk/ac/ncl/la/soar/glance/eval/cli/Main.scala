@@ -17,7 +17,6 @@
   */
 package uk.ac.ncl.la.soar.glance.eval.cli
 
-import org.apache.log4j.{Level, LogManager}
 import cats._
 import cats.implicits._
 import monix.eval.Task
@@ -32,9 +31,6 @@ import scala.util.{Failure, Success}
 object Main {
 
   def main(args: Array[String]): Unit = {
-    //Set up the logger
-    val log = LogManager.getRootLogger
-    log.setLevel(Level.WARN)
 
     //Bring in Args - pass to Config factory
     val conf = CommandConfig(args).fold(
@@ -51,6 +47,7 @@ object Main {
       case a: LoadSupportConfig => Task.unit
     } runOnComplete {
       case Failure(e) =>
+        println(s"There has been a failure: $e")
         //In the event of an error, log and crash out.
         System.err.println(e.toString)
         sys.exit(1)

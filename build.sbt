@@ -7,7 +7,6 @@ import org.scalajs.sbtplugin.cross.{CrossProject, CrossType}
 //Use the typelevel compiler for extra goodies
 scalaOrganization in ThisBuild := "org.typelevel"
 scalaVersion in ThisBuild := "2.11.11-bin-typelevel-4"
-//TODO: Switch to Typelevel 4 for 2.11.11 when things settle down re: ScalaJS
 
 /**
   * Repeated scala dependency versions
@@ -45,6 +44,15 @@ lazy val langFixDeps = Seq(
     "org.typelevel" %%% "machinist" % "0.6.1")
 )
 
+lazy val langFixDepsJVM = Seq(
+  libraryDependencies ++= Seq(
+    compilerPlugin("org.spire-math" %% "kind-projector" % "0.9.3"),
+    compilerPlugin("org.scalamacros" % "paradise" % "2.1.0" cross CrossVersion.patch),
+    "com.github.mpilquist" %% "simulacrum" % "0.10.0",
+    "org.typelevel" %% "machinist" % "0.6.1")
+)
+
+
 lazy val testingDeps = Seq(
   libraryDependencies ++= Seq(
     "org.scalatest" %%% "scalatest" % "3.0.3" % "test",
@@ -52,11 +60,25 @@ lazy val testingDeps = Seq(
     "org.typelevel" %%% "discipline" % "0.7.3" % "test")
 )
 
+lazy val testingDepsJVM = Seq(
+  libraryDependencies ++= Seq(
+    "org.scalatest" %% "scalatest" % "3.0.3" % "test",
+    "org.scalacheck" %% "scalacheck" % "1.13.5" % "test",
+    "org.typelevel" %% "discipline" % "0.7.3" % "test")
+)
+
 lazy val altStdLibDeps = Seq(
   libraryDependencies ++= Seq(
     "org.typelevel" %%% "cats" % catsVersion,
     "io.monix" %%% "monix-eval" % monixVersion,
     "io.monix" %%% "monix-cats" % monixVersion)
+)
+
+lazy val altStdLibDepsJVM = Seq(
+  libraryDependencies ++= Seq(
+    "org.typelevel" %% "cats" % catsVersion,
+    "io.monix" %% "monix-eval" % monixVersion,
+    "io.monix" %% "monix-cats" % monixVersion)
 )
 
 //Lazy val defining dependencies common to modules containing spark batch jobs
@@ -74,6 +96,13 @@ lazy val circeDeps = Seq(
     "io.circe" %%% "circe-generic" % circeVersion,
     "io.circe" %%% "circe-core" % circeVersion,
     "io.circe" %%% "circe-parser" % circeVersion)
+)
+
+lazy val circeDepsJVM = Seq(
+  libraryDependencies ++= Seq(
+    "io.circe" %% "circe-generic" % circeVersion,
+    "io.circe" %% "circe-core" % circeVersion,
+    "io.circe" %% "circe-parser" % circeVersion)
 )
 
 lazy val kantanDeps = Seq(
@@ -118,6 +147,7 @@ lazy val reactJSDeps = Seq(
 )
 
 lazy val commonDeps = langFixDeps ++ testingDeps ++ altStdLibDeps ++ circeDeps
+lazy val commonDepsJVM = langFixDepsJVM ++ testingDepsJVM ++ altStdLibDepsJVM ++ circeDepsJVM
 lazy val commonBackendDeps = doobieDeps ++ finchDeps ++ kantanDeps
 lazy val commonFrontendDeps = scalaJSDeps ++ reactJSDeps
 
@@ -184,14 +214,15 @@ lazy val sjsCrossVersionPatch = Seq(
 def soarProject(name: String): Project = {
   Project(name, file(name))
     .settings(soarSettings:_*)
-    .settings(commonDeps:_*)
+    .settings(commonDepsJVM:_*)
 }
 
 def soarCrossProject(name: String, tpe: CrossType): CrossProject = {
   val proj = CrossProject(name, file(name), tpe)
     .jvmSettings(soarSettings:_*)
+    .jvmSettings(commonDepsJVM:_*)
     .jsSettings(soarJSSettings:_*)
-    .settings(commonDeps:_*)
+    .jsSettings(commonDeps:_*)
 
 //  //Below is required because pure projects freak out if you mess with the sjs compiler, no idea why
 //  tpe match {
@@ -227,6 +258,7 @@ def commonAssembly(main: String, jar: String) = Seq(
     case "log4j.properties" => MergeStrategy.last
     case "overview.html" => MergeStrategy.rename
     case "JS_DEPENDENCIES" => MergeStrategy.discard
+    case "application.conf" => MergeStrategy.last
     case x =>
       val oldStrategy = (assemblyMergeStrategy in assembly).value
       oldStrategy(x)
@@ -355,10 +387,13 @@ lazy val glanceEval = soarCrossProject("glance-eval", CrossType.Full)
     moduleName := "soar-glance-eval",
     unmanagedSourceDirectories in Compile += baseDirectory.value / "shared" / "main" / "scala")
   .settings(sjsCrossVersionPatch:_*)
-  .jvmSettings(commonBackendDeps:_*)
-  .jvmSettings(flywaySettings("glance_eval"):_*)
-  .jsSettings(commonFrontendDeps:_*)
-  .jsSettings(
+  .enablePlugins(SbtWeb)
+  .enablePlugins(WorkbenchPlugin)
+
+lazy val glanceEvalJS = glanceEval.js
+  .dependsOn(coreJS, glanceCoreJS)
+  .settings(commonFrontendDeps:_*)
+  .settings(
     libraryDependencies ++= Seq (
       //What is the point of having these dependencies in libraryDependencies?
       "org.webjars" %   "bootstrap"  % bootstrapVersion,
@@ -375,17 +410,15 @@ lazy val glanceEval = soarCrossProject("glance-eval", CrossType.Full)
       ProvidedJS / "react-sortable-hoc.js" minified "react-sortable-hoc.min.js" dependsOn("react-with-addons.js", "react-dom.js")
     ),
     scalaJSUseMainModuleInitializer := true)
-  .enablePlugins(SbtWeb)
-  .enablePlugins(WorkbenchPlugin)
 
-lazy val glanceEvalJS = glanceEval.js
-  .dependsOn(coreJS, glanceCoreJS)
 
 lazy val glanceEvalJVM = glanceEval.jvm
   .dependsOn(coreJVM, glanceCoreJVM, server)
   .settings(
-    (resources in Compile) += (fastOptJS in (glanceEvalJS, Compile)).value.data,
+//    (resources in Compile) += (fastOptJS in (glanceEvalJS, Compile)).value.data,
     mainClass in Compile := Some("uk.ac.ncl.la.soar.glance.eval.server.Main"))
+  .settings(commonBackendDeps:_*)
+  .settings(flywaySettings("glance_eval"):_*)
   .settings(commonAssembly("uk.ac.ncl.la.soar.glance.web.server.Main", "soar-glance-eval.jar"))
 
 //TODO: Investigate intermittent heap space OOM error on assembly of this module
@@ -394,9 +427,10 @@ lazy val glanceEvalCli = soarProject("glance-eval-cli")
   .settings(
     name := "Soar Glance Eval CLI",
     moduleName := "soar-glance-eval-cli",
-    libraryDependencies += "com.jsuereth" %% "scala-arm" % "2.0",
-    commonAssembly("uk.ac.ncl.la.soar.glance.cli.Main", "soar-glance-eval-cli.jar"))
-  .settings(sparkBatchDeps:_*)
+    libraryDependencies ++= Seq(
+      "com.jsuereth" %% "scala-arm" % "2.0",
+      "com.github.scopt" %% "scopt" % "3.5.0"),
+    commonAssembly("uk.ac.ncl.la.soar.glance.eval.cli.Main", "soar-glance-eval-cli.jar"))
 
 /**
   * Command Aliases to make using this sbt project from the console a little more palatable

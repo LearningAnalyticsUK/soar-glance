@@ -17,10 +17,34 @@
   */
 package uk.ac.ncl.la.soar.glance.eval.cli
 
-/** Description of Class
-  *
-  * @author hugofirth
+import java.nio.file.Paths
+
+import cats._
+import cats.implicits._
+import kantan.csv._
+import kantan.csv.ops._
+import kantan.csv.cats._
+import kantan.csv.generic._
+import kantan.csv.java8._
+import monix.eval.Task
+import CsvRow._
+
+/**
+  * Job which transforms a selection of input .csvs containing Soar data
   */
-object LoadSupportData {
+object LoadSupportData extends Command[TansformConfig, Unit] {
+
+  override def run(conf: TansformConfig) = ???
+
+  /** Retrieve and parse all session rows from the provided file if possible */
+  private def parseSessions[R <: HasStudent : RowDecoder](sessionsPath: String): Task[List[R]] = Task {
+
+    println("parsing sessions")
+
+    //Pull in the Sessions
+    val readSessions = Paths.get(sessionsPath).asCsvReader[R](rfc)
+
+
+  }
 
 }

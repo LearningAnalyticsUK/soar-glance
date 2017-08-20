@@ -30,35 +30,15 @@ import kantan.csv.java8._
 import monix.eval.Task
 import uk.ac.ncl.la.soar.{ModuleCode, StudentNumber}
 import uk.ac.ncl.la.soar.data.ModuleScore
+import CsvRow._
 
 /**
   * Job which transforms a selection of input .csvs containing Soar data
   */
 object TransformData extends Command[TansformConfig, Unit] {
 
-  /** Types which correspond to csv rows */
-  //More trouble than its worth perhaps? More as an intellectual exercise, how would I auto derive instances for Row
-  // types if HasStudent was a TC?
-  sealed trait HasStudent {
-    def student: StudentNumber
-  }
-
-  //TODO: Create encoder/decoder for Year type and switch back to using it
-  case class NessMarkRow(student: StudentNumber, study: Int, stage: Int, year: String, progression: String, module: ModuleCode,
-                         score: Int, component: String, componentAttempt: Int, componentScore: Int,
-                         componentWeight: Double, due: Option[Instant]) extends HasStudent
-
-  case class ClusterSessionRow(start: Instant, end: Instant, student: StudentNumber, study: Int, stage: Int,
-                               machine: String) extends HasStudent
-
-  case class RecapSessionRow(start: Instant, student: StudentNumber, study: Int, stage: Int,
-                             duration: Int) extends HasStudent
-
-  implicit val moduleScoreEncoder: RowEncoder[ModuleScore] = RowEncoder.ordered { ms: ModuleScore =>
-    (ms.student, ms.module, ms.score)
-  }
-
   override def run(conf: TansformConfig): Task[Unit] = {
+    println("starting the transform")
     for{
       m <- parseMarks(conf.nessMarkPath, conf.prefix, conf.start, conf.stage)
       s <- Task.zip2(parseSessions[ClusterSessionRow](conf.clusterPath, m._2),
@@ -71,10 +51,12 @@ object TransformData extends Command[TansformConfig, Unit] {
 
   /** Retrieve and parse all Mark rows from provided file if possible */
   private def parseMarks(marksPath: String, prefix: String,
-                         year: String, stage: Int): Task[(List[ModuleScore], Set[StudentNumber])] = Task {
+                         year: String, stage: Int): Task[(Set[ModuleScore], Set[StudentNumber])] = Task {
+
+    println("parsing marks")
 
     //Filter to find all NessMarks belonging to a particular student cohort, given start year and stage
-    def rightCohort(m: NessMarkRow) =  m.year == year && m.stage == stage
+    def rightCohort(m: NessMarkRow) =  m.year == year && m.module.startsWith(prefix+stage)
 
     //Pull in the NessMarks
     val readMarks = Paths.get(marksPath).asCsvReader[NessMarkRow](rfc.withHeader)
@@ -88,20 +70,23 @@ object TransformData extends Command[TansformConfig, Unit] {
     //Find all marks from all years belonging to student Cohort (on modules with given prefix)
     (prefixedRows.collect({ case m if studentCohort.contains(m.student) =>
       ModuleScore(m.student, m.module, m.score.toDouble)
-    }).flatten.distinct, studentCohort)
+    }).flatten.toSet, studentCohort)
   }
 
   /** Retrieve and parse all session rows from the provided file if possible */
   private def parseSessions[R <: HasStudent : RowDecoder](sessionsPath: String,
                                               studentCohort: Set[StudentNumber]): Task[List[R]] = Task {
+    println("parsing sessions")
+
     //Pull in the Sessions
     val readSessions = Paths.get(sessionsPath).asCsvReader[R](rfc.withHeader)
 
     //Drop sessions not associated with cohort students
-    readSessions.collect({ case Success(cs) if !studentCohort.contains(cs.student) => cs }).toList
+    readSessions.collect({ case Success(cs) if studentCohort.contains(cs.student) => cs }).toList
   }
 
-  private def writeMarks(outputPath: String, marks: List[ModuleScore]): Task[Unit] = Task {
+  private def writeMarks(outputPath: String, marks: Set[ModuleScore]): Task[Unit] = Task {
+    println("writing marks")
     val out = Paths.get(outputPath)
 
     val outDir = if(Files.exists(out)) out else Files.createDirectories(out)
@@ -110,6 +95,8 @@ object TransformData extends Command[TansformConfig, Unit] {
   }
 
   private def writeSessions[R : RowEncoder](outputPath: String, rows: List[R], fileName: String): Task[Unit] = Task {
+
+    println("writing sessions")
     val out = Paths.get(outputPath)
 
     val outDir = if(Files.exists(out)) out else Files.createDirectories(out)

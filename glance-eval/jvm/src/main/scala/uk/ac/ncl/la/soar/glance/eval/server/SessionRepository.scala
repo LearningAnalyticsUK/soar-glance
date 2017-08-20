@@ -17,3 +17,50 @@
   */
 package uk.ac.ncl.la.soar.glance.eval.server
 
+import java.time.Instant
+import java.util.UUID
+
+import doobie.imports._
+import monix.eval.Task
+import cats._
+import cats.implicits._
+import uk.ac.ncl.la.soar.StudentNumber
+import uk.ac.ncl.la.soar.db.{RepositoryCompanion, Repository => DbRepository}
+
+
+sealed trait SessionTable {
+  type Row
+  def name: String
+}
+case object ClusterSessionTable extends SessionTable {
+  type Row = (UUID, Instant, Instant, String, StudentNumber, UUID)
+  val name = "cluster_session"
+}
+case object RecapSessionTable extends SessionTable {
+  val name = "recap_session"
+}
+
+class SessionDb[S <: SessionTable] private[glance] (xa: Transactor[Task]) extends DbRepository[S] {
+
+  override type PK = UUID
+  override val init = _
+  override val list = _
+
+  override def find(id: UUID) = ???
+
+  override def save(entry: S) = ???
+
+  override def delete(id: UUID) = ???
+}
+
+case class SessionDbCompanion[S <: SessionTable](table: S) extends RepositoryCompanion[S, SessionDb[S]] {
+
+  override val initQ = _
+  override val listQ = _
+
+  override def findQ(id: UUID) = ???
+
+  override def saveQ(entry: S) = ???
+
+  override def deleteQ(id: UUID) = ???
+}

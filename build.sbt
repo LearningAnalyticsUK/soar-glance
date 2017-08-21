@@ -415,7 +415,7 @@ lazy val glanceEvalJS = glanceEval.js
 lazy val glanceEvalJVM = glanceEval.jvm
   .dependsOn(coreJVM, glanceCoreJVM, server)
   .settings(
-//    (resources in Compile) += (fastOptJS in (glanceEvalJS, Compile)).value.data,
+    (resources in Compile) += (fastOptJS in (glanceEvalJS, Compile)).value.data,
     mainClass in Compile := Some("uk.ac.ncl.la.soar.glance.eval.server.Main"))
   .settings(commonBackendDeps:_*)
   .settings(flywaySettings("glance_eval"):_*)

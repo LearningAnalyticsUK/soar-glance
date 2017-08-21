@@ -43,6 +43,9 @@ class SurveysApi(repository: SurveyDb) {
     }
   }
 
+  /** Endpoint to get cluster data for a specific survey by id */
+  val readClusters = get("surveys" :: path[UUID] :: "cluster")
+
   /** Pre-flight endpoint for CORS headers */
   //Clunky Unit syntax - fix?
   val preflight = options(*) { Ok(()) }

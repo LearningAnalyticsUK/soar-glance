@@ -28,6 +28,7 @@ import cats._
 import cats.implicits._
 import uk.ac.ncl.la.soar.StudentNumber
 import uk.ac.ncl.la.soar.db.{RepositoryCompanion, Repository => DbRepository}
+import uk.ac.ncl.la.soar.glance.eval.{ClusterSession, RecapSession}
 
 
 sealed trait SessionTable {
@@ -38,12 +39,12 @@ sealed trait SessionTable {
 }
 case object ClusterSessionTable extends SessionTable {
   type PK = UUID
-  type Row = (UUID, Instant, Instant, String, StudentNumber)
+  type Row = ClusterSession
   val name = "cluster_session"
 }
 case object RecapSessionTable extends SessionTable {
   type PK = UUID
-  type Row = (UUID, Instant, StudentNumber, Int)
+  type Row = RecapSession
   val name = "recap_session"
 }
 
@@ -79,8 +80,8 @@ object ClusterSessionDbCompanion extends RepositoryCompanion[ClusterSessionTable
     val addClusterQ =
       sql"""
         INSERT INTO cluster_session (id, start_time, end_time, machine_name, student_num)
-        SELECT ${entry._1}, ${entry._2}, ${entry._3}, ${entry._4}, ${entry._5}
-        WHERE EXISTS (SELECT * FROM student WHERE num = ${entry._5})
+        SELECT ${entry.id.toString}, ${entry.start}, ${entry.end}, ${entry.machine}, ${entry.student}
+        WHERE EXISTS (SELECT * FROM student WHERE num = ${entry.student})
         ON CONFLICT (id) DO NOTHING;
       """
     addClusterQ.update.run.void
@@ -122,8 +123,8 @@ object RecapSessionDbCompanion extends RepositoryCompanion[RecapSessionTable.Row
     val addRecapQ =
       sql"""
           INSERT INTO recap_session (id, start_time, student_num, seconds_listened)
-          SELECT ${entry._1}, ${entry._2}, ${entry._3}, ${entry._4}
-          WHERE EXISTS (SELECT * FROM student WHERE num = ${entry._3})
+          SELECT ${entry.id.toString}, ${entry.start}, ${entry.student}, ${entry.duration}
+          WHERE EXISTS (SELECT * FROM student WHERE num = ${entry.student})
           ON CONFLICT (id) DO NOTHING;
       """
     addRecapQ.update.run.void

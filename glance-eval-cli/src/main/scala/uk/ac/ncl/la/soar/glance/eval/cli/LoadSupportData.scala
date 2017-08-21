@@ -31,6 +31,7 @@ import kantan.csv.java8._
 import monix.eval.Task
 import monix.cats._
 import CsvRow._
+import uk.ac.ncl.la.soar.glance.eval.{ClusterSession, RecapSession}
 import uk.ac.ncl.la.soar.glance.eval.server._
 
 import scala.util.Try
@@ -67,8 +68,8 @@ object LoadSupportData extends Command[LoadSupportConfig, Unit] {
   private def prepTs(ts: String) = Try(Instant.parse(ts.dropRight(4).concat("Z"))).getOrElse(Instant.now)
 
   private def prepareClusterRow(r: ClusterSessionRow): ClusterSessionTable.Row =
-    (UUID.randomUUID, prepTs(r.start), prepTs(r.end), r.machine, r.student)
+    ClusterSession(UUID.randomUUID, prepTs(r.start), prepTs(r.end), r.machine, r.student)
 
   private def prepareRecapRow(r: RecapSessionRow): RecapSessionTable.Row =
-    (UUID.randomUUID, prepTs(r.start), r.student, r.duration.toInt)
+    RecapSession(UUID.randomUUID, prepTs(r.start), r.student, r.duration.toInt)
 }

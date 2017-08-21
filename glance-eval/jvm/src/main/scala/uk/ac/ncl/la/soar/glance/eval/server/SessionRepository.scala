@@ -17,11 +17,13 @@
   */
 package uk.ac.ncl.la.soar.glance.eval.server
 
+import java.sql.Timestamp
 import java.time.Instant
 import java.util.UUID
 
 import doobie.imports._
 import monix.eval.Task
+import monix.cats._
 import cats._
 import cats.implicits._
 import uk.ac.ncl.la.soar.StudentNumber
@@ -29,38 +31,100 @@ import uk.ac.ncl.la.soar.db.{RepositoryCompanion, Repository => DbRepository}
 
 
 sealed trait SessionTable {
+  type PK
   type Row
   def name: String
+  def pkName: String = "id"
 }
 case object ClusterSessionTable extends SessionTable {
-  type Row = (UUID, Instant, Instant, String, StudentNumber, UUID)
+  type PK = UUID
+  type Row = (UUID, Instant, Instant, String, StudentNumber)
   val name = "cluster_session"
 }
 case object RecapSessionTable extends SessionTable {
+  type PK = UUID
+  type Row = (UUID, Instant, StudentNumber, Int)
   val name = "recap_session"
 }
 
-class SessionDb[S <: SessionTable] private[glance] (xa: Transactor[Task]) extends DbRepository[S] {
+class ClusterSessionDb private[glance] (xa: Transactor[Task]) extends DbRepository[ClusterSessionTable.Row] {
+
+  import ClusterSessionDbCompanion._
 
   override type PK = UUID
-  override val init = _
-  override val list = _
+  override val init = initQ.transact(xa)
+  override val list = listQ.transact(xa)
 
-  override def find(id: UUID) = ???
+  override def find(id: UUID) = findQ(id).transact(xa)
 
-  override def save(entry: S) = ???
+  override def save(entry: ClusterSessionTable.Row) = saveQ(entry).transact(xa)
 
-  override def delete(id: UUID) = ???
+  override def delete(id: UUID) = deleteQ(id).transact(xa)
 }
 
-case class SessionDbCompanion[S <: SessionTable](table: S) extends RepositoryCompanion[S, SessionDb[S]] {
+object ClusterSessionDbCompanion extends RepositoryCompanion[ClusterSessionTable.Row, ClusterSessionDb] {
 
-  override val initQ = _
-  override val listQ = _
+  implicit val uuidMeta: Meta[UUID] = Meta[String].nxmap(UUID.fromString, _.toString)
+  implicit val InstantMeta: Meta[Instant] = Meta[Timestamp].nxmap(_.toInstant, Timestamp.from)
 
-  override def findQ(id: UUID) = ???
+  override val initQ: ConnectionIO[Unit] = ().pure[ConnectionIO]
 
-  override def saveQ(entry: S) = ???
+  override val listQ: ConnectionIO[List[ClusterSessionTable.Row]] =
+    sql"SELECT * FROM cluster_session;".query[ClusterSessionTable.Row].list
 
-  override def deleteQ(id: UUID) = ???
+  override def findQ(id: UUID): ConnectionIO[Option[ClusterSessionTable.Row]] =
+    sql"SELECT s FROM cluster_session s WHERE s.id = $id;".query[ClusterSessionTable.Row].option
+
+  override def saveQ(entry: ClusterSessionTable.Row): ConnectionIO[Unit] = {
+      val addClusterSql =
+        """
+          INSERT INTO cluster_session (id, start_time, end_time, machine_name, student_num)
+          VALUES (?, ?, ?, ?, ?) ON CONFLICT (id) DO NOTHING;
+        """
+      Update[ClusterSessionTable.Row](addClusterSql).toUpdate0(entry).run.void
+  }
+
+  override def deleteQ(id: UUID): ConnectionIO[Boolean] =
+    sql"DELETE FROM cluster_session WHERE id = $id;".update.run.map(_ > 0)
+}
+
+class RecapSessionDb private[glance] (xa: Transactor[Task]) extends DbRepository[RecapSessionTable.Row] {
+
+  import RecapSessionDbCompanion._
+
+  override type PK = UUID
+  override val init = initQ.transact(xa)
+  override val list = listQ.transact(xa)
+
+  override def find(id: UUID) = findQ(id).transact(xa)
+
+  override def save(entry: RecapSessionTable.Row) = saveQ(entry).transact(xa)
+
+  override def delete(id: UUID) = deleteQ(id).transact(xa)
+}
+
+object RecapSessionDbCompanion extends RepositoryCompanion[RecapSessionTable.Row, RecapSessionDb] {
+
+  implicit val uuidMeta: Meta[UUID] = Meta[String].nxmap(UUID.fromString, _.toString)
+  implicit val InstantMeta: Meta[Instant] = Meta[Timestamp].nxmap(_.toInstant, Timestamp.from)
+
+  override val initQ: ConnectionIO[Unit] = ().pure[ConnectionIO]
+
+  override val listQ: ConnectionIO[List[RecapSessionTable.Row]] =
+    sql"SELECT * FROM recap_session;".query[RecapSessionTable.Row].list
+
+  override def findQ(id: UUID): ConnectionIO[Option[RecapSessionTable.Row]] =
+    sql"SELECT s FROM recap_session s WHERE s.id = $id;".query[RecapSessionTable.Row].option
+
+  override def saveQ(entry: RecapSessionTable.Row): ConnectionIO[Unit] = {
+    val addRecapSql =
+      """
+          INSERT INTO recap_session (id, start_time, student_num, seconds_listened)
+          VALUES (?, ?, ?, ?) ON CONFLICT (id) DO NOTHING;
+      """
+    Update[RecapSessionTable.Row](addRecapSql).toUpdate0(entry).run.void
+  }
+
+  override def deleteQ(id: UUID): ConnectionIO[Boolean] =
+    sql"DELETE FROM recap_session WHERE id = $id;".update.run.map(_ > 0)
 }

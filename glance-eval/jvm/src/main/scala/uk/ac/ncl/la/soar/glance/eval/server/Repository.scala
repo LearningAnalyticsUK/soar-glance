@@ -33,6 +33,8 @@ object Repository {
   //Is this the best/safest way to expose the Repository classes? Not really....
   lazy val Survey: Task[SurveyDb] = createSchema.map(_._1)
   lazy val SurveyResponse: Task[SurveyResponseDb] = createSchema.map(_._2)
+  lazy val ClusterSession: Task[ClusterSessionDb] = createSchema.map(_._3)
+  lazy val RecapSession: Task[RecapSessionDb] = createSchema.map(_._4)
 
   /** Method to perform db db.migrations */
   private def migrate(dbUrl: String, user: String, pass: String) = Task {
@@ -42,7 +44,7 @@ object Repository {
   }
 
   /** Init method to set up the database */
-  private val createSchema: Task[(SurveyDb, SurveyResponseDb)] = {
+  private val createSchema: Task[(SurveyDb, SurveyResponseDb, ClusterSessionDb, RecapSessionDb)] = {
 
     //TODO: Work out if this is even vaguely sane?
     //Lazy config for memoization?
@@ -63,8 +65,12 @@ object Repository {
       )
       sDb = new SurveyDb(xa)
       sRDb = new SurveyResponseDb(xa)
+      cSDb = new ClusterSessionDb(xa)
+      rSDb = new RecapSessionDb(xa)
       - <- { println("Initialising Survey tables");sDb.init }
       _ <- { println("Initialising Survey response tables");sRDb.init }
-    } yield (sDb, sRDb)
+      _ <- { println("Initialising Cluster session tables");cSDb.init }
+      _ <- { println("Initialising Recap session tables");rSDb.init }
+    } yield (sDb, sRDb, cSDb, rSDb)
   }
 }

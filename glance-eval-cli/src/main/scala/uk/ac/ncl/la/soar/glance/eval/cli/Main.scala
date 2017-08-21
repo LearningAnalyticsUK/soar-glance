@@ -44,7 +44,7 @@ object Main {
       case a: GenerateConfig => GenerateSurveys.run(a)
       case a: AssessConfig => AssessSurveyResponses.run(a)
       case a: TansformConfig => TransformData.run(a)
-      case a: LoadSupportConfig => Task.unit
+      case a: LoadSupportConfig => LoadSupportData.run(a)
     } runOnComplete {
       case Failure(e) =>
         println(s"There has been a failure: $e")

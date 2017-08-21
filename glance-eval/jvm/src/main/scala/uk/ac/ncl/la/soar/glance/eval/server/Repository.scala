@@ -30,11 +30,13 @@ import uk.ac.ncl.la.soar.server.Implicits._
   */
 object Repository {
 
+  //TODO: Really refactor this next of lazy snakes. Sure this is stupid
+
   //Is this the best/safest way to expose the Repository classes? Not really....
-  lazy val Survey: Task[SurveyDb] = createSchema.map(_._1)
-  lazy val SurveyResponse: Task[SurveyResponseDb] = createSchema.map(_._2)
-  lazy val ClusterSession: Task[ClusterSessionDb] = createSchema.map(_._3)
-  lazy val RecapSession: Task[RecapSessionDb] = createSchema.map(_._4)
+  lazy val Survey: Task[SurveyDb] = schema.map(_._1)
+  lazy val SurveyResponse: Task[SurveyResponseDb] = schema.map(_._2)
+  lazy val ClusterSession: Task[ClusterSessionDb] = schema.map(_._3)
+  lazy val RecapSession: Task[RecapSessionDb] = schema.map(_._4)
 
   /** Method to perform db db.migrations */
   private def migrate(dbUrl: String, user: String, pass: String) = Task {
@@ -43,10 +45,11 @@ object Repository {
     flyway.migrate()
   }
 
+  private lazy val schema = createSchema.memoize
+
   /** Init method to set up the database */
   private val createSchema: Task[(SurveyDb, SurveyResponseDb, ClusterSessionDb, RecapSessionDb)] = {
 
-    //TODO: Work out if this is even vaguely sane?
     //Lazy config for memoization?
     lazy val config = loadConfigOrThrow[Config]
 

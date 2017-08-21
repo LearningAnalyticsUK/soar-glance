@@ -35,7 +35,6 @@ final case class GenerateConfig(recordsPath: String = "",
                                 outputPath: String = "",
                                 elided: Int = 10,
                                 modules: Seq[String] = Seq.empty[String],
-                                common: Option[String] = None,
                                 seed: Int = 1921437) extends CommandConfig
 
 /**
@@ -97,14 +96,6 @@ object CommandConfig {
       .action((x, c) => c.copy(modules = x))
       .text("modules is the list of modules for which to elide a students records. Only one module record will be " +
         "elided per student. One survey is generated per elided module code.")
-
-    opt[String]('c', "common").valueName("e.g. CSC2024")
-      .action({ (x, c) =>
-        val cmn = if(x == "") None else Option(x)
-        c.copy(common = cmn)
-      })
-      .text("common is an optional parameter specifying an additional module to elide student records for in *all* " +
-        "generated surveys.")
 
     opt[Int]('s', "seed").valueName("<int>")
       .action((x, c) => c.copy(seed = x))

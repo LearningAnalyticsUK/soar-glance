@@ -110,7 +110,7 @@ object Survey {
     }
 
     //TODO: replace magic number filter to drop students with few records with a conf option
-    fullRecords.filter(_.record.size > 10).toList
+    fullRecords.filter(_.record.size > 7).toList
   }
 
   /**

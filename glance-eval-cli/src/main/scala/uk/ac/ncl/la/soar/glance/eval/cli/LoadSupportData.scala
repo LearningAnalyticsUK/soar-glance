@@ -33,6 +33,8 @@ import monix.cats._
 import CsvRow._
 import uk.ac.ncl.la.soar.glance.eval.server._
 
+import scala.util.Try
+
 /**
   * Job which transforms a selection of input .csvs containing Soar data
   */
@@ -55,12 +57,18 @@ object LoadSupportData extends Command[LoadSupportConfig, Unit] {
     //Pull in the Sessions
     val readSessions = Paths.get(sessionsPath).asCsvReader[R](rfc)
 
-    readSessions.collect({ case Success(s) => s}).toList
+    val sessions = readSessions.collect({ case Success(s) => s}).toList
+    println(s"parsed ${sessions.size} sessions")
+
+    sessions
   }
 
+  /** Data provided with ms precision which is mal-formatted, so we drop it */
+  private def prepTs(ts: String) = Try(Instant.parse(ts.dropRight(4).concat("Z"))).getOrElse(Instant.now)
+
   private def prepareClusterRow(r: ClusterSessionRow): ClusterSessionTable.Row =
-    (UUID.randomUUID, Instant.parse(r.start), Instant.parse(r.end), r.machine, r.student)
+    (UUID.randomUUID, prepTs(r.start), prepTs(r.end), r.machine, r.student)
 
   private def prepareRecapRow(r: RecapSessionRow): RecapSessionTable.Row =
-    (UUID.randomUUID, Instant.parse(r.start), r.student, r.duration.toInt)
+    (UUID.randomUUID, prepTs(r.start), r.student, r.duration.toInt)
 }

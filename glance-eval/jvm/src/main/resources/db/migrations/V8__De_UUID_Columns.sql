@@ -1,0 +1,5 @@
+ALTER TABLE recap_session
+  ALTER COLUMN id TYPE VARCHAR(40);
+
+ALTER TABLE cluster_session
+  ALTER COLUMN id TYPE VARCHAR(40);

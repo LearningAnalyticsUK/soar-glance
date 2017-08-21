@@ -76,12 +76,14 @@ object ClusterSessionDbCompanion extends RepositoryCompanion[ClusterSessionTable
     sql"SELECT s FROM cluster_session s WHERE s.id = $id;".query[ClusterSessionTable.Row].option
 
   override def saveQ(entry: ClusterSessionTable.Row): ConnectionIO[Unit] = {
-      val addClusterSql =
-        """
-          INSERT INTO cluster_session (id, start_time, end_time, machine_name, student_num)
-          VALUES (?, ?, ?, ?, ?) ON CONFLICT (id) DO NOTHING;
-        """
-      Update[ClusterSessionTable.Row](addClusterSql).toUpdate0(entry).run.void
+    val addClusterQ =
+      sql"""
+        INSERT INTO cluster_session (id, start_time, end_time, machine_name, student_num)
+        SELECT ${entry._1}, ${entry._2}, ${entry._3}, ${entry._4}, ${entry._5}
+        WHERE EXISTS (SELECT * FROM student WHERE num = ${entry._5})
+        ON CONFLICT (id) DO NOTHING;
+      """
+    addClusterQ.update.run.void
   }
 
   override def deleteQ(id: UUID): ConnectionIO[Boolean] =
@@ -117,12 +119,14 @@ object RecapSessionDbCompanion extends RepositoryCompanion[RecapSessionTable.Row
     sql"SELECT s FROM recap_session s WHERE s.id = $id;".query[RecapSessionTable.Row].option
 
   override def saveQ(entry: RecapSessionTable.Row): ConnectionIO[Unit] = {
-    val addRecapSql =
-      """
+    val addRecapQ =
+      sql"""
           INSERT INTO recap_session (id, start_time, student_num, seconds_listened)
-          VALUES (?, ?, ?, ?) ON CONFLICT (id) DO NOTHING;
+          SELECT ${entry._1}, ${entry._2}, ${entry._3}, ${entry._4}
+          WHERE EXISTS (SELECT * FROM student WHERE num = ${entry._3})
+          ON CONFLICT (id) DO NOTHING;
       """
-    Update[RecapSessionTable.Row](addRecapSql).toUpdate0(entry).run.void
+    addRecapQ.update.run.void
   }
 
   override def deleteQ(id: UUID): ConnectionIO[Boolean] =

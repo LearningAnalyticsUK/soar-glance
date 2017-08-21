@@ -11,11 +11,14 @@ ALTER TABLE survey
 
 -- Drop survey_query constraint on query then drop part of the composite key
 ALTER TABLE survey_query
+  DROP CONSTRAINT survey_query_pkey,
   DROP CONSTRAINT survey_query_student_num_fkey,
-  DROP COLUMN module_num;
+  DROP COLUMN module_num,
+
+  ADD PRIMARY KEY (survey_id, student_num);
 
 DROP TABLE query;
 
-DROP TABLE modules;
+DROP TABLE IF EXISTS modules;
 
 

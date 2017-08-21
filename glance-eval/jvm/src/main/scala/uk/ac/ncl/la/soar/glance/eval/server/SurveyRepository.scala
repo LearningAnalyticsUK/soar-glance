@@ -111,6 +111,14 @@ object SurveyDb extends RepositoryCompanion[Survey, SurveyDb] {
     val studRows = records.map(_.number)
     val addStudentsQ = Update[(StudentNumber)](addStudentSQL).updateMany(studRows)
 
+    //Next, add module entries
+    val addModuleSQL =
+      """
+        INSERT INTO module (num) VALUES (?) ON CONFLICT (num) DO NOTHING;
+      """
+    val modRows = entry.modules
+    val addModulesQ = Update[ModuleCode](addModuleSQL).updateMany(modRows)
+
     //Next, add survey entries
     val addEntrySQL =
       """
@@ -139,8 +147,9 @@ object SurveyDb extends RepositoryCompanion[Survey, SurveyDb] {
     val addSQueryQ = Update[(UUID, StudentNumber)](addSurveyQuerySQL).updateMany(sQRows)
 
     //Return combined query
+    //TODO: Work out why we're actually using Cartesian ops here rather than normal monadic sequencing?
     for{
-      _ <- addSurveyQ *> addStudentsQ
+      _ <- addModulesQ *> addSurveyQ *> addStudentsQ
       _ <- addEntryQ *> addModuleScoreQ *> addSQueryQ
     } yield ()
   }

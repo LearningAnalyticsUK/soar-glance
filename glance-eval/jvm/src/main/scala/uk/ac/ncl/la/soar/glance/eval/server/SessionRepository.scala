@@ -26,7 +26,7 @@ import monix.eval.Task
 import monix.cats._
 import cats._
 import cats.implicits._
-import uk.ac.ncl.la.soar.StudentNumber
+import uk.ac.ncl.la.soar.{ModuleCode, StudentNumber}
 import uk.ac.ncl.la.soar.db.{RepositoryCompanion, Repository => DbRepository}
 import uk.ac.ncl.la.soar.glance.eval.{ClusterSession, RecapSession}
 
@@ -58,9 +58,12 @@ class ClusterSessionDb private[glance] (xa: Transactor[Task]) extends DbReposito
 
   override def find(id: UUID) = findQ(id).transact(xa)
 
+  def findBetween(start: Instant, end: Instant): Task[List[ClusterSessionTable.Row]] = ???
+
   override def save(entry: ClusterSessionTable.Row) = saveQ(entry).transact(xa)
 
   override def delete(id: UUID) = deleteQ(id).transact(xa)
+
 }
 
 object ClusterSessionDbCompanion extends RepositoryCompanion[ClusterSessionTable.Row, ClusterSessionDb] {

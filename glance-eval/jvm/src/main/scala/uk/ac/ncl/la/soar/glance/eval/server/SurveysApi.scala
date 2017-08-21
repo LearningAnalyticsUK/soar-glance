@@ -17,34 +17,53 @@
   */
 package uk.ac.ncl.la.soar.glance.eval.server
 
+import java.time.Period
 import java.util.UUID
 
+import cats.data.OptionT
 import io.circe.generic.auto._
 import io.finch._
 import io.finch.circe._
+import monix.cats._
+import monix.eval.Task
+import uk.ac.ncl.la.soar.glance.eval.{ClusterSession, Session}
 import uk.ac.ncl.la.soar.server.Implicits._
 
 /**
   * Class defines the REST api for Surveys
   */
-class SurveysApi(repository: SurveyDb) {
+class SurveysApi(surveyRepository: SurveyDb, clusterRepository: ClusterSessionDb) {
 
   /** Endpoint returns all surveys in response to `GET /surveys` */
   lazy val list = get("surveys") {
-    repository.list.toFuture.map(Ok(_))
+    surveyRepository.list.toFuture.map(Ok(_))
   }
 
   /** Endpoint to retrieve a specific Survey by id */
   val read = get("surveys" :: path[UUID] ) { (id: UUID) =>
     println(s"received a request for this survey: $id")
-    repository.find(id).toFuture.map {
+    surveyRepository.find(id).toFuture.map {
       case Some(s) => Ok(s)
       case None => notFound(id)
     }
   }
 
   /** Endpoint to get cluster data for a specific survey by id */
-  val readClusters = get("surveys" :: path[UUID] :: "cluster")
+  val readClusters = get("surveys" :: path[UUID] :: "cluster") { (id: UUID) =>
+    val fetchSummary = for {
+      surveyDates <- surveyRepository.findDateRange(id)
+      sessions <- surveyDates.fold(Task.now(List.empty[ClusterSession])) { case (start, end) =>
+        clusterRepository.findBetween(start, end)
+      }
+    } yield {
+      surveyDates.map { case (s, e) => Session.getSummary(sessions, s, e, Period.ofDays(7)) }
+    }
+
+    fetchSummary.toFuture.map {
+      case Some(s) => Ok(s)
+      case None => notFound(id)
+    }
+  }
 
   /** Pre-flight endpoint for CORS headers */
   //Clunky Unit syntax - fix?

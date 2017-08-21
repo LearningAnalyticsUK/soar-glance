@@ -50,6 +50,8 @@ class SurveyDb private[glance] (xa: Transactor[Task]) extends DbRepository[Surve
 
   override def find(id: UUID): Task[Option[Survey]] = findQ(id).transact(xa)
 
+  def findDateRange(id: UUID): Task[Option[(Instant, Instant)]] = ???
+
   override def save(entry: Survey): Task[Unit] = saveQ(entry).transact(xa)
 
   override def delete(id: UUID): Task[Boolean] = deleteQ(id).transact(xa)

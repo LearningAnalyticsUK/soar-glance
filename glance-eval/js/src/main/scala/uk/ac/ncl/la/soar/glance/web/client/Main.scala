@@ -98,7 +98,7 @@ object Main extends js.JSApp {
     //Load the styles
     GlobalStyle.addToDocument()
     //Load the survey data and render
-    GlanceCircuit.dispatch(RefreshSurvey)
+    GlanceCircuit.dispatch(RefreshSurveys)
     //Find undeprecated way of doing this
     router.renderIntoDOM(dom.document.getElementById("soar-app"))
     ()

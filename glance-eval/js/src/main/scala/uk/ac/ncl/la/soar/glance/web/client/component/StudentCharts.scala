@@ -17,8 +17,7 @@
   */
 package uk.ac.ncl.la.soar.glance.web.client.component
 
-import uk.ac.ncl.la.soar.ModuleCode
-import uk.ac.ncl.la.soar.data.StudentRecords
+import uk.ac.ncl.la.soar.{ModuleCode, StudentNumber}
 import diode.data._
 import diode.react.ReactPot._
 import diode.react._
@@ -29,6 +28,7 @@ import japgolly.scalajs.react._
 import japgolly.scalajs.react.vdom.html_<^._
 import uk.ac.ncl.la.soar.ModuleCode
 import uk.ac.ncl.la.soar.data.StudentRecords
+import uk.ac.ncl.la.soar.glance.eval.SessionSummary
 import uk.ac.ncl.la.soar.glance.web.client.data.CohortAttainmentSummary
 import uk.ac.ncl.la.soar.glance.web.client.style.Icon
 
@@ -60,6 +60,8 @@ object StudentCharts {
                    handleClearStudent: Callback,
                    toggleSelecting: (Boolean) => Callback,
                    cohort: CohortAttainmentSummary,
+                   clusters: SessionSummary,
+                   recaps: SessionSummary,
                    filterChoices: NonEmptyVector[Select.Choice[Filter]] = options)
 
   case class State(selectedFilters: Set[Select.Choice[Filter]], cohortComparison: Boolean)
@@ -88,14 +90,29 @@ object StudentCharts {
                 drawCheckbox(s.cohortComparison)
               )
             ),
-            drawBars(filtered(student, s.selectedFilters),
-              p.studentR.map(filtered(_, s.selectedFilters)),
-              filtered(p.cohort.toRecord, s.selectedFilters),
-              s.cohortComparison),
-            drawLines(filtered(student, s.selectedFilters),
-              p.studentR.map(filtered(_, s.selectedFilters)),
-              filtered(p.cohort.toRecord, s.selectedFilters),
-              s.cohortComparison)
+            <.div(
+              ^.className := "row border-between",
+              <.div(
+                ^.className := "col-md-6",
+                drawAttainmentBars(filtered(student, s.selectedFilters),
+                  p.studentR.map(filtered(_, s.selectedFilters)),
+                  filtered(p.cohort.toRecord, s.selectedFilters),
+                  s.cohortComparison),
+                drawAvgTrend(filtered(student, s.selectedFilters),
+                  p.studentR.map(filtered(_, s.selectedFilters)),
+                  filtered(p.cohort.toRecord, s.selectedFilters),
+                  s.cohortComparison)
+              ),
+              <.div(
+                ^.className := "col-md-6",
+                drawIndexedSession(student.number, p.studentR.map(_.number), p.clusters,
+                  "Relative cluster usage", "Cluster usage over time",
+                  "rgba(111, 203, 118, 0.1)", "#47CB50"),
+                drawIndexedSession(student.number, p.studentR.map(_.number), p.recaps,
+                  "Relative recap usage", "Cluster usage over time",
+                  "rgba(111, 203, 118, 0.1)", "#47CB50")
+              )
+            )
           ).toTagMod
         }
       )
@@ -114,7 +131,7 @@ object StudentCharts {
     }
 
     /** Construct line chart representation of student average over time, as a proof of concept */
-    private def drawLines(studentScores: SortedMap[ModuleCode, Double],
+    private def drawAvgTrend(studentScores: SortedMap[ModuleCode, Double],
                           comparedStudentScores: Option[SortedMap[ModuleCode, Double]],
                           cohortSummary: SortedMap[ModuleCode, Double],
                           drawCohortSummary: Boolean) = {
@@ -158,7 +175,7 @@ object StudentCharts {
     }
 
     /** Construct detailed representation of student scores, including viz */
-    private def drawBars(data: SortedMap[ModuleCode, Double],
+    private def drawAttainmentBars(data: SortedMap[ModuleCode, Double],
                          comparedStudentScores: Option[SortedMap[ModuleCode, Double]],
                          cohortSummary: SortedMap[ModuleCode, Double],
                          drawCohortSummary: Boolean)  = {
@@ -230,6 +247,50 @@ object StudentCharts {
       val fills = scores.iterator.map(s => colourPicker(s.toInt, fillColours))
       val borders = scores.iterator.map(s => colourPicker(s.toInt, borderColours))
       (fills.toList, borders.toList)
+    }
+
+    /** Draw a mean indexed line for sessions */
+    private def drawIndexedSession(student: StudentNumber,
+                                   comparedStudent: Option[StudentNumber],
+                                   sessionSummary: SessionSummary,
+                                   legendTitle: String,
+                                   chartTitle: String,
+                                   fillColor: String,
+                                   borderColor: String) = {
+
+      def indexDurationsFor(student: StudentNumber) = {
+        val studentDurations = sessionSummary.studentDuration.getOrElse(student, sessionSummary.meanDuration)
+
+        studentDurations.map { case (k, v) => k -> (v - sessionSummary.meanDuration.getOrElse(k, 0D)) }
+      }
+
+      //Derive student datapoints indexed on the meanDuration
+      val sIdxDuration = indexDurationsFor(student)
+      //Do the same for the compared student if it exists
+      val cSIdxDuration = comparedStudent.map(indexDurationsFor)
+
+      //Create the session dataset for the clicked student
+      val datasets = ListBuffer(
+        ChartDataset(sIdxDuration.valuesIterator.toList, legendTitle, fillColor, borderColor, fill = false)
+      )
+
+      //Create the dataset for the compared student if it existsi
+      cSIdxDuration.foreach { sc =>
+        datasets += ChartDataset(sc.valuesIterator.toList, "Compared student", fill = false)
+      }
+
+      //List of blank strings required rather than just having no labels as otherwise Chart.js only renders first point
+      val labels = sIdxDuration.valuesIterator.map(_ => "").toSeq
+      val chartData = ChartData(labels, datasets)
+
+      //Find min and max values for meanDurations (this is unsound for positive values ... consider)
+      val min = sessionSummary.meanDuration.valuesIterator.min
+      val max = sessionSummary.meanDuration.valuesIterator.max
+
+      val p = Chart.Props(chartTitle, Chart.LineChart, chartData,
+        ChartOptions(displayLegend = true, axisStyle = IndexedAxis(min, max)))
+
+      <.div(^.className := "chart-container", Chart.component(p))
     }
 
     /** Draw filter form group */

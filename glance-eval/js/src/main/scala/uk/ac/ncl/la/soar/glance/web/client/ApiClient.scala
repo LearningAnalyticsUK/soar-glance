@@ -17,6 +17,8 @@
   */
 package uk.ac.ncl.la.soar.glance.web.client
 
+import java.util.UUID
+
 import cats.data.EitherT
 import org.scalajs.dom.ext.Ajax
 import org.scalajs.dom.raw.XMLHttpRequest
@@ -27,7 +29,7 @@ import io.circe._
 import io.circe.generic.auto._
 import io.circe.parser._
 import io.circe.syntax._
-import uk.ac.ncl.la.soar.glance.eval.{Survey, SurveyResponse}
+import uk.ac.ncl.la.soar.glance.eval.{SessionSummary, Survey, SurveyResponse}
 
 /**
   * Object defining methods for talking to remote API and parsing results
@@ -39,21 +41,38 @@ object ApiClient {
 
   /* Surveys */
 
-  /** Load the surveys from the surveys API, then decode them using circe */
-  def loadSurveys: Future[Either[Error, List[Survey]]] = Ajax.get(url("surveys")).map(decodeSurveys)
+  /** Load the survey ids from the surveys API, then decode them using circe */
+  def loadSurveyIds: Future[Either[Error, List[UUID]]] = Ajax.get(url("surveys")).map(decodeReq[List[UUID]])
 
-  /** Load the surveys, decode them then lift into an either transformer. Would be preferable to do this always, but
+  /** Load the survey ids, decode them then lift into an either transformer. Would be preferable to do this always, but
     * [[diode.Effect]]'s `apply` method expects an un evaluated future and it seems crazy to lift only to call `.value`
     * immediately. So, for now, this is just a helper.
     */
-  def loadSurveysT: EitherT[Future, Error, List[Survey]] = EitherT(loadSurveys)
+  def loadSurveysIdsT: EitherT[Future, Error, List[UUID]] = EitherT(loadSurveyIds)
 
-  private def decodeSurveys(xhr: XMLHttpRequest) = decode[List[Survey]](xhr.responseText)
+  /** Load a survey with the given id from the surveys API, then decode using circe */
+  def loadSurvey(id: UUID): Future[Either[Error, Survey]] = Ajax.get(url(s"surveys/$id")).map(decodeReq[Survey])
+
+  def loadSurveyT(id: UUID): EitherT[Future, Error, Survey] = EitherT(loadSurvey(id))
+
+
+  /* Sessions */
+
+  /** Load the recap sessions relevant to a given survey */
+  def loadRecaps(id: UUID): Future[Either[Error, SessionSummary]] =
+    Ajax.get(url(s"surveys/$id/recap")).map(decodeReq[SessionSummary])
+
+  def loadRecapsT(id: UUID): EitherT[Future, Error, SessionSummary] = EitherT(loadRecaps(id))
+
+  def loadClusters(id: UUID): Future[Either[Error, SessionSummary]] =
+    Ajax.get(url(s"surveys/$id/cluster")).map(decodeReq[SessionSummary])
+
+  def loadClustersT(id: UUID): EitherT[Future, Error, SessionSummary] = EitherT(loadClusters(id))
 
   /* SurveyResponses */
 
   /** Post a survey response */
   def postResponse(r: SurveyResponse) = Ajax.post(url("responses"), r.asJson.noSpaces)
 
-
+  private def decodeReq[A: Decoder](xhr: XMLHttpRequest) = decode[A](xhr.responseText)
 }

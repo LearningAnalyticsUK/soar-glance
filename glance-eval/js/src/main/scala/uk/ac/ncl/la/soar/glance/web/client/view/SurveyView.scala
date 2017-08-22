@@ -173,7 +173,9 @@ object SurveyView {
                 s.selectingR,
                 handleClearStudent,
                 handleToggleSelecting,
-                sm.summary
+                sm.attainmentSummary,
+                sm.clusterSummary,
+                sm.recapSummary
               )
             )
           }

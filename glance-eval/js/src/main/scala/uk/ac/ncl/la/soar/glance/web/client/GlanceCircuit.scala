@@ -17,6 +17,8 @@
   */
 package uk.ac.ncl.la.soar.glance.web.client
 
+import java.util.UUID
+
 import scala.concurrent.ExecutionContext.Implicits.global
 import cats._
 import cats.implicits._
@@ -27,9 +29,9 @@ import diode.util._
 import diode.react.ReactConnector
 import io.circe._
 import uk.ac.ncl.la.soar.{ModuleCode, StudentNumber}
-import uk.ac.ncl.la.soar.glance.eval.{Survey, SurveyResponse}
+import uk.ac.ncl.la.soar.glance.eval.{SessionSummary, Survey, SurveyResponse}
 import uk.ac.ncl.la.soar.glance.web.client.data.CohortAttainmentSummary
-import japgolly.scalajs.react.extra.router.{Action => RouterAction, RouterCtl}
+import japgolly.scalajs.react.extra.router.{RouterCtl, Action => RouterAction}
 
 /**
   * Hierarchical definition of Application model, composing various other models.
@@ -43,33 +45,52 @@ final case class GlanceModel(survey: Pot[SurveyModel])
   * TODO: Work out if all elements have to be wrapped in Option. Understand response may be OK + empty, but does Pot not
   * have the ability to encode this? Otherwise it feels like we're almost creating an option of an option (Pot ~ Option)
   */
-case class SurveyModel(survey: Survey, summary: CohortAttainmentSummary)
+case class SurveyModel(survey: Survey,
+                       attainmentSummary: CohortAttainmentSummary,
+                       clusterSummary: SessionSummary,
+                       recapSummary: SessionSummary)
 
 /**
   * ADT representing the set of actions which may be taken to update a `SurveyModel`. These actions encapsulate no
   * behaviour. Instead the behaviour is defined in a handler/interpreter method provided in the `GlanceCircuit` object.
   */
 sealed trait SurveyAction extends Action
-final case class InitSurvey(survey: Either[Error, List[Survey]]) extends SurveyAction
+final case class InitSurveys(surveyIds: Either[Error, List[UUID]]) extends SurveyAction
+final case class InitSurvey(info: Either[Error, (Survey, SessionSummary, SessionSummary)]) extends SurveyAction
 final case class SelectStudent(id: StudentNumber) extends SurveyAction
 final case class SubmitSurveyResponse(response: SurveyResponse) extends SurveyAction
-case object RefreshSurvey extends SurveyAction
+final case class RefreshSurvey(id: UUID) extends SurveyAction
+case object RefreshSurveys extends SurveyAction
 case object DoNothing extends SurveyAction
 
 /**
   * Handles actions related to Surveys
   */
 class SurveyHandler[M](modelRW: ModelRW[M, Pot[SurveyModel]]) extends ActionHandler(modelRW) {
+
+  private def loadSurveyInfo(id: UUID) = Effect {
+    val info = (ApiClient.loadSurveyT(id) |@|
+      ApiClient.loadClustersT(id) |@|
+      ApiClient.loadRecapsT(id)).map((_, _, _)).value
+
+    info.map(i => InitSurvey(i))
+  }
+
   override def handle = {
-    case RefreshSurvey =>
-      //Going round the houses a bit here. Tersest to lift ot a transformer, map, then call value. How is performance?
-      effectOnly(Effect(ApiClient.loadSurveys.map(s => InitSurvey(s))))
-    //case SelectStudent(number) => ??? //Unclear to me if this should be an Action or just handled in the component?
-    case InitSurvey(decodedSurveys) =>
-      decodedSurveys.fold(
+    case RefreshSurveys =>
+      effectOnly(Effect(ApiClient.loadSurveyIds.map(s => InitSurveys(s))))
+    case RefreshSurvey(id) =>
+      effectOnly(loadSurveyInfo(id))
+    case InitSurveys(decodedSurveyIds) =>
+      decodedSurveyIds.fold(
         err => updated(Failed(err)),
-        surveys => surveys.headOption.fold(updated(Empty)) { s =>
-          updated(Ready(SurveyModel(s, CohortAttainmentSummary(s.entries))))
+        surveyIds => surveyIds.headOption.fold(updated(Empty))( id => effectOnly(loadSurveyInfo(id)) )
+      )
+    case InitSurvey(decodedInfo) =>
+      decodedInfo.fold(
+        err => updated(Failed(err)),
+        { case (srv, cS, rS) =>
+          updated(Ready(SurveyModel(srv, CohortAttainmentSummary(srv.entries), cS, rS)))
         }
       )
     case SubmitSurveyResponse(response) =>

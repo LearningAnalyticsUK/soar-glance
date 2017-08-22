@@ -31,18 +31,23 @@ import scala.scalajs.js.annotation.{JSGlobal, JSName}
 trait ChartDataset extends js.Object {
   def label: String = js.native
   def data: js.Array[Double] = js.native
+  def fill: Boolean = js.native
   def fillColor: String = js.native
   def strokeColor: String = js.native
 }
 
 object ChartDataset {
   def apply(data: Seq[Double],
-            label: String, backgroundColor: String = "#8080FF", borderColor: String = "#404080"): ChartDataset = {
+            label: String,
+            backgroundColor: String = "#8080FF",
+            borderColor: String = "#404080",
+            fill: Boolean = true): ChartDataset = {
     js.Dynamic.literal(
       label = label,
       data = data.toJSArray,
       backgroundColor = backgroundColor,
-      borderColor = borderColor
+      borderColor = borderColor,
+      fill = fill
     ).asInstanceOf[ChartDataset]
   }
 
@@ -52,7 +57,8 @@ object ChartDataset {
       label = label,
       data = data.toJSArray,
       backgroundColor = backgroundColor.toJSArray,
-      borderColor = borderColor.toJSArray
+      borderColor = borderColor.toJSArray,
+      fill = true
     ).asInstanceOf[ChartDataset]
   }
 }
@@ -90,6 +96,10 @@ trait ChartLegendItem extends js.Object {
   def strokeStyle: String = js.native
 }
 
+sealed trait ChartyAxisStlye
+case object PercentagesAxis extends ChartyAxisStlye
+case class IndexedAxis(min: Double, max: Double) extends ChartyAxisStlye
+
 object ChartLegendItem {
   def apply(text: String, fillStyle: String, strokeStyle: String): ChartLegendItem = {
     js.Dynamic.literal(
@@ -110,12 +120,12 @@ object ChartOptions {
   def apply(responsive: Boolean = true,
             displayLegend: Boolean = false,
             generateLegend: Option[JSChart => Seq[ChartLegendItem]] = None,
-            yTicksAtZero: Boolean = true): ChartOptions = {
+            axisStyle: ChartyAxisStlye = PercentagesAxis): ChartOptions = {
 
     js.Dynamic.literal(
       responsive = responsive,
       legend = legend(displayLegend, generateLegend),
-      scales = axisConf(yTicksAtZero)
+      scales = axisConf(axisStyle)
     ).asInstanceOf[ChartOptions]
   }
 
@@ -134,20 +144,14 @@ object ChartOptions {
     ).asInstanceOf[LegendLabelConfiguration]
   }
 
-  private def axisConf(percentages: Boolean) = {
-    val tickLit = js.Dynamic.literal(beginAtZero = percentages)
-    if(percentages) {
-      tickLit.suggestedMax = 100
-//      tickLit.callback = (labelPct: js.Function3[String, Int, js.Array[String], String])
+  private def axisConf(style: ChartyAxisStlye) = {
+    val tickLit = style match {
+      case PercentagesAxis =>
+        js.Dynamic.literal(beginAtZero = true, suggestedMax = 100)
+      case IndexedAxis(min, max) =>
+        js.Dynamic.literal(suggestedMin = min, suggestedMax = max)
     }
-
-    js.Dynamic.literal(
-      yAxes = js.Array(
-        js.Dynamic.literal(
-          ticks = tickLit
-        )
-      )
-    )
+    js.Dynamic.literal( yAxes = js.Array( js.Dynamic.literal( ticks = tickLit ) ) )
   }
 
   private val labelPct: (String, Int, js.Array[String]) => String = { (value, _, _) => s"$value%" }
@@ -187,6 +191,7 @@ object Chart {
   sealed trait ChartStyle
   case object LineChart extends ChartStyle
   case object BarChart extends ChartStyle
+  case object IndexedLineChart extends ChartStyle
 
   case class State(chart: Option[JSChart])
 
@@ -194,8 +199,8 @@ object Chart {
                    style: ChartStyle,
                    data: ChartData,
                    options: ChartOptions = ChartOptions(),
-                   width: Option[Int] = Some(1110),
-                   height: Option[Int] = Some(300))
+                   width: Option[Int] = Some(600),
+                   height: Option[Int] = Some(400))
 
   class Backend(bs: BackendScope[Props, State]) {
 
@@ -208,6 +213,7 @@ object Chart {
           val ctx = node.asInstanceOf[HTMLCanvasElement].getContext("2d")
           // create the actual chart using the 3rd party component
           p.style match {
+            case IndexedLineChart => new JSChart(ctx, ChartConfiguration("line", p.data, p.options))
             case LineChart => new JSChart(ctx, ChartConfiguration("line", p.data, p.options))
             case BarChart => new JSChart(ctx, ChartConfiguration("bar", p.data, p.options))
           }

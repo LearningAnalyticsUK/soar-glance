@@ -58,7 +58,8 @@ class ClusterSessionDb private[glance] (xa: Transactor[Task]) extends DbReposito
 
   override def find(id: UUID) = findQ(id).transact(xa)
 
-  def findBetween(start: Instant, end: Instant): Task[List[ClusterSessionTable.Row]] = ???
+  def findBetween(start: Instant, end: Instant): Task[List[ClusterSessionTable.Row]] =
+    findBetweenQ(start, end).transact(xa)
 
   override def save(entry: ClusterSessionTable.Row) = saveQ(entry).transact(xa)
 
@@ -78,6 +79,14 @@ object ClusterSessionDbCompanion extends RepositoryCompanion[ClusterSessionTable
 
   override def findQ(id: UUID): ConnectionIO[Option[ClusterSessionTable.Row]] =
     sql"SELECT s FROM cluster_session s WHERE s.id = $id;".query[ClusterSessionTable.Row].option
+
+  def findBetweenQ(start: Instant, end: Instant): ConnectionIO[List[ClusterSessionTable.Row]] = {
+    sql"""
+      SELECT * FROM cluster_session s
+      WHERE s.start_time
+      BETWEEN to_timestamp(${start.getEpochSecond}) AND to_timestamp(${end.getEpochSecond});
+    """.query[ClusterSessionTable.Row].list
+  }
 
   override def saveQ(entry: ClusterSessionTable.Row): ConnectionIO[Unit] = {
     val addClusterQ =
@@ -104,6 +113,8 @@ class RecapSessionDb private[glance] (xa: Transactor[Task]) extends DbRepository
 
   override def find(id: UUID) = findQ(id).transact(xa)
 
+  def findBetween(start: Instant, end: Instant) = findBetweenQ(start, end).transact(xa)
+
   override def save(entry: RecapSessionTable.Row) = saveQ(entry).transact(xa)
 
   override def delete(id: UUID) = deleteQ(id).transact(xa)
@@ -121,6 +132,14 @@ object RecapSessionDbCompanion extends RepositoryCompanion[RecapSessionTable.Row
 
   override def findQ(id: UUID): ConnectionIO[Option[RecapSessionTable.Row]] =
     sql"SELECT s FROM recap_session s WHERE s.id = $id;".query[RecapSessionTable.Row].option
+
+  def findBetweenQ(start: Instant, end: Instant): ConnectionIO[List[RecapSessionTable.Row]] = {
+    sql"""
+      SELECT * FROM recap_session s
+      WHERE s.start_time
+      BETWEEN to_timestamp(${start.getEpochSecond}) AND to_timestamp(${end.getEpochSecond});
+    """.query[RecapSessionTable.Row].list
+  }
 
   override def saveQ(entry: RecapSessionTable.Row): ConnectionIO[Unit] = {
     val addRecapQ =

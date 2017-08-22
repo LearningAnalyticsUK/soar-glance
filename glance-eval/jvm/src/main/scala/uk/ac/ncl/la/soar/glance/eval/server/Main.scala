@@ -22,6 +22,7 @@ import com.twitter.server.TwitterServer
 import com.twitter.util.Await
 import uk.ac.ncl.la.soar.server.Implicits._
 import monix.eval.Task
+import monix.cats._
 import cats._
 import cats.implicits._
 import cats.data._
@@ -35,8 +36,12 @@ object Main extends TwitterServer {
 
   def main(): Unit = {
 
-    val surveysTask = Repository.Survey.map(new SurveysApi(_)).memoize
-    val responsesTask = Repository.SurveyResponse.map(new SurveyResponsesApi(_)).memoize
+    val surveysTask =
+      (Repository.Survey |@|
+        Repository.ClusterSession |@|
+        Repository.RecapSession).map(new SurveysApi(_, _, _))
+
+    val responsesTask = Repository.SurveyResponse.map(new SurveyResponsesApi(_))
 
     val (surveysApi, responsesApi) = Await.result(surveysTask.zip(responsesTask).toFuture)
 

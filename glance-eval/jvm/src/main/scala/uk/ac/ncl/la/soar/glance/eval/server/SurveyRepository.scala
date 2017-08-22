@@ -50,7 +50,7 @@ class SurveyDb private[glance] (xa: Transactor[Task]) extends DbRepository[Surve
 
   override def find(id: UUID): Task[Option[Survey]] = findQ(id).transact(xa)
 
-  def findDateRange(id: UUID): Task[Option[(Instant, Instant)]] = ???
+  def findDateRange(id: UUID): Task[Option[(Instant, Instant)]] = findDateRangeQ(id).transact(xa)
 
   override def save(entry: Survey): Task[Unit] = saveQ(entry).transact(xa)
 
@@ -158,6 +158,17 @@ object SurveyDb extends RepositoryCompanion[Survey, SurveyDb] {
 
   override def deleteQ(id: UUID): ConnectionIO[Boolean] =
     sql"DELETE FROM survey WHERE id = $id;".update.run.map(_ > 0)
+
+  def findDateRangeQ(id: UUID): ConnectionIO[Option[(Instant, Instant)]] = {
+    val q = sql"""
+      SELECT m.start_date, EXTRACT(epoch FROM m.length)
+      FROM survey s JOIN module m
+      ON m.num = s.module_num
+      WHERE s.id = $id;
+    """.query[(Instant, Long)].option
+
+    q.map(_.map({ case (start, length) => (start, start.plusSeconds(length)) }))
+  }
 
   private lazy val listSurveyIdsQ: ConnectionIO[List[UUID]] = sql"SELECT s.id FROM survey s;".query[UUID].list
 

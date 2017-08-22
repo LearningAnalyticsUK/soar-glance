@@ -24,10 +24,9 @@ import io.circe.{Decoder, HCursor}
 /**
   * Scala implemenetation of simple wrapper Time type
   */
-object Time extends TimeCompanion {
+object Times extends TimeCompanion {
   /** Constructor for the current time, defined agnostically across systems */
   override def now: Time = fromLong(Instant.now.toEpochMilli)
-
 
   /** Some constructors, all milliseconds since Epoch */
   override def fromDouble(a: Double): Time = Point(a)
@@ -41,7 +40,7 @@ object Time extends TimeCompanion {
 
   /** Implicit ops classes and utilities */
   final implicit class InstantOps(val a: Instant) extends AnyVal {
-    def toTime: Time = Point(a.toEpochMilli)
+    def toTime: Time = Point(a.toEpochMilli.toDouble)
   }
 
   final implicit class TimeOps(val t: Time) extends AnyVal {

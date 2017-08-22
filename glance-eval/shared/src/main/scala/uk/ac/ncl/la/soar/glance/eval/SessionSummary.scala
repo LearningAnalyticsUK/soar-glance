@@ -17,10 +17,15 @@
   */
 package uk.ac.ncl.la.soar.glance.eval
 
+import cats._
+import cats.implicits._
 import io.circe._
 import io.circe.syntax._
+import io.circe.generic.auto._
 import uk.ac.ncl.la.soar.StudentNumber
-import uk.ac.ncl.la.soar.glance.util.Time
+import uk.ac.ncl.la.soar.glance.util.{Time, Times}
+
+import scala.util.Try
 
 trait SessionSummary {
 
@@ -28,12 +33,11 @@ trait SessionSummary {
   def end: Time
   def meanDuration: Map[(Time, Time), Double]
   def studentDuration: Map[StudentNumber, Map[(Time, Time), Double]]
-
 }
 
 object SessionSummary {
 
-  import Time._
+  import Times._
 
   /** Typeclass instances */
   implicit val encodeSessionSummary: Encoder[SessionSummary] = new Encoder[SessionSummary] {
@@ -46,23 +50,37 @@ object SessionSummary {
   }
 
   implicit val decodeSessionSummary: Decoder[SessionSummary] = new Decoder[SessionSummary] {
+
     override def apply(c: HCursor): Decoder.Result[SessionSummary] = {
       for {
-        start <- c.downField("start").as[Time]
-        end <- c.downField("end").as[Time]
-        meanDuration <- c.downField("meanDuration").as[Map[(Time, Time), Double]]
-        studentDuration <- c.downField("studentDuration").as[Map[StudentNumber, Map[(Time, Time), Double]]]
-      } yield {
-        new SessionSummary {
+        s <- c.downField("start").as[Time]
+        e <- c.downField("end").as[Time]
+        mD <- c.downField("meanDuration").as[Map[(Time, Time), Double]]
+        sD <- c.downField("studentDuration").as[Map[StudentNumber, Map[(Time, Time), Double]]]
+      } yield new SessionSummary {
+        override def meanDuration: Map[(Time, Time), Double] = mD
+        override def start: Time = s
+        override def studentDuration: Map[StudentNumber, Map[(Time, Time), Double]] = sD
+        override def end: Time = e
+      }
+    }
+  }
 
-          override def meanDuration: Map[(Time, Time), Double] = meanDuration
+  /** Customer KeyEncoder/Decoder for (Time, Time) - is this a good idea? */
+  implicit val encodeIntervalKey: KeyEncoder[(Time, Time)] = new KeyEncoder[(Time, Time)] {
+    override def apply(key: (Time, Time)): String = f"${key._1.millis}%.0f|${key._2.millis}%.0f"
+  }
 
-          override def start: Time = start
+  implicit val decodeIntervalKey: KeyDecoder[(Time, Time)] = new KeyDecoder[(Time, Time)] {
 
-          override def studentDuration: Map[StudentNumber, Map[(Time, Time), Double]] = studentDuration
+    private def strToTime(repr: String) = Try(repr.toDouble).toOption.map(Times.fromDouble)
 
-          override def end: Time = end
-        }
+    override def apply(key: String): Option[(Time, Time)] = {
+      key.split('|') match {
+        case Array(start, end) =>
+          (strToTime(start) |@| strToTime(end)).map(_ -> _)
+        case _ =>
+          None
       }
     }
   }

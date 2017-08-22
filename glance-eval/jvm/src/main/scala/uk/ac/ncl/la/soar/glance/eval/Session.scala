@@ -22,7 +22,7 @@ import java.time.temporal.TemporalAmount
 import java.util.UUID
 
 import uk.ac.ncl.la.soar.StudentNumber
-import uk.ac.ncl.la.soar.glance.util.Time
+import uk.ac.ncl.la.soar.glance.util.{Time, Times}
 
 import scala.annotation.tailrec
 
@@ -38,11 +38,11 @@ sealed trait Session { self =>
 
 }
 
-case class ClusterSession(id: UUID,
-                          start: Instant,
+case class ClusterSession(start: Instant,
                           end: Instant,
                           machine: String,
-                          student: StudentNumber) extends Session {
+                          student: StudentNumber,
+                          id: UUID) extends Session {
 
   //TODO: Investigate better handling of the time situation
   override val duration = Duration.between(start, end).getSeconds.toInt
@@ -61,7 +61,7 @@ object Session {
                                chunk: TemporalAmount): SessionSummary = new SessionSummary {
 
 
-    import Time._
+    import Times._
 
     //Build list of time chunks
     @tailrec

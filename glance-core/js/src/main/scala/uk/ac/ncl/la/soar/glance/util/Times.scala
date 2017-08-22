@@ -24,7 +24,7 @@ import scala.scalajs.js
 
 
 /** Javascript implementation of simple Time type */
-object Time extends TimeCompanion {
+object Times extends TimeCompanion {
 
   /** Get the current time as a Double. This is the *whole* number of milliseconds since Epoch */
   def now = Point(js.Date.now())

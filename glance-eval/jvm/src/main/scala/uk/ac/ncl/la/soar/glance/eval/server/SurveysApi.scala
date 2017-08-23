@@ -26,7 +26,7 @@ import io.finch._
 import io.finch.circe._
 import monix.cats._
 import monix.eval.Task
-import uk.ac.ncl.la.soar.glance.eval.{ClusterSession, RecapSession, Session}
+import uk.ac.ncl.la.soar.glance.eval.{ClusterSession, RecapSession, Session, Survey}
 import uk.ac.ncl.la.soar.server.Implicits._
 
 /**
@@ -43,7 +43,7 @@ class SurveysApi(surveyRepository: SurveyDb, clusterRepository: ClusterSessionDb
   val read = get("surveys" :: path[UUID] ) { (id: UUID) =>
     println(s"received a request for this survey: $id")
     surveyRepository.find(id).toFuture.map {
-      case Some(s) => Ok(s)
+      case Some(s) => Ok(Survey.truncateQueryRecords(s))
       case None => notFound(id)
     }
   }

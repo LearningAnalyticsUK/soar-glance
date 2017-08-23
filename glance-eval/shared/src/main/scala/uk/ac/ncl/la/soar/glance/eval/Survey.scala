@@ -32,6 +32,9 @@ import io.circe.Decoder.Result
 import io.circe.syntax._
 import io.circe.generic.auto._
 
+import scala.collection.mutable
+import scala.collection.mutable.ListBuffer
+
 /**
   * Case class representing an unanswered survey which will be presented to members of staff to fill out.
   */
@@ -95,11 +98,28 @@ object Survey {
     val queries = sampleQueries(stRecords, numQueries*2, numQueries, queryModules.toSet, seed)
     //Each entry in queries represents the query set for one survey. Split them out and and make surveys
     queries.iterator.map { case (module, students) =>
-        val queryMap = students.map(_ -> module).toMap
         Survey(allModules, module, students, stRecords)
     }.toList
   }
 
+  /**
+    * Removing the score for queries (student -> module) and the score for any module which follows it
+    * (where alphanum ~ chronological). Note: Likely do this on front-end after persistence.
+    */
+  private[glance] def truncateQueryRecords(s: Survey): Survey = {
+
+    val qSet = s.queries.toSet
+    val dEntries = ListBuffer.empty[StudentRecords[SortedMap, ModuleCode, Double]]
+
+    for(e <- s.entries) {
+      if (qSet.contains(e.number))
+        dEntries += StudentRecords(e.number, e.record.until(s.moduleToRank))
+      else
+        dEntries += e
+    }
+
+    s.copy(entries = dEntries.result())
+  }
 
   /** Group module scores by studnet numbers and construct StudentRecords */
   private[glance] def groupByStudents(scores: List[ModuleScore]): List[StudentRecords[SortedMap, ModuleCode, Double]] = {
@@ -113,9 +133,17 @@ object Survey {
     fullRecords.filter(_.record.size > 7).toList
   }
 
+  /** Split a list of student records into records with a score for the given module (upto n records) and the remainder */
+  private def splitNWithModule(records: List[StudentRecords[SortedMap, ModuleCode, Double]],
+                               module: ModuleCode, n: Int) = {
+    var counter = 0
+    records.partition { r =>
+      if (r.record.contains(module) && counter < n) { counter += 1; true } else false
+    }
+  }
+
   /**
-    * Randomly sample the student records, selecting conf.elided students *per* module, and removing both the score for
-    * that module and the score for any module which follows it in the order (where alphanum ~ chronological).
+    * Randomly sample the student records, selecting conf.elided students *per* module
     */
   private def sampleQueries(studentRecords: List[StudentRecords[SortedMap, ModuleCode, Double]],
                       trainingData: Int,
@@ -123,24 +151,24 @@ object Survey {
                       queryModules: Set[ModuleCode],
                       seed: Int): Map[ModuleCode, List[StudentNumber]] = {
 
+    require(studentRecords.size > (numQueries * queryModules.size) + trainingData, "The number of students for which " +
+      "you have records must be greater than the formula (Number of queries * number of modules) + (Number of " +
+      s"training records). Instead, you provided #queries:$numQueries, #modules: ${queryModules.size}, " +
+      s"#training: $trainingData and students: ${studentRecords.size}.")
+
     //Take the list of students, shuffle then split off the training data from the head.
     //Create the rng with provided seed
     val rand = new Random(seed)
-    //Map student records to simple student numbers then shuffle with the rng
-    val shuffled = rand.shuffle(studentRecords.map(_.number))
-    //First take the "training data" which is a fixed n student records
-    val (trainingStudents, queryStudents) = shuffled.splitAt(trainingData) match {
-      case (_, Nil) => throw new IllegalArgumentException("The number of students for which you have records must be " +
-        "greater than the formula (Number of queries * number of modules) + (Number of training records). Instead, " +
-        s"you provided #queries:$numQueries, #modules: ${queryModules.size}, #training: $trainingData and " +
-        s"students: ${studentRecords.size}.")
-      case a => a
-    }
 
-    //Take students to be used for queries (queryStudents) and group them into chunks the size of queriesPerModule
-    val queryStudentChunks = queryStudents.grouped(numQueries)
-    //Assign each of these chunks of students to one of the module codes for which we need queries and return the map
-    queryModules.iterator.zip(queryStudentChunks).toMap
+    def findNWithModule(n: Int, records: List[StudentRecords[SortedMap, ModuleCode, Double]], module: ModuleCode) = {
+      records.iterator.filter(_.record.contains(module)).map(_.number).take(n).toList
+    }
+    //Split off a random first n student records which have a score for a given query module
+    val studentsPerQuery = for {
+      qM <- queryModules
+    } yield qM -> findNWithModule(numQueries, rand.shuffle(studentRecords), qM)
+    
+    studentsPerQuery.toMap
   }
 
   /** get the list of distinct modulecodes, sorted alphanumerically (therefore chronologically) */

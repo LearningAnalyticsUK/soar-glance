@@ -86,7 +86,7 @@ object Session {
     }
 
     private def instantKeysToTime[V](m: Map[(Instant, Instant), V]) = m.map { case ((s, e), v) =>
-      (s.toTime, e.toTime) -> v
+      (s.toTime, e.toTime) -> v.
     }
 
     private val perStudentDurationPerChunk: Map[StudentNumber, Map[(Time, Time), Double]] = {

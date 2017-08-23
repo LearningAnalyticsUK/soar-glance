@@ -63,6 +63,8 @@ class ClusterSessionDb private[glance] (xa: Transactor[Task]) extends DbReposito
 
   override def save(entry: ClusterSessionTable.Row) = saveQ(entry).transact(xa)
 
+  def saveBatch(entries: List[ClusterSessionTable.Row]) = saveBatchQ(entries).transact(xa)
+
   override def delete(id: UUID) = deleteQ(id).transact(xa)
 
 }
@@ -99,6 +101,20 @@ object ClusterSessionDbCompanion extends RepositoryCompanion[ClusterSessionTable
     addClusterQ.update.run.void
   }
 
+  def saveBatchQ(entries: List[ClusterSessionTable.Row]): ConnectionIO[Int] = {
+    val addClusterQ =
+      """
+        INSERT INTO cluster_session (id, start_time, end_time, machine_name, student_num)
+        SELECT ?, ?, ?, ?, ?
+        WHERE EXISTS (SELECT * FROM student WHERE num = ?)
+        ON CONFLICT (id) DO NOTHING;
+      """
+    val transformParams = { e: ClusterSessionTable.Row => (e.id, e.start, e.end, e.machine, e.student, e.student) }
+    Update[(UUID, Instant, Instant, String, StudentNumber, StudentNumber)](addClusterQ).updateMany(
+      entries.toStream.map(transformParams)
+    )
+  }
+
   override def deleteQ(id: UUID): ConnectionIO[Boolean] =
     sql"DELETE FROM cluster_session WHERE id = $id;".update.run.map(_ > 0)
 }
@@ -116,6 +132,8 @@ class RecapSessionDb private[glance] (xa: Transactor[Task]) extends DbRepository
   def findBetween(start: Instant, end: Instant) = findBetweenQ(start, end).transact(xa)
 
   override def save(entry: RecapSessionTable.Row) = saveQ(entry).transact(xa)
+
+  def saveBatch(entries: List[RecapSessionTable.Row]) = saveBatchQ(entries).transact(xa)
 
   override def delete(id: UUID) = deleteQ(id).transact(xa)
 }
@@ -150,6 +168,18 @@ object RecapSessionDbCompanion extends RepositoryCompanion[RecapSessionTable.Row
           ON CONFLICT (id) DO NOTHING;
       """
     addRecapQ.update.run.void
+  }
+
+  def saveBatchQ(entries: List[RecapSessionTable.Row]): ConnectionIO[Int] = {
+    val addRecapQ =
+      """
+        INSERT INTO recap_session (id, start_time, student_num, seconds_listened)
+        SELECT ?, ?, ?, ?
+        WHERE EXISTS (SELECT * FROM student WHERE num = ?)
+        ON CONFLICT (id) DO NOTHING;
+      """
+    val transformParams = { e: RecapSessionTable.Row => (e.id, e.start, e.student, e.duration, e.student) }
+    Update[(UUID, Instant, StudentNumber, Int, StudentNumber)](addRecapQ).updateMany(entries.toStream.map(transformParams))
   }
 
   override def deleteQ(id: UUID): ConnectionIO[Boolean] =

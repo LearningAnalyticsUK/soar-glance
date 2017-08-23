@@ -31,7 +31,7 @@ import uk.ac.ncl.la.soar.data.StudentRecords
 import uk.ac.ncl.la.soar.glance.eval.SessionSummary
 import uk.ac.ncl.la.soar.glance.web.client.data.CohortAttainmentSummary
 import uk.ac.ncl.la.soar.glance.web.client.style.Icon
-
+import uk.ac.ncl.la.soar.glance.util.Times
 import scala.collection.immutable.SortedMap
 import scala.collection.mutable.{ArrayBuffer, ListBuffer}
 import scala.scalajs.js
@@ -265,9 +265,9 @@ object StudentCharts {
       }
 
       //Derive student datapoints indexed on the meanDuration
-      val sIdxDuration = indexDurationsFor(student)
+      val sIdxDuration = indexDurationsFor(student).mapValues(_/3600)
       //Do the same for the compared student if it exists
-      val cSIdxDuration = comparedStudent.map(indexDurationsFor)
+      val cSIdxDuration = comparedStudent.map(s => indexDurationsFor(s).mapValues(_/3600))
 
       //Create the session dataset for the clicked student
       val datasets = ListBuffer(
@@ -280,15 +280,15 @@ object StudentCharts {
       }
 
       //List of blank strings required rather than just having no labels as otherwise Chart.js only renders first point
-      val labels = sIdxDuration.valuesIterator.map(_ => "").toSeq
+      val labels = sIdxDuration.valuesIterator.zipWithIndex.map({ case (_, i) => s"Week $i" }).toSeq
       val chartData = ChartData(labels, datasets)
 
       //Find min and max values for meanDurations (this is unsound for positive values ... consider)
-      val min = sessionSummary.meanDuration.valuesIterator.min
       val max = sessionSummary.meanDuration.valuesIterator.max
+      val scaleMax = (max/3600).ceil
 
       val p = Chart.Props(chartTitle, Chart.LineChart, chartData,
-        ChartOptions(displayLegend = true, axisStyle = IndexedAxis(min, max)))
+        ChartOptions(displayLegend = true, axisStyle = TimeAxis(-1 * scaleMax, scaleMax)))
 
       <.div(^.className := "chart-container", Chart.component(p))
     }

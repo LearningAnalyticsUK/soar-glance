@@ -46,7 +46,7 @@ object LoadSupportData extends Command[LoadSupportConfig, Unit] {
       r <- Task.zip2(parseSessions[ClusterSessionRow](conf.clusterPath), parseSessions[RecapSessionRow](conf.recapPath))
       cSDb <- Repository.ClusterSession
       rSDb <- Repository.RecapSession
-      _ <- Task.zip2(r._1.map(prepareClusterRow).traverse(cSDb.save), r._2.map(prepareRecapRow).traverse(rSDb.save))
+      _ <- Task.zip2(cSDb.saveBatch(r._1.map(prepareClusterRow)), rSDb.saveBatch(r._2.map(prepareRecapRow)))
     } yield ()
   }
 
@@ -68,7 +68,7 @@ object LoadSupportData extends Command[LoadSupportConfig, Unit] {
   private def prepTs(ts: String) = Try(Instant.parse(ts.dropRight(4).concat("Z"))).getOrElse(Instant.now)
 
   private def prepareClusterRow(r: ClusterSessionRow): ClusterSessionTable.Row =
-    ClusterSession(UUID.randomUUID, prepTs(r.start), prepTs(r.end), r.machine, r.student)
+    ClusterSession(prepTs(r.start), prepTs(r.end), r.machine, r.student, UUID.randomUUID)
 
   private def prepareRecapRow(r: RecapSessionRow): RecapSessionTable.Row =
     RecapSession(UUID.randomUUID, prepTs(r.start), r.student, r.duration.toInt)

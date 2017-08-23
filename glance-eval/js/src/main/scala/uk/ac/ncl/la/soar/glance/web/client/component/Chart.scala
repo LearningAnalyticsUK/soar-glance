@@ -20,6 +20,9 @@ package uk.ac.ncl.la.soar.glance.web.client.component
 import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react._
 import org.scalajs.dom.raw.HTMLCanvasElement
+import uk.ac.ncl.la.soar.glance.util.Time
+import uk.ac.ncl.la.soar.glance.util.Times._
+import moment._
 
 import scala.scalajs.js
 import scala.scalajs.js.JSConverters._
@@ -99,6 +102,7 @@ trait ChartLegendItem extends js.Object {
 sealed trait ChartyAxisStlye
 case object PercentagesAxis extends ChartyAxisStlye
 case class IndexedAxis(min: Double, max: Double) extends ChartyAxisStlye
+case class TimeAxis(min: Double, max: Double) extends ChartyAxisStlye
 
 object ChartLegendItem {
   def apply(text: String, fillStyle: String, strokeStyle: String): ChartLegendItem = {
@@ -147,14 +151,18 @@ object ChartOptions {
   private def axisConf(style: ChartyAxisStlye) = {
     val tickLit = style match {
       case PercentagesAxis =>
-        js.Dynamic.literal(beginAtZero = true, suggestedMax = 100)
+        js.Dynamic.literal(ticks = js.Dynamic.literal(beginAtZero = true, suggestedMax = 100))
       case IndexedAxis(min, max) =>
-        js.Dynamic.literal(suggestedMin = min, suggestedMax = max)
+        js.Dynamic.literal(ticks = js.Dynamic.literal(suggestedMin = min, suggestedMax = max))
+      case TimeAxis(min, max) =>
+        js.Dynamic.literal(ticks = js.Dynamic.literal(suggestedMin = min, max = max, callback = labelHr))
     }
-    js.Dynamic.literal( yAxes = js.Array( js.Dynamic.literal( ticks = tickLit ) ) )
+    js.Dynamic.literal(yAxes = js.Array( tickLit ))
   }
 
-  private val labelPct: (String, Int, js.Array[String]) => String = { (value, _, _) => s"$value%" }
+  private val labelHr: js.Function3[Double, Int, js.Array[String], String] = {
+    (value: Double, _: Int, _: js.Array[String]) => s"${value.floor} hours"
+  }
 }
 
 @js.native

@@ -3,10 +3,11 @@
 
 * [x] Fix java.time types for JS compilation. Going to need to special case both sides with some conversions I think.
 * [x] Create endpoint aggregating a SessionsRecord object for a survey and sending it to the front end
-* [ ] Modify survey generator such that it only picks candidates who have actually got a score for the module in question.
+* [x] Modify survey generator such that it only picks candidates who have actually got a score for the module in question.
 * [x] Remove datapoint for rankedModule from student records
 * [ ] Label session usage axis correctly, using Moment js if necessary
 * [ ] Check that rank changes are modifying state correctly and being stored
+* [ ] Fix compared student data for wrong columns in attainment bars
 
 ### Modules 
 
@@ -19,7 +20,7 @@
 
 ### Cleanup 
 
-* [ ] Investigate missing recap datapoint
+* [x] Investigate missing recap datapoint
 * [ ] Remove notes field from submission form
 * [ ] Highlight "compared to" student in ranking table
 * [ ] Change drag handle on rank table to up/down arrows

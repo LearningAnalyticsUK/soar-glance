@@ -91,6 +91,7 @@ object Survey {
   def generate(records: List[ModuleScore], numQueries: Int, queryModules: Seq[ModuleCode], seed: Int): List[Survey] = {
     //Group the records by student and turn them into StudentRecords objects
     val stRecords = groupByStudents(records)
+    println(s"Number of scores: ${records.size} Number of records: ${stRecords.size}")
     //Build the set of modules across all entries.
     val allModules = records.iterator.map(_.module).toSet
     //Pass the StudentRecords objects to generate a set of queries

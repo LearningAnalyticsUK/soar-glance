@@ -60,7 +60,9 @@ object GenerateSurveys extends Command[GenerateConfig, Unit] {
     //Read in ModuleScore CSV
     val lines = Source.fromFile(recordsPath).getLines()
     //In order to groupBy the current naive implementation requires sufficient memory to hold all ModuleScores
-    ModuleScore.parse(lines, ',').toList
+    val lineList = lines.toList
+    println(s"There are ${lineList.size} lines in $recordsPath")
+    ModuleScore.parse(lineList.iterator, ',').toList
   }
 
 

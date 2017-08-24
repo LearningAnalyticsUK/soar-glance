@@ -1,6 +1,10 @@
 ## Glance evaluation setup
 
-1. Create Postgres database with correct details
+1. Create Postgres database with correct details using the following two commands:
+    ```
+    psql -c 'create user postgres createdb'
+    psql -c 'create database glance_eval' -U postgres
+    ```
 
 2. Download and extract datafiles from provided NCL Dropoff link.
 
@@ -40,8 +44,8 @@ postgres database. This loads module titles, descriptions, keywords, and start d
     ```
     glance-evalJVM/reStart
     ``` 
-    Once you have done this, the api is available [http://localhost:8080](here), whilst the front-end is available  
-    [http://localhost:12345/glance-eval/js/target/scala-2.11/classes/index-dev.html](here).
+    Once you have done this, the api is available [here](http://localhost:8080), whilst the front-end is available  
+    [here](http://localhost:12345/glance-eval/js/target/scala-2.11/classes/index-dev.html).
 
 
 ### Updating (no data changes)

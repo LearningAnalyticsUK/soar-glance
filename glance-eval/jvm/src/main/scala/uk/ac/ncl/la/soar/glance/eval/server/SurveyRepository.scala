@@ -317,7 +317,7 @@ object SurveyResponseDb extends RepositoryCompanion[SurveyResponse, SurveyRespon
       ranks += ((e, entry.id, idx))
     }
 
-    val addRanksQ = Update[(String, UUID, Int)](addRanksSQL).updateMany(ranks)
+    val addRanksQ = Update[(String, UUID, Int)](addRanksSQL).updateMany(ranks.result())
 
     //Actually construct the combined query program
     for {

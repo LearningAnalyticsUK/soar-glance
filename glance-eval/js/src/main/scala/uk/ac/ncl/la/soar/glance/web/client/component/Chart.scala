@@ -22,7 +22,6 @@ import japgolly.scalajs.react._
 import org.scalajs.dom.raw.HTMLCanvasElement
 import uk.ac.ncl.la.soar.glance.util.Time
 import uk.ac.ncl.la.soar.glance.util.Times._
-import moment._
 
 import scala.scalajs.js
 import scala.scalajs.js.JSConverters._

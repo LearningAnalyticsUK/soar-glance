@@ -32,7 +32,6 @@ sealed trait CommandConfig
   * TODO: Remove common Option[String]
   */
 final case class GenerateConfig(recordsPath: String = "",
-                                outputPath: String = "",
                                 elided: Int = 10,
                                 modules: Seq[String] = Seq.empty[String],
                                 seed: Int = 1921437) extends CommandConfig
@@ -82,10 +81,6 @@ object CommandConfig {
       .action((x, c) => c.copy(recordsPath = x))
       .text("input is a required .csv file containing student/module scores. " +
         "Format \"StudentNumber, Module Code, Percentage\"")
-
-    opt[String]('o', "output").required().valueName("<directory>")
-      .action((x, c) => c.copy(outputPath = x))
-      .text("output is a required parameter specifying the directory to write the surveys to.")
 
     opt[Int]('e', "elided").valueName("e.g. 20")
       .action((x, c) => c.copy(elided = x))

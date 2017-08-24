@@ -333,7 +333,6 @@ lazy val glanceCore = soarCrossProject("glance-core", CrossType.Full)
     moduleName := "soar-glance-core"
   )
   .jsSettings(sjsCrossVersionPatch:_*)
-  .jsSettings(libraryDependencies += "ru.pavkin" %%% "scala-js-momentjs" % "0.9.0")
 
 lazy val glanceCoreJS = glanceCore.js
 lazy val glanceCoreJVM = glanceCore.jvm
@@ -407,8 +406,7 @@ lazy val glanceEvalJS = glanceEval.js
       "org.webjars" % "bootstrap" % bootstrapVersion / "bootstrap.js" minified "bootstrap.min.js" dependsOn "jquery.js",
       "org.webjars" % "datatables" % datatablesVersion / "jquery.dataTables.js" minified "jquery.dataTables.min.js" dependsOn "jquery.js",
       "org.webjars" % "datatables" % datatablesVersion / "dataTables.bootstrap.js" minified "dataTables.bootstrap.min.js" dependsOn "jquery.js",
-      "org.webjars" % "momentjs" % "2.18.1" / "moment.js" minified "moment.min.js",
-      "org.webjars" % "chartjs" % "2.1.3" / "Chart.js" minified "Chart.min.js" dependsOn "moment.js",
+      "org.webjars" % "chartjs" % "2.1.3" / "Chart.js" minified "Chart.min.js",
       ProvidedJS / "react-sortable-hoc.js" minified "react-sortable-hoc.min.js" dependsOn("react-with-addons.js", "react-dom.js")
     ),
     scalaJSUseMainModuleInitializer := true)

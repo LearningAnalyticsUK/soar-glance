@@ -16,7 +16,7 @@
 * [ ] Add ranked module description to banner at top of survey page
 * [ ] Add bootstrap pop overs for module titles to table headers
 * [ ] Create module api endpoint to fetch module table as json
-* [ ] Add module info to survey model
+* [ ] Add module info to diode survey model
 
 ### Cleanup 
 

@@ -219,7 +219,7 @@ class SurveyResponseDb private[glance] (xa: Transactor[Task]) extends DbReposito
 object SurveyResponseDb extends RepositoryCompanion[SurveyResponse, SurveyResponseDb] {
 
   /** Type aliases for Db rows */
-  type ResponseRow = (UUID, String, UUID, Double, Double, String)
+  type ResponseRow = (UUID, String, UUID, Double, Double)
   type RankRow = (StudentNumber, Int)
 
   implicit val uuidMeta: Meta[UUID] = Meta[String].nxmap(UUID.fromString, _.toString)
@@ -250,20 +250,20 @@ object SurveyResponseDb extends RepositoryCompanion[SurveyResponse, SurveyRespon
   private def responsesFromRows(rows: List[(ResponseRow, Option[RankRow])]): ConnectionIO[List[CompleteResponse]] = {
 
     val groupedRows = rows.groupBy(_._1).mapValues(_.flatMap(_._2))
-    val withRanks = groupedRows.mapValues(_.sortBy(_._2).map(_._1).toVector)
+    val withRanks = groupedRows.mapValues(_.sortBy(_._2).map(_._1))
 
     withRanks.toList.traverse({ case (row, ranks) => responseFromRow(row, ranks) }).map(_.flatten)
   }
 
-  private def responseFromRow(row: ResponseRow, ranks: Vector[StudentNumber]): ConnectionIO[Option[CompleteResponse]] = {
-    val (id, respondent, surveyId, start, finish, notes) = row
+  private def responseFromRow(row: ResponseRow, ranks: List[StudentNumber]): ConnectionIO[Option[CompleteResponse]] = {
+    val (id, respondent, surveyId, start, finish) = row
 
     //Get survey
     //TODO: get the survey db side with a join rather than programme side like this.
     val surveyOpt = OptionT(SurveyDb.findQ(surveyId))
     //Build the CompleteResponse
     surveyOpt.map { survey =>
-      CompleteResponse(survey, ranks, respondent, start, finish, id, notes)
+      CompleteResponse(survey, ranks, respondent, start, finish, id)
     }.value
   }
 
@@ -301,8 +301,8 @@ object SurveyResponseDb extends RepositoryCompanion[SurveyResponse, SurveyRespon
     //Insert entry in respondents table
     val addResponseQ =
       sql"""
-         INSERT INTO survey_response (id, respondent_email, survey_id, time_started, time_finished, notes)
-         VALUES (${entry.id}, ${entry.respondent}, ${entry.survey.id}, $startTs, CURRENT_TIMESTAMP, ${entry.notes});
+         INSERT INTO survey_response (id, respondent_email, survey_id, time_started, time_finished)
+         VALUES (${entry.id}, ${entry.respondent}, ${entry.survey.id}, $startTs, CURRENT_TIMESTAMP);
       """.update.run
 
     //Then batch insert entries in student_ranks table
@@ -313,11 +313,11 @@ object SurveyResponseDb extends RepositoryCompanion[SurveyResponse, SurveyRespon
       """
 
     val ranks = ListBuffer.empty[(String, UUID, Int)]
-    for ( i <- entry.ranks.indices ) {
-      ranks += ((entry.ranks(i), entry.id, i))
+    for ( (e, idx) <- entry.ranks.zipWithIndex ) {
+      ranks += ((e, entry.id, idx))
     }
 
-    val addRanksQ = Update[(String, UUID, Int)](addRanksSQL).updateMany(ranks.result())
+    val addRanksQ = Update[(String, UUID, Int)](addRanksSQL).updateMany(ranks)
 
     //Actually construct the combined query program
     for {

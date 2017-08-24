@@ -40,21 +40,19 @@ import io.circe.generic.semiauto._
   */
 sealed trait SurveyResponse {
   def survey: Survey
-  def ranks: IndexedSeq[StudentNumber]
+  def ranks: List[StudentNumber]
   def respondent: String
   def start: Double
   def id: UUID
-  def notes: String
 }
 
 object SurveyResponse {
 
   def apply(survey: Survey,
-            ranks: IndexedSeq[StudentNumber],
+            ranks: List[StudentNumber],
             respondent: String,
             start: Double,
-            id: UUID,
-            notes: String): SurveyResponse = IncompleteResponse(survey, ranks, respondent, start, id, notes)
+            id: UUID): SurveyResponse = IncompleteResponse(survey, ranks, respondent, start, id)
 
   /** Typeclass instances for SurveResponse */
   implicit val encodeSurveyResponse: Encoder[SurveyResponse] = new Encoder[SurveyResponse] {
@@ -64,7 +62,6 @@ object SurveyResponse {
       "ranks" -> a.ranks.asJson,
       "respondent" -> a.respondent.asJson,
       "start" -> a.start.asJson,
-      "notes" -> a.notes.asJson
     )
   }
 
@@ -84,28 +81,25 @@ object SurveyResponse {
     override def apply(c: HCursor): Decoder.Result[UUID => SurveyResponse] = {
       for {
         survey <- c.downField("survey").as[Survey]
-        ranks <- c.downField("ranks").as[Vector[StudentNumber]]
+        ranks <- c.downField("ranks").as[List[StudentNumber]]
         respondent <- c.downField("respondent").as[String]
         start <- c.downField("start").as[Double]
-        notes <- c.downField("notes").as[String]
       } yield { id: UUID =>
-        IncompleteResponse(survey, ranks, respondent, start, id, notes)
+        IncompleteResponse(survey, ranks, respondent, start, id)
       }
     }
   }
 }
 
 case class IncompleteResponse(survey: Survey,
-                              ranks: IndexedSeq[StudentNumber],
+                              ranks: List[StudentNumber],
                               respondent: String,
                               start: Double,
-                              id: UUID,
-                              notes: String) extends SurveyResponse
+                              id: UUID) extends SurveyResponse
 
 case class CompleteResponse(survey: Survey,
-                            ranks: IndexedSeq[StudentNumber],
+                            ranks: List[StudentNumber],
                             respondent: String,
                             start: Double,
                             finish: Double,
-                            id: UUID,
-                            notes: String) extends SurveyResponse
+                            id: UUID) extends SurveyResponse

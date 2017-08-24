@@ -28,7 +28,7 @@ import japgolly.scalajs.react.vdom.html_<^._
 import uk.ac.ncl.la.soar.{ModuleCode, StudentNumber}
 import uk.ac.ncl.la.soar.data.StudentRecords
 import uk.ac.ncl.la.soar.glance.eval.Survey
-import uk.ac.ncl.la.soar.glance.web.client.{Main, SubmitSurveyResponse, SurveyModel}
+import uk.ac.ncl.la.soar.glance.web.client.{ChangeRanks, Main, SubmitSurveyResponse, SurveyModel}
 import uk.ac.ncl.la.soar.glance.web.client.component._
 import uk.ac.ncl.la.soar.glance.web.client.data.CohortAttainmentSummary
 import uk.ac.ncl.la.soar.glance.web.client.style.Icon
@@ -122,9 +122,10 @@ object SurveyView {
       })
       .build
 
-    private val rankingTable = ScalaComponent.builder[Pot[SurveyModel]]("RankingTable")
+    private val rankingTable = ScalaComponent.builder[ModelProxy[Pot[SurveyModel]]]("RankingTable")
       .render($ => {
-        val model = $.props
+        val proxy = $.props
+        val model = proxy()
 
         <.div(
           ^.id := "ranking",
@@ -144,7 +145,8 @@ object SurveyView {
                   queryStudents(sm.survey),
                   headings(sm.survey),
                   renderCell(" "),
-                  handleStudentClick
+                  handleStudentClick,
+                  ranks => proxy.dispatchCB(ChangeRanks(ranks))
                 )
               )
             )
@@ -190,11 +192,13 @@ object SurveyView {
             <.h2("Submit Survey")
           ),
           model.render { sm =>
+            val smConnector = p.proxy.connect(_.get)
             SurveyResponseForm.component(
               SurveyResponseForm.Props(
-                sm.survey,
-                response => {
-                  p.proxy.dispatchCB(SubmitSurveyResponse(response)) >> p.ctrl.set(Main.SurveyCompleteLoc)
+                p.proxy,
+                response => response match {
+                  case Some(r) => p.proxy.dispatchCB(SubmitSurveyResponse(r)) >> p.ctrl.set(Main.SurveyCompleteLoc)
+                  case None => Callback.empty
                 }
               )
             )
@@ -216,7 +220,7 @@ object SurveyView {
         },
         <.div(
           ^.id := "training",
-          rankingTable(model)
+          rankingTable(p.proxy)
         ),
         detailedView,
         submissionForm

@@ -35,7 +35,8 @@ object StudentsSortableTable {
                    queryRecords: List[Record],
                    headings: List[String],
                    renderCell: (Record, String) => String,
-                   selectStudent: Record => Callback) {
+                   selectStudent: Record => Callback,
+                   changeRanks: List[StudentNumber] => Callback) {
 
     val rankModuleIdx = headings.indexWhere(_ == rankModule)
   }
@@ -103,10 +104,15 @@ object StudentsSortableTable {
     def render(props: Props, items: List[Record]) = {
       sortableTable(props)(
         SortableContainer.Props(
-          onSortEnd = p =>
-            bs.modState(
-              l => p.updatedList(l)
-            ),
+          onSortEnd = { p =>
+            //TODO: map.dRanks to studentNumber every time is very wasteful, fix it!
+            for {
+              ranks <- bs.state
+              dRanks = p.updatedList(ranks)
+              _ <- bs.setState(dRanks)
+              _ <- props.changeRanks(dRanks.map(_.number))
+            } yield ()
+          },
           useDragHandle = true,
           helperClass = "react-sortable-handler"
         )

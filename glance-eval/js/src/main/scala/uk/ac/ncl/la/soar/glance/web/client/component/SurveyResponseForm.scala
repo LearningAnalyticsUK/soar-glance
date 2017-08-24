@@ -21,7 +21,7 @@ import java.time.Instant
 import java.util.UUID
 
 import diode.data.Pot
-import diode.react.ModelProxy
+import diode.react.{ModelProxy, ReactConnectProxy}
 import japgolly.scalajs.react._
 import japgolly.scalajs.react.vdom.html_<^._
 import uk.ac.ncl.la.soar.StudentNumber
@@ -37,22 +37,18 @@ import scala.scalajs.js.Date
   */
 object SurveyResponseForm {
 
-  case class Props(survey: Survey, submitHandler: State => Callback)
+  case class Props(proxy: ModelProxy[Pot[SurveyModel]], submitHandler: Option[IncompleteResponse] => Callback)
 
-  type State = IncompleteResponse
+  case class State(respondent: String)
 
   sealed trait FormField
   case object EmailField extends FormField
-  case object NotesField extends FormField
 
   class Backend(bs: BackendScope[Props, State]) {
 
-    private def formValueChange(field: FormField)(e: ReactEventFromInput) = {
+    private def formValueChange(e: ReactEventFromInput) = {
       val text = e.target.value
-      field match {
-        case EmailField => bs.modState(s => s.copy(respondent = text))
-        case NotesField => bs.modState(s => s.copy(notes = text))
-      }
+      bs.modState(s => s.copy(respondent = text))
     }
 
     private val emailRegex = """^[a-zA-Z0-9\.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$""".r
@@ -66,6 +62,12 @@ object SurveyResponseForm {
         false
     }
 
+    private def buildResponseFromProps(p: Props, s: State) = {
+      p.proxy().toOption.map { sm =>
+        IncompleteResponse(sm.survey, sm.ranks, s.respondent, sm.startTime, UUID.randomUUID)
+      }
+    }
+
     def render(p: Props, s: State): VdomElement = {
       <.form(
         <.div(
@@ -76,34 +78,22 @@ object SurveyResponseForm {
             ^.className := "form-control",
             ^.id := "emailInput",
             ^.placeholder := "Email",
-            ^.onChange ==> formValueChange(EmailField)
+            ^.onChange ==> formValueChange
           ),
-        ),
-        <.div(
-          ^.className := "form-group",
-          <.label(^.`for` := "notesInput", "Please enter your notes about this experiment..."),
-          <.textarea(
-            ^.className := "form-control",
-            ^.rows := 3,
-            ^.onChange ==> formValueChange(NotesField)
-          )
         ),
         <.button(
           ^.`type` := "button",
           ^.className := "btn btn-primary pull-right",
           "Submit",
           (^.disabled := true).when(!validEmail(s.respondent)),
-          ^.onClick --> p.submitHandler(s)
+          ^.onClick --> p.submitHandler(buildResponseFromProps(p, s))
         )
       )
     }
   }
 
   val component = ScalaComponent.builder[Props]("SurveyResponseForm")
-    .initialStateFromProps({ p =>
-      val s =  p.survey
-      IncompleteResponse(s, s.queries.toVector, "", Date.now, UUID.randomUUID, "")
-    })
+    .initialStateFromProps(p => State(""))
     .renderBackend[Backend]
     .build
 

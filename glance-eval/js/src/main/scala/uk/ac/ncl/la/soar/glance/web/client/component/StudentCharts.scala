@@ -285,7 +285,7 @@ object StudentCharts {
 
       //Find min and max values for meanDurations (this is unsound for positive values ... consider)
       val max = sessionSummary.meanDuration.valuesIterator.max
-      val scaleMax = (max/3600).ceil
+      val scaleMax = ((max/3600) * 2.5).ceil
 
       val p = Chart.Props(chartTitle, Chart.LineChart, chartData,
         ChartOptions(displayLegend = true, axisStyle = TimeAxis(-1 * scaleMax, scaleMax)))

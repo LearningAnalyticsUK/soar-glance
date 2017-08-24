@@ -1,0 +1,1 @@
+ALTER TABLE survey_response DROP COLUMN notes;

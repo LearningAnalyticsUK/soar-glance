@@ -155,7 +155,7 @@ object ChartOptions {
       case IndexedAxis(min, max) =>
         js.Dynamic.literal(ticks = js.Dynamic.literal(suggestedMin = min, suggestedMax = max))
       case TimeAxis(min, max) =>
-        js.Dynamic.literal(ticks = js.Dynamic.literal(suggestedMin = min, max = max, callback = labelHr))
+        js.Dynamic.literal(ticks = js.Dynamic.literal(suggestedMin = min, max = max, callback = labelHr, autoSkip = true))
     }
     js.Dynamic.literal(yAxes = js.Array( tickLit ))
   }

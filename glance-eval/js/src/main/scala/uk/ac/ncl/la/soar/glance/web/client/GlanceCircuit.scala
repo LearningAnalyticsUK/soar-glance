@@ -32,6 +32,10 @@ import uk.ac.ncl.la.soar.{ModuleCode, StudentNumber}
 import uk.ac.ncl.la.soar.glance.eval.{SessionSummary, Survey, SurveyResponse}
 import uk.ac.ncl.la.soar.glance.web.client.data.CohortAttainmentSummary
 import japgolly.scalajs.react.extra.router.{RouterCtl, Action => RouterAction}
+import uk.ac.ncl.la.soar.data.StudentRecords
+
+import scala.scalajs.js.Date
+import scala.collection.immutable.SortedMap
 
 /**
   * Hierarchical definition of Application model, composing various other models.
@@ -48,7 +52,9 @@ final case class GlanceModel(survey: Pot[SurveyModel])
 case class SurveyModel(survey: Survey,
                        attainmentSummary: CohortAttainmentSummary,
                        clusterSummary: SessionSummary,
-                       recapSummary: SessionSummary)
+                       recapSummary: SessionSummary,
+                       ranks: List[StudentNumber],
+                       startTime: Double)
 
 /**
   * ADT representing the set of actions which may be taken to update a `SurveyModel`. These actions encapsulate no
@@ -60,6 +66,7 @@ final case class InitSurvey(info: Either[Error, (Survey, SessionSummary, Session
 final case class SelectStudent(id: StudentNumber) extends SurveyAction
 final case class SubmitSurveyResponse(response: SurveyResponse) extends SurveyAction
 final case class RefreshSurvey(id: UUID) extends SurveyAction
+final case class ChangeRanks(ranks: List[StudentNumber]) extends SurveyAction
 case object RefreshSurveys extends SurveyAction
 case object DoNothing extends SurveyAction
 
@@ -76,6 +83,7 @@ class SurveyHandler[M](modelRW: ModelRW[M, Pot[SurveyModel]]) extends ActionHand
     info.map(i => InitSurvey(i))
   }
 
+
   override def handle = {
     case RefreshSurveys =>
       effectOnly(Effect(ApiClient.loadSurveyIds.map(s => InitSurveys(s))))
@@ -90,11 +98,14 @@ class SurveyHandler[M](modelRW: ModelRW[M, Pot[SurveyModel]]) extends ActionHand
       decodedInfo.fold(
         err => updated(Failed(err)),
         { case (srv, cS, rS) =>
-          updated(Ready(SurveyModel(srv, CohortAttainmentSummary(srv.entries), cS, rS)))
+          updated(Ready(SurveyModel(srv, CohortAttainmentSummary(srv.entries), cS, rS, srv.queries, Date.now)))
         }
       )
     case SubmitSurveyResponse(response) =>
       effectOnly(Effect(ApiClient.postResponse(response).map(_ => DoNothing)))
+    case ChangeRanks(ranks) =>
+      println(s"We changed the ranks, top is now ${ranks.head}")
+      updated(value.map(_.copy(ranks = ranks)))
     case DoNothing => noChange
   }
 }

@@ -19,7 +19,7 @@
  we speak, but in the mean time run the `transform` job (which prepares sql12 data for insertion into the glance 
  database) using the following command in sbt: 
     ```
-    glance-eval-cli/run glance-eval-cli/run transform -c /Location/Of/CSClusterSessions.csv -r /Location/Of/RecapSessions.csv -m /Location/Of/NessMarks.csv -o /Directory/To/Write/Transformed/Csvs -p CSC -y 2015 -s 2
+    glance-eval-cli/run transform -c /Location/Of/CSClusterSessions.csv -r /Location/Of/RecapSessions.csv -m /Location/Of/NessMarks.csv -o /Directory/To/Write/Transformed/Csvs -p CSC -y 2015 -s 2
     ``` 
     
 6. Run the `generate` job (which creates the surveys in the glance database) using the following command in sbt:

@@ -32,7 +32,7 @@ import uk.ac.ncl.la.soar.{ModuleCode, StudentNumber}
 import uk.ac.ncl.la.soar.glance.eval.{SessionSummary, Survey, SurveyResponse}
 import uk.ac.ncl.la.soar.glance.web.client.data.CohortAttainmentSummary
 import japgolly.scalajs.react.extra.router.{RouterCtl, Action => RouterAction}
-import uk.ac.ncl.la.soar.data.StudentRecords
+import uk.ac.ncl.la.soar.data.{Module, StudentRecords}
 
 import scala.scalajs.js.Date
 import scala.collection.immutable.SortedMap
@@ -54,7 +54,12 @@ case class SurveyModel(survey: Survey,
                        clusterSummary: SessionSummary,
                        recapSummary: SessionSummary,
                        ranks: List[StudentNumber],
-                       startTime: Double)
+                       startTime: Double,
+                       modules: Map[ModuleCode, Module])
+
+object SurveyModel {
+  type Info = (Survey, SessionSummary, SessionSummary, Map[ModuleCode, Module])
+}
 
 /**
   * ADT representing the set of actions which may be taken to update a `SurveyModel`. These actions encapsulate no
@@ -62,7 +67,7 @@ case class SurveyModel(survey: Survey,
   */
 sealed trait SurveyAction extends Action
 final case class InitSurveys(surveyIds: Either[Error, List[UUID]]) extends SurveyAction
-final case class InitSurvey(info: Either[Error, (Survey, SessionSummary, SessionSummary)]) extends SurveyAction
+final case class InitSurvey(info: Either[Error, SurveyModel.Info]) extends SurveyAction
 final case class SelectStudent(id: StudentNumber) extends SurveyAction
 final case class SubmitSurveyResponse(response: SurveyResponse) extends SurveyAction
 final case class RefreshSurvey(id: UUID) extends SurveyAction
@@ -78,9 +83,12 @@ class SurveyHandler[M](modelRW: ModelRW[M, Pot[SurveyModel]]) extends ActionHand
   private def loadSurveyInfo(id: UUID) = Effect {
     val info = (ApiClient.loadSurveyT(id),
       ApiClient.loadClustersT(id),
-      ApiClient.loadRecapsT(id)).map3((_, _, _)).value
+      ApiClient.loadRecapsT(id),
+      ApiClient.loadModulesT).map4((_, _, _, _))
 
-    info.map(i => InitSurvey(i))
+    val preppedInfo = info.map { case (s, c, r, ms) => (s, c, r, ms.iterator.map(m => m.code -> m).toMap) }
+
+    preppedInfo.value.map(i => InitSurvey(i))
   }
 
 
@@ -97,14 +105,13 @@ class SurveyHandler[M](modelRW: ModelRW[M, Pot[SurveyModel]]) extends ActionHand
     case InitSurvey(decodedInfo) =>
       decodedInfo.fold(
         err => updated(Failed(err)),
-        { case (srv, cS, rS) =>
-          updated(Ready(SurveyModel(srv, CohortAttainmentSummary(srv.entries), cS, rS, srv.queries, Date.now)))
+        { case (srv, cS, rS, ms) =>
+          updated(Ready(SurveyModel(srv, CohortAttainmentSummary(srv.entries), cS, rS, srv.queries, Date.now, ms)))
         }
       )
     case SubmitSurveyResponse(response) =>
       effectOnly(Effect(ApiClient.postResponse(response).map(_ => DoNothing)))
     case ChangeRanks(ranks) =>
-      println(s"We changed the ranks, top is now ${ranks.head}")
       updated(value.map(_.copy(ranks = ranks)))
     case DoNothing => noChange
   }

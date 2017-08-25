@@ -26,7 +26,7 @@ import japgolly.scalajs.react._
 import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.html_<^._
 import uk.ac.ncl.la.soar.{ModuleCode, StudentNumber}
-import uk.ac.ncl.la.soar.data.StudentRecords
+import uk.ac.ncl.la.soar.data.{Module, StudentRecords}
 import uk.ac.ncl.la.soar.glance.eval.Survey
 import uk.ac.ncl.la.soar.glance.web.client.{ChangeRanks, Main, SubmitSurveyResponse, SurveyModel}
 import uk.ac.ncl.la.soar.glance.web.client.component._
@@ -74,10 +74,12 @@ object SurveyView {
     val indexCol = "Student Number"
 
     /** Construct the presentation of the modules as a sorted list to fill some table headings */
-    private def modules(survey: Survey) = survey.modules.toList.sorted
+    private def modules(survey: Survey, moduleInfo: Map[ModuleCode, Module]) =
+      survey.modules.map(k => k -> moduleInfo.get(k).flatMap(_.title)).toList.sorted
 
-    /** Construct the full presentation of table headings, including modules */
-    private def headings(survey: Survey) = indexCol :: modules(survey)
+    /** Construct the full presentation of table headings, including modules and tool tips */
+    private def headings(survey: Survey, moduleInfo: Map[ModuleCode, Module]) =
+      (indexCol, none[String]) :: modules(survey, moduleInfo)
 
     /** Construct the presentation of the students to fill table rows */
     private def students(survey: Survey) = survey.entries
@@ -111,7 +113,7 @@ object SurveyView {
                 StudentsDataTable.component(
                   StudentsDataTable.Props(
                     students(sm.survey),
-                    headings(sm.survey),
+                    headings(sm.survey, sm.modules),
                     renderCell(" "),
                     handleStudentClick
                   )
@@ -141,9 +143,9 @@ object SurveyView {
               ^.className := "table-responsive",
               StudentsSortableTable.component(
                 StudentsSortableTable.Props(
-                  rankModule, //TODO: Fix the hack by restructuring Survey
+                  rankModule,
                   queryStudents(sm.survey),
-                  headings(sm.survey),
+                  headings(sm.survey, sm.modules),
                   renderCell(" "),
                   handleStudentClick,
                   ranks => proxy.dispatchCB(ChangeRanks(ranks))
@@ -210,12 +212,16 @@ object SurveyView {
         model.render { sm =>
           val rankModule = sm.survey.moduleToRank
           <.div(
-            ^.className := "alert alert-success",
+            ^.className := "alert alert-success welcome-banner",
             ^.role := "alert",
-            <.strong("Welcome"),
-            " Please rank students below by how you believe they will perform in the module ",
-            <.strong(rankModule),
-            ". Higher is better."
+            <.p(
+              <.strong("Welcome"),
+              " Please rank students below by how you believe they will perform in the module ",
+              <.strong(s"$rankModule: ${sm.modules.get(rankModule).flatMap(m => m.title).getOrElse("")}"),
+              ". Higher is better."
+            ),
+            //Why is the type annotation necessary below?
+            <.p(<.strong("Module aims: "), sm.modules.get(rankModule).flatMap(m => m.description).getOrElse(""): String)
           )
         },
         <.div(

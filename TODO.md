@@ -13,10 +13,12 @@
 
 * [x] Add filters, title and description fields to module table
 * [x] Hand populate module descriptions, titles and filters
-* [ ] Add ranked module description to banner at top of survey page
-* [ ] Add bootstrap pop overs for module titles to table headers
-* [ ] Create module api endpoint to fetch module table as json
-* [ ] Add module info to diode survey model
+* [x] Add ranked module description to banner at top of survey page
+* [x] Add bootstrap pop overs for module titles to table headers
+* [x] Create module api endpoint to fetch module table as json
+* [x] Add module info to diode survey model
+* [ ] Hand populate keywords fields in module table
+* [ ] Set up filters to use a groupBy over modules by keyword
 
 ### Cleanup 
 

@@ -33,7 +33,7 @@ object StudentsSortableTable {
 
   case class Props(rankModule: ModuleCode,
                    queryRecords: List[Record],
-                   headings: List[String],
+                   headings: List[(String, Option[String])],
                    renderCell: (Record, String) => String,
                    selectStudent: Record => Callback,
                    changeRanks: List[StudentNumber] => Callback) {
@@ -53,17 +53,21 @@ object StudentsSortableTable {
             <.tr(
               wrappedP.headings match {
                 case hd :: tl =>
-                  (<.th(" ") :: <.th(hd) :: tl.map { h =>
+                  (<.th(" ") :: <.th(hd._1) :: tl.map { h =>
                     <.th(
-                      if(h == wrappedP.rankModule) {
+                      if(h._1 == wrappedP.rankModule) {
                         ^.className := "warning long-heading"
                       } else {
                         ^.className := "long-heading"
                       },
-                      <.span(h))
+                      <.span(
+                        h._2.whenDefined(t => ^.title := t),
+                        h._1
+                      )
+                    )
                   }).toTagMod
-                case a =>
-                  a.toTagMod
+                case Nil =>
+                  EmptyVdom
               }
             )
           ),
@@ -79,7 +83,7 @@ object StudentsSortableTable {
     private def trView(wrappedP: Props) = ScalaComponent.builder[Record]("TrView")
       .render(bs => {
         //Get the row columns for the given record
-        val columns = wrappedP.headings.map(h => wrappedP.renderCell(bs.props, h))
+        val columns = wrappedP.headings.map { case (title, tip) => wrappedP.renderCell(bs.props, title) }
 
         val renderedColumns = columns.iterator.zipWithIndex.map({ case (c, idx) =>
           <.td(

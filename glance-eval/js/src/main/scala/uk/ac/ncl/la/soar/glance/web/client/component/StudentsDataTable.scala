@@ -39,7 +39,7 @@ object StudentsDataTable {
 
   case class Props(
     records: Seq[StudentRecords[SortedMap, ModuleCode, Double]],
-    headings: Seq[String],
+    headings: Seq[(String, Option[String])],
     renderCell: (StudentRecords[SortedMap, ModuleCode, Double], String) => String,
     selectStudent: StudentRecords[SortedMap, ModuleCode, Double] => Callback
   )
@@ -62,10 +62,17 @@ object StudentsDataTable {
           <.tr(
             props.headings.toList match {
               case hd :: tl =>
-                (<.td(hd) :: tl.map { h =>
-                  <.td(^.className := "long-heading", <.span(h)) }).toTagMod
-              case a =>
-                a.toTagMod
+                (<.td(hd._1) :: tl.map { h =>
+                  <.td(
+                    ^.className := "long-heading",
+                    <.span(
+                      h._2.whenDefined(t => ^.title := t),
+                      h._1
+                    )
+                  )
+                }).toTagMod
+              case Nil =>
+                EmptyVdom
             }
           )
         ),
@@ -79,7 +86,7 @@ object StudentsDataTable {
                          studentRecord: StudentRecords[SortedMap, ModuleCode, Double]) = {
 
       //Get the row columns for the given record
-      val columns = props.headings.map(h => props.renderCell(studentRecord, h))
+      val columns = props.headings.map { case (title, tip) => props.renderCell(studentRecord, title) }
 
       //Return the row, with a td for each column and also using the onclick listener
       <.tr(

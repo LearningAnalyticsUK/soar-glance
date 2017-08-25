@@ -29,6 +29,7 @@ import io.circe._
 import io.circe.generic.auto._
 import io.circe.parser._
 import io.circe.syntax._
+import uk.ac.ncl.la.soar.data.Module
 import uk.ac.ncl.la.soar.glance.eval.{SessionSummary, Survey, SurveyResponse}
 
 /**
@@ -36,7 +37,7 @@ import uk.ac.ncl.la.soar.glance.eval.{SessionSummary, Survey, SurveyResponse}
   */
 object ApiClient {
 
-  /** TODO: Figure out if there is a way to do compiletime config? Or something of that sort. Setting this here is bad*/
+  /** TODO: Figure out if there is a way to do compiletime config? Or something of that sort. Setting this here is bad */
   def url(rel: String) = s"http://localhost:8080/$rel"
 
   /* Surveys */
@@ -75,4 +76,11 @@ object ApiClient {
   def postResponse(r: SurveyResponse) = Ajax.post(url("responses"), r.asJson.noSpaces)
 
   private def decodeReq[A: Decoder](xhr: XMLHttpRequest) = decode[A](xhr.responseText)
+
+  /* Modules */
+
+  /** Load the modules for this survey */
+  def loadModules: Future[Either[Error, List[Module]]] = Ajax.get(url("modules")).map(decodeReq[List[Module]])
+
+  def loadModulesT: EitherT[Future, Error, List[Module]] = EitherT(loadModules)
 }

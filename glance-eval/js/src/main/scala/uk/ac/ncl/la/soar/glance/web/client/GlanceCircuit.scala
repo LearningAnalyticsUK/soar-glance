@@ -76,9 +76,9 @@ case object DoNothing extends SurveyAction
 class SurveyHandler[M](modelRW: ModelRW[M, Pot[SurveyModel]]) extends ActionHandler(modelRW) {
 
   private def loadSurveyInfo(id: UUID) = Effect {
-    val info = (ApiClient.loadSurveyT(id) |@|
-      ApiClient.loadClustersT(id) |@|
-      ApiClient.loadRecapsT(id)).map((_, _, _)).value
+    val info = (ApiClient.loadSurveyT(id),
+      ApiClient.loadClustersT(id),
+      ApiClient.loadRecapsT(id)).map3((_, _, _)).value
 
     info.map(i => InitSurvey(i))
   }

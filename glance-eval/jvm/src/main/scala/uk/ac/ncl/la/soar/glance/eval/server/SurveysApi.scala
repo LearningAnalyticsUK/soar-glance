@@ -35,7 +35,7 @@ import uk.ac.ncl.la.soar.server.Implicits._
 class SurveysApi(surveyRepository: SurveyDb, clusterRepository: ClusterSessionDb, recapRepository: RecapSessionDb) {
 
   /** Endpoint returns all survey ids in response to `GET /surveys` */
-  lazy val list = get("surveys") {
+  val list = get("surveys") {
     surveyRepository.list.toFuture.map(ss => Ok(ss.map(_.id)))
   }
 

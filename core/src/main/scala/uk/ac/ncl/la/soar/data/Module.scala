@@ -17,9 +17,10 @@
   */
 package uk.ac.ncl.la.soar.data
 
+
 import uk.ac.ncl.la.soar.ModuleCode
 
 /**
   * General purpose struct type representing modules
   */
-case class Module(code: ModuleCode)
+case class Module(code: ModuleCode, title: Option[String], keywords: List[String], description: Option[String])

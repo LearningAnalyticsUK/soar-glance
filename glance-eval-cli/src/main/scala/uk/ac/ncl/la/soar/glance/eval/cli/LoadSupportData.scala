@@ -44,8 +44,8 @@ object LoadSupportData extends Command[LoadSupportConfig, Unit] {
   override def run(conf: LoadSupportConfig) = {
     for {
       r <- Task.zip2(parseSessions[ClusterSessionRow](conf.clusterPath), parseSessions[RecapSessionRow](conf.recapPath))
-      cSDb <- Repository.ClusterSession
-      rSDb <- Repository.RecapSession
+      cSDb <- Repositories.ClusterSession
+      rSDb <- Repositories.RecapSession
       _ <- Task.zip2(cSDb.saveBatch(r._1.map(prepareClusterRow)), rSDb.saveBatch(r._2.map(prepareRecapRow)))
     } yield ()
   }

@@ -78,7 +78,7 @@ object SessionSummary {
     override def apply(key: String): Option[(Time, Time)] = {
       key.split('|') match {
         case Array(start, end) =>
-          (strToTime(start) |@| strToTime(end)).map(_ -> _)
+          (strToTime(start), strToTime(end)).map2(_ -> _)
         case _ =>
           None
       }

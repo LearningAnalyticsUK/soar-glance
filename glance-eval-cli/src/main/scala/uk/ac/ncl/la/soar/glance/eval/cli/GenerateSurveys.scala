@@ -32,7 +32,7 @@ import uk.ac.ncl.la.soar.Record._
 import uk.ac.ncl.la.soar.data.{ModuleScore, StudentRecords}
 import uk.ac.ncl.la.soar.server.Implicits._
 import uk.ac.ncl.la.soar.glance.eval.Survey
-import uk.ac.ncl.la.soar.glance.eval.server.Repository
+import uk.ac.ncl.la.soar.glance.eval.server.Repositories
 
 import scala.collection.immutable.SortedMap
 import scala.util.{Properties, Random}
@@ -49,7 +49,7 @@ object GenerateSurveys extends Command[GenerateConfig, Unit] {
     for {
       scores <- parseScores(conf.recordsPath)
       surveys <- Task.now(Survey.generate(scores, conf.elided, conf.modules, conf.seed))
-      db <- Repository.Survey
+      db <- Repositories.Survey
       _ <- { println("Finished creating tables.");surveys.traverse(db.save) }
     } yield ()
   }

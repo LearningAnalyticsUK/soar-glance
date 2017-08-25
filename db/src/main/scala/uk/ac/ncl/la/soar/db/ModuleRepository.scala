@@ -17,9 +17,12 @@
   */
 package uk.ac.ncl.la.soar.db
 
+import java.sql.Date
+
 import cats._
 import cats.implicits._
 import doobie.imports._
+import doobie.postgres.imports._
 import monix.eval.Task
 import monix.cats._
 import uk.ac.ncl.la.soar.{ModuleCode, StudentNumber}
@@ -48,23 +51,33 @@ class ModuleDb(xa: Transactor[Task]) extends Repository[Module] {
 
 private[db] object ModuleDb extends RepositoryCompanion[Module, ModuleDb] {
 
+  private case class ModuleRow(num: ModuleCode,
+                               start: Option[Date],
+                               length: Option[String],
+                               title: Option[String],
+                               keywords: List[String],
+                               description: Option[String])
+
+  private def fromRow[F[_]: Functor](row: F[ModuleRow]): F[Module] =
+    row.map(r => Module(r.num, r.title, r.keywords, r.description))
+
   override val initQ: ConnectionIO[Unit] = ().pure[ConnectionIO]
 
-  override val listQ: ConnectionIO[List[Module]] = sql"SELECT * FROM modules;".query[Module].list
+  override val listQ: ConnectionIO[List[Module]] = sql"SELECT * FROM module;".query[ModuleRow].list.map(fromRow[List])
 
   override def findQ(id: ModuleCode): ConnectionIO[Option[Module]] =
-    sql"SELECT * FROM modules m WHERE m.code = $id;".query[Module].option
+    sql"SELECT * FROM module m WHERE m.num = $id;".query[ModuleRow].option.map(fromRow[Option])
 
   override def saveQ(entry: Module): ConnectionIO[Unit] =
-    sql"INSERT INTO modules (code) VALUES (${entry.code});".update.run.map(_ => ())
+    sql"INSERT INTO module (num) VALUES (${entry.code});".update.run.map(_ => ())
 
   override def deleteQ(id: ModuleCode): ConnectionIO[Boolean] =
-    sql"DELETE FROM modules m WHERE m.code = $id;".update.run.map(_ > 0)
+    sql"DELETE FROM module m WHERE m.num = $id;".update.run.map(_ > 0)
 
   def findRecordQ(id: ModuleCode): ConnectionIO[Option[ModuleRecords[Map, StudentNumber, Double]]] = {
     val q =
       sql"""
-        SELECT m.student_num, m.score FROM module_score m WHERE m.module_code = $id;
+        SELECT m.student_num, m.score FROM module_score m WHERE m.module_num = $id;
       """.query[(StudentNumber, Double)].list
 
     q.map {

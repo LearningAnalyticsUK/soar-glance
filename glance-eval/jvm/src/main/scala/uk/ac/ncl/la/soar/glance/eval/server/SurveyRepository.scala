@@ -238,7 +238,7 @@ object SurveyResponseDb extends RepositoryCompanion[SurveyResponse, SurveyRespon
         LEFT OUTER JOIN student_rank rnk
         ON rnk.response_id = rsp.id;
       """.query[(ResponseRow, Option[StudentNumber], Option[Int])].map({
-        case (rsp, stud, rank) => (rsp, (stud |@| rank).map( _ -> _ ))
+        case (rsp, stud, rank) => (rsp, (stud, rank).map2( _ -> _ ))
       }).list
 
     for {
@@ -280,7 +280,7 @@ object SurveyResponseDb extends RepositoryCompanion[SurveyResponse, SurveyRespon
         LEFT OUTER JOIN student_rank rnk
         ON rnk.response_id = rsp.id;
       """.query[(ResponseRow, Option[StudentNumber], Option[Int])].map({
-        case (rsp, stud, rank) => (rsp, (stud |@| rank).map( _ -> _ ))
+        case (rsp, stud, rank) => (rsp, (stud, rank).map2( _ -> _ ))
       }).list
 
     for {

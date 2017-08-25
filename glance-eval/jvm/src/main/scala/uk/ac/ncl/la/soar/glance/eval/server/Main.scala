@@ -28,6 +28,8 @@ import cats.implicits._
 import cats.data._
 import io.finch._
 import io.finch.circe._
+import io.circe.generic.auto._
+import uk.ac.ncl.la.soar.data.Module
 
 /**
   * Main class for the glance server
@@ -37,15 +39,17 @@ object Main extends TwitterServer {
   def main(): Unit = {
 
     val surveysTask =
-      (Repository.Survey |@|
-        Repository.ClusterSession |@|
-        Repository.RecapSession).map(new SurveysApi(_, _, _))
+      (Repositories.Survey,
+        Repositories.ClusterSession,
+        Repositories.RecapSession).map3(new SurveysApi(_, _, _))
 
-    val responsesTask = Repository.SurveyResponse.map(new SurveyResponsesApi(_))
+    val responsesTask = Repositories.SurveyResponse.map(new SurveyResponsesApi(_))
 
-    val (surveysApi, responsesApi) = Await.result(surveysTask.zip(responsesTask).toFuture)
+    val modulesTask = Repositories.Module.map(new ModulesApi(_))
 
-    val service = (surveysApi.endpoints :+: responsesApi.endpoints).toService
+    val (surveysApi, responsesApi, modulesApi) = Await.result(Task.zip3(surveysTask, responsesTask, modulesTask).toFuture)
+
+    val service = (surveysApi.endpoints :+: responsesApi.endpoints :+: modulesApi.endpoints).toService
 
     val server = Http.server.serve(":8080", service)
 

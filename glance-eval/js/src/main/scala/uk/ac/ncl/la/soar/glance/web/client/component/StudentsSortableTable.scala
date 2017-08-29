@@ -85,6 +85,7 @@ object StudentsSortableTable {
         //Get the row columns for the given record
         val columns = wrappedP.headings.map { case (title, tip) => wrappedP.renderCell(bs.props, title) }
 
+        //TODO: Find out why no cells are getting the warning class anymore
         val renderedColumns = columns.iterator.zipWithIndex.map({ case (c, idx) =>
           <.td(
             (^.className := "warning").when(idx == wrappedP.rankModuleIdx),

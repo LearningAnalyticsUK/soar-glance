@@ -284,6 +284,8 @@ object StudentCharts {
       val chartData = ChartData(labels, datasets)
 
       //Find min and max values for meanDurations (this is unsound for positive values ... consider)
+      //TODO: Magic numbers, put in a config file somewhere or at least make then named constants with comments
+      // explaining values
       val max = sessionSummary.meanDuration.valuesIterator.max
       val scaleMax = ((max/3600) * 2.5).ceil
 

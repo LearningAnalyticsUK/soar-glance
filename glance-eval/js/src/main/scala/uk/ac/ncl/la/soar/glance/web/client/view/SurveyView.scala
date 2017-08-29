@@ -18,6 +18,7 @@
 package uk.ac.ncl.la.soar.glance.web.client.view
 
 import cats._
+import cats.data.NonEmptyVector
 import cats.implicits._
 import diode.data._
 import diode.react.ReactPot._
@@ -94,6 +95,18 @@ object SurveyView {
         case k => student.record.get(k).fold(default)(_.toString)
       }
 
+    /** Construct the NEL of filters from the survey model, to be passed to the charts component */
+    private def buildFilters(modules: Iterable[Module]) = {
+      val modKeywordPairs = modules.flatMap(m => m.keywords.map(_ -> m.code))
+      val keywordModSets = modKeywordPairs.groupBy(_._1).mapValues(_.map(_._2).toSet)
+      NonEmptyVector(
+        Select.Choice((_: ModuleCode, _: Double) => true, "None"),
+        keywordModSets.map({ case (keyword, modSet) =>
+          Select.Choice((mc: ModuleCode, _: Double) => modSet.contains(mc), keyword)
+        }).toVector
+      )
+    }
+
     //TODO: Lookup React-collapse. Preferrably do not render unless expanded. For now we just don't show the training table
     private val trainingTable = ScalaComponent.builder[Pot[SurveyModel]]("TrainingTable")
       .render($ => {
@@ -157,11 +170,16 @@ object SurveyView {
       })
       .build
 
+
+
     def render(p: Props, s: State): VdomElement = {
       //Get the necessary data from the model
-      //This is a bit of a nested Mess - TODO: Make sure we're understanding the model construction properly
       val model = p.proxy()
 
+      //Get the module info from the survey
+
+
+      //TODO: Why are these lazy - any benefit?
       lazy val detailedView = {
         <.div(
           <.span(
@@ -179,7 +197,8 @@ object SurveyView {
                 handleToggleSelecting,
                 sm.attainmentSummary,
                 sm.clusterSummary,
-                sm.recapSummary
+                sm.recapSummary,
+                buildFilters(sm.modules.values)
               )
             )
           }
@@ -198,7 +217,7 @@ object SurveyView {
             SurveyResponseForm.component(
               SurveyResponseForm.Props(
                 p.proxy,
-                response => response match {
+                {
                   case Some(r) => p.proxy.dispatchCB(SubmitSurveyResponse(r)) >> p.ctrl.set(Main.SurveyCompleteLoc)
                   case None => Callback.empty
                 }

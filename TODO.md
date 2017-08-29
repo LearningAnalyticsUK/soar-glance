@@ -8,6 +8,7 @@
 * [x] Label session usage axis correctly, using Moment js if necessary
 * [x] Check that rank changes are modifying state correctly and being stored
 * [ ] Fix compared student data for wrong columns in attainment bars
+* [ ] Add dynamic routing to Main to allow choosing of specific survey by link - rather than just loading the default.
 
 ### Modules 
 
@@ -25,6 +26,7 @@
 * [x] Investigate missing recap datapoint
 * [x] Remove notes field from submission form
 * [ ] Highlight "compared to" student in ranking table
+* [ ] Figure out why ranked module column is only highlighted in the header now.
 * [ ] Change drag handle on rank table to up/down arrows
 * [ ] Add individual rank change tracking if at all possible
 * [x] Write up instructions for a) setting up postgres; b) running flyWay migrations via sbt; c) building and using the 

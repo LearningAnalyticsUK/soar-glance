@@ -1,24 +1,34 @@
-UPDATE module SET keywords = '{}' WHERE num = 'CSC2021';
+UPDATE module SET title = 'Software Engineering',keywords = '{"Programming", "Commercial Accumen", "Exam heavy"}' WHERE num = 'CSC2021';
 
-UPDATE module SET keywords = '{}' WHERE num = 'CSC2022';
+UPDATE module
+SET title = 'Software Engineering Team Project',
+  keywords = '{"Presentation", "Coursework heavy", "Collaboration", "Programming", "Commercial Accumen", "Written comm", "Research"}'
+WHERE num = 'CSC2022';
 
-UPDATE module SET keywords = '{}' WHERE num = 'CSC2023';
+UPDATE module
+SET title = 'Algorithm Design and Analysis',
+  keywords = '{"Exam heavy", "Independent learning"}'
+WHERE num = 'CSC2023';
 
-UPDATE module SET keywords = '{}' WHERE num = 'CSC2024';
+UPDATE module
+SET title = 'Database Technology',
+  keywords = '{"Programming", "Exam heavy"}'
+WHERE num = 'CSC2024';
 
-UPDATE module SET keywords = '{}' WHERE num = 'CSC2025';
+UPDATE module SET title = 'Operating Systems', keywords = '{"Programming", "Exam heavy", "Independent learning"}' WHERE num = 'CSC2025';
 
 UPDATE module
 SET start_date = '2016-01-29',
   length = '0 years 0 mons 90 days 0 hours 0 mins 0.00 secs',
   title = 'Computer Networks',
   description = 'This module will teach the student the fundamental principles which govern the operation of the Internet. There will be a particular focus on the algorithms involved to achieve reliable communication over an unreliable network of networks.
-The module will also teach the student how wireless sensor networks operate and how they differ from conventional data networks.'
+The module will also teach the student how wireless sensor networks operate and how they differ from conventional data networks.',
+  keywords = '{"Programming", "Independent learning", "Exam heavy"}'
 WHERE num = 'CSC2026';
 
-UPDATE module SET keywords = '{}' WHERE num = 'CSC2513';
+UPDATE module SET title = 'Database Systems', keywords = '{}' WHERE num = 'CSC2513';
 
-UPDATE module SET keywords = '{}' WHERE num = 'CSC3095';
+UPDATE module SET tite = 'Project and Dissertation in Computing Science', keywords = '{"Written comm", "Independent Learning", "Research"}' WHERE num = 'CSC3095';
 
 UPDATE module
 SET start_date = '2016-09-28',
@@ -39,11 +49,11 @@ SET start_date = '2017-01-29',
   keywords = '{}'
 WHERE num = 'CSC3122';
 
-UPDATE module SET keywords = '{}' WHERE num = 'CSC3123';
+UPDATE module SET title = 'Web Technologies', keywords = '{}' WHERE num = 'CSC3123';
 
-UPDATE module SET keywords = '{}' WHERE num = 'CSC3124';
+UPDATE module SET title = 'System and Network Security', keywords = '{}' WHERE num = 'CSC3124';
 
-UPDATE module SET keywords = '{}' WHERE num = 'CSC3221';
+UPDATE module SET title = 'Programming for Games', keywords = '{}' WHERE num = 'CSC3221';
 
 UPDATE module
 SET start_date = '2017-01-29',
@@ -65,21 +75,21 @@ To provide students with a basis for understanding the current computer graphics
   keywords = '{}'
 WHERE num = 'CSC3223';
 
-UPDATE module SET keywords = '{}' WHERE num = 'CSC3224';
+UPDATE module SET title = 'Computer Games Development', keywords = '{}' WHERE num = 'CSC3224';
 
-UPDATE module SET keywords = '{}' WHERE num = 'CSC3321';
+UPDATE module SET title = 'Understanding Programming Languages', keywords = '{}' WHERE num = 'CSC3321';
 
-UPDATE module SET keywords = '{}' WHERE num = 'CSC3322';
+UPDATE module SET title = 'Real-Time and Cyber-Physical Systems', keywords = '{}' WHERE num = 'CSC3322';
 
-UPDATE module SET keywords = '{}' WHERE num = 'CSC3323';
+UPDATE module SET title = 'Software Verification Technologies', keywords = '{}' WHERE num = 'CSC3323';
 
-UPDATE module SET keywords = '{}' WHERE num = 'CSC3324';
+UPDATE module SET title = 'Understanding Concurrency', keywords = '{}' WHERE num = 'CSC3324';
 
-UPDATE module SET keywords = '{}' WHERE num = 'CSC3422';
+UPDATE module SET title = 'Website Construction and Management (Server-side)', keywords = '{}' WHERE num = 'CSC3422';
 
-UPDATE module SET keywords = '{}' WHERE num = 'CSC3423';
+UPDATE module SET title = 'Biologically-inspired Computing',  keywords = '{}' WHERE num = 'CSC3423';
 
-UPDATE module SET keywords = '{}' WHERE num = 'CSC3424';
+UPDATE module SET title = 'Bioinformatics', keywords = '{}' WHERE num = 'CSC3424';
 
 UPDATE module
 SET start_date = '2016-09-28',
@@ -89,9 +99,9 @@ SET start_date = '2016-09-28',
   keywords = '{}'
 WHERE num = 'CSC3621';
 
-UPDATE module SET keywords = '{}' WHERE num = 'CSC3622';
+UPDATE module SET title = 'Reliability and Fault Tolerance', keywords = '{}' WHERE num = 'CSC3622';
 
-UPDATE module SET keywords = '{}' WHERE num = 'CSC3721';
+UPDATE module SET title = 'Introduction to Human-Computer Interaction', keywords = '{}' WHERE num = 'CSC3721';
 
 UPDATE module
 SET start_date = '2017-01-29',
@@ -105,4 +115,4 @@ To give students experience of and to develop skills in working in collaborative
   keywords = '{}'
 WHERE num = 'CSC3722';
 
-UPDATE module SET keywords = '{}' WHERE num = 'CSC3723';
+UPDATE module SET title = 'Ubiquitous Computing', keywords = '{}' WHERE num = 'CSC3723';

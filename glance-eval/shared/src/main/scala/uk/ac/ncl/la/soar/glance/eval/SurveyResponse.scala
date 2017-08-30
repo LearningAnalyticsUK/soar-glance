@@ -25,12 +25,13 @@ import cats.implicits._
 import uk.ac.ncl.la.soar._
 import uk.ac.ncl.la.soar.data._
 import uk.ac.ncl.la.soar.Record._
-
 import io.circe._
 import io.circe.{Decoder, Encoder, Json}
 import io.circe.syntax._
 import io.circe.generic.auto._
 import io.circe.generic.semiauto._
+import uk.ac.ncl.la.soar.glance.util.Time
+import uk.ac.ncl.la.soar.glance.web.client.component.sortable.IndexChange
 
 /**
   * ADT representing an a survey which is completed by a member of staff.
@@ -41,6 +42,7 @@ import io.circe.generic.semiauto._
 sealed trait SurveyResponse {
   def survey: Survey
   def ranks: List[StudentNumber]
+  def rankHistory: List[(IndexChange, Time)]
   def respondent: String
   def start: Double
   def id: UUID
@@ -50,9 +52,10 @@ object SurveyResponse {
 
   def apply(survey: Survey,
             ranks: List[StudentNumber],
+            ranksHistory: List[(IndexChange, Time)],
             respondent: String,
             start: Double,
-            id: UUID): SurveyResponse = IncompleteResponse(survey, ranks, respondent, start, id)
+            id: UUID): SurveyResponse = IncompleteResponse(survey, ranks, ranksHistory, respondent, start, id)
 
   /** Typeclass instances for SurveResponse */
   implicit val encodeSurveyResponse: Encoder[SurveyResponse] = new Encoder[SurveyResponse] {
@@ -60,6 +63,7 @@ object SurveyResponse {
       "id" -> a.id.toString.asJson,
       "survey" -> a.survey.asJson,
       "ranks" -> a.ranks.asJson,
+      "rankHistory" -> a.rankHistory.asJson,
       "respondent" -> a.respondent.asJson,
       "start" -> a.start.asJson,
     )
@@ -82,10 +86,11 @@ object SurveyResponse {
       for {
         survey <- c.downField("survey").as[Survey]
         ranks <- c.downField("ranks").as[List[StudentNumber]]
+        rankHistory <- c.downField("rankHistory").as[List[(IndexChange, Time)]]
         respondent <- c.downField("respondent").as[String]
         start <- c.downField("start").as[Double]
       } yield { id: UUID =>
-        IncompleteResponse(survey, ranks, respondent, start, id)
+        IncompleteResponse(survey, ranks, rankHistory, respondent, start, id)
       }
     }
   }
@@ -93,12 +98,14 @@ object SurveyResponse {
 
 case class IncompleteResponse(survey: Survey,
                               ranks: List[StudentNumber],
+                              rankHistory: List[(IndexChange, Time)], 
                               respondent: String,
                               start: Double,
                               id: UUID) extends SurveyResponse
 
 case class CompleteResponse(survey: Survey,
                             ranks: List[StudentNumber],
+                            rankHistory: List[(IndexChange, Time)],
                             respondent: String,
                             start: Double,
                             finish: Double,

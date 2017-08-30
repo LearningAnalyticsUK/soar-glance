@@ -36,7 +36,7 @@ object StudentsSortableTable {
                    headings: List[(String, Option[String])],
                    renderCell: (Record, String) => String,
                    selectStudent: Record => Callback,
-                   changeRanks: List[StudentNumber] => Callback) {
+                   changeRanks: (List[StudentNumber], IndexChange) => Callback) {
 
     val rankModuleIdx = headings.indexWhere(_ == rankModule)
   }
@@ -115,7 +115,7 @@ object StudentsSortableTable {
               ranks <- bs.state
               dRanks = p.updatedList(ranks)
               _ <- bs.setState(dRanks)
-              _ <- props.changeRanks(dRanks.map(_.number))
+              _ <- props.changeRanks(dRanks.map(_.number), p)
             } yield ()
           },
           useDragHandle = true,

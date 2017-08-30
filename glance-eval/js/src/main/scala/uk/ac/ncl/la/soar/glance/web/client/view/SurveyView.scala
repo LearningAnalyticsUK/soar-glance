@@ -161,7 +161,7 @@ object SurveyView {
                   headings(sm.survey, sm.modules),
                   renderCell(" "),
                   handleStudentClick,
-                  ranks => proxy.dispatchCB(ChangeRanks(ranks))
+                  (ranks, change) => proxy.dispatchCB(ChangeRanks(ranks, change))
                 )
               )
             )
@@ -170,14 +170,9 @@ object SurveyView {
       })
       .build
 
-
-
     def render(p: Props, s: State): VdomElement = {
       //Get the necessary data from the model
       val model = p.proxy()
-
-      //Get the module info from the survey
-
 
       //TODO: Why are these lazy - any benefit?
       lazy val detailedView = {

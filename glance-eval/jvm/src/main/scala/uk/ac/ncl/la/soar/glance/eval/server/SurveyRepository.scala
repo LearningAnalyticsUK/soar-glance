@@ -29,6 +29,7 @@ import monix.eval.Task
 import uk.ac.ncl.la.soar.data.ModuleScore
 import uk.ac.ncl.la.soar.db.{RepositoryCompanion, Repository => DbRepository}
 import uk.ac.ncl.la.soar.glance.eval.{CompleteResponse, Survey, SurveyResponse}
+import uk.ac.ncl.la.soar.glance.util.{Time, Times}
 import uk.ac.ncl.la.soar.{ModuleCode, StudentNumber}
 import uk.ac.ncl.la.soar.server.Implicits._
 
@@ -221,9 +222,11 @@ object SurveyResponseDb extends RepositoryCompanion[SurveyResponse, SurveyRespon
   /** Type aliases for Db rows */
   type ResponseRow = (UUID, String, UUID, Double, Double)
   type RankRow = (StudentNumber, Int)
+  type RankChangeRow = (Int, Int, Time)
 
   implicit val uuidMeta: Meta[UUID] = Meta[String].nxmap(UUID.fromString, _.toString)
 //  implicit val InstantMeta: Meta[Instant] = Meta[Timestamp].nxmap(_.toInstant, Timestamp.from)
+  implicit val timeMeta: Meta[Time] = Meta[Double].nxmap(Times.fromDouble, _.millis)
 
   override val initQ: ConnectionIO[Unit] = ().pure[ConnectionIO]
 
@@ -247,6 +250,9 @@ object SurveyResponseDb extends RepositoryCompanion[SurveyResponse, SurveyRespon
     } yield completeResponse
   }
 
+  private def rankChangeRowsQ(id: UUID): ConnectionIO[List[RankChangeRow]] =
+    sql"SELECT rnkC FROM rank_change WHERE rnkC.response_id = $id;".query[RankChangeRow].list
+
   private def responsesFromRows(rows: List[(ResponseRow, Option[RankRow])]): ConnectionIO[List[CompleteResponse]] = {
 
     val groupedRows = rows.groupBy(_._1).mapValues(_.flatMap(_._2))
@@ -261,7 +267,17 @@ object SurveyResponseDb extends RepositoryCompanion[SurveyResponse, SurveyRespon
     //Get survey
     //TODO: get the survey db side with a join rather than programme side like this.
     val surveyOpt = OptionT(SurveyDb.findQ(surveyId))
+    //Get the rank changes
+    val rankChanges = rankChangeRowsQ(id)
     //Build the CompleteResponse
+    for {
+      s <- OptionT(SurveyDb.findQ(surveyId))
+      rC <- OptionT.liftF(rankChangeRowsQ(id))
+    } yield {
+      val rankHistory = ??? // map ints to IndexChange
+      CompleteResponse(s, ranks, rC, )
+    }
+
     surveyOpt.map { survey =>
       CompleteResponse(survey, ranks, respondent, start, finish, id)
     }.value

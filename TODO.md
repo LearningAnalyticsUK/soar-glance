@@ -19,7 +19,7 @@
 * [x] Create module api endpoint to fetch module table as json
 * [x] Add module info to diode survey model
 * [ ] Hand populate keywords fields in module table
-* [ ] Set up filters to use a groupBy over modules by keyword
+* [x] Set up filters to use a groupBy over modules by keyword
 
 ### Cleanup 
 

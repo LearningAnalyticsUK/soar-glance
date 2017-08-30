@@ -28,7 +28,7 @@
 * [ ] Highlight "compared to" student in ranking table
 * [ ] Figure out why ranked module column is only highlighted in the header now.
 * [ ] Change drag handle on rank table to up/down arrows
-* [ ] Add individual rank change tracking if at all possible
+* [x] Add individual rank change tracking if at all possible
 * [x] Write up instructions for a) setting up postgres; b) running flyWay migrations via sbt; c) building and using the 
 command line tools for transforming data, generating surveys and loading support data; and d) running the local server 
 from sbt in a tmux session

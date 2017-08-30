@@ -226,9 +226,7 @@ object SurveyResponseDb extends RepositoryCompanion[SurveyResponse, SurveyRespon
   type RankChangeRow = (IndexChange, Time)
 
   implicit val uuidMeta: Meta[UUID] = Meta[String].nxmap(UUID.fromString, _.toString)
-//  implicit val InstantMeta: Meta[Instant]= Meta[Timestamp].nxmap(_.toInstant, Timestamp.from)
-  //TODO: Handle null
-  implicit val timeMeta: Meta[Time] = Meta[Double].xmap(Times.fromDouble, _.millis)
+  implicit val timeMeta: Meta[Time] = Meta[Double].xmap(Times.fromDouble , _.millis)
 
   override val initQ: ConnectionIO[Unit] = ().pure[ConnectionIO]
 
@@ -324,17 +322,32 @@ object SurveyResponseDb extends RepositoryCompanion[SurveyResponse, SurveyRespon
         VALUES (?, ?, ?);
       """
 
+    //Finally batch insert entries in rank_change table
+    val addChangesSQL =
+      """
+        INSERT INTO rank_change (start_rank, end_rank, time, response_id)
+        VALUES (?, ?, ?, ?);
+      """
+
     val ranks = ListBuffer.empty[(String, UUID, Int)]
     for ( (e, idx) <- entry.ranks.zipWithIndex ) {
       ranks += ((e, entry.id, idx))
     }
 
+    val rankHistory = ListBuffer.empty[(Int, Int, Timestamp, UUID)]
+    for( r <- entry.rankHistory ) {
+      val ts = new Timestamp(r._2.millis.toLong)
+      rankHistory += ((r._1.oldIndex, r._1.newIndex, ts, entry.id))
+    }
+
+
     val addRanksQ = Update[(String, UUID, Int)](addRanksSQL).updateMany(ranks.result())
+    val addRankChangesQ = Update[(Int, Int, Timestamp, UUID)](addChangesSQL).updateMany(rankHistory.result())
 
     //Actually construct the combined query program
     for {
       _ <- addResponseQ
-      _ <- addRanksQ
+      _ <- addRanksQ *> addRankChangesQ
     } yield ()
   }
 

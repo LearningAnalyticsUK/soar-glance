@@ -29,8 +29,8 @@ import io.circe._
 import io.circe.{Decoder, Encoder, Json}
 import io.circe.syntax._
 import io.circe.generic.auto._
-import io.circe.generic.semiauto._
 import uk.ac.ncl.la.soar.glance.util.Time
+import uk.ac.ncl.la.soar.glance.util.Times._
 import uk.ac.ncl.la.soar.glance.web.client.component.sortable.IndexChange
 
 /**
@@ -56,6 +56,7 @@ object SurveyResponse {
             respondent: String,
             start: Double,
             id: UUID): SurveyResponse = IncompleteResponse(survey, ranks, ranksHistory, respondent, start, id)
+
 
   /** Typeclass instances for SurveResponse */
   implicit val encodeSurveyResponse: Encoder[SurveyResponse] = new Encoder[SurveyResponse] {

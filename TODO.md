@@ -7,7 +7,7 @@
 * [x] Remove datapoint for rankedModule from student records
 * [x] Label session usage axis correctly, using Moment js if necessary
 * [x] Check that rank changes are modifying state correctly and being stored
-* [ ] Fix compared student data for wrong columns in attainment bars
+* [x] Fix compared student data for wrong columns in attainment bars
 * [x] Add dynamic routing to Main to allow choosing of specific survey by link - rather than just loading the default.
 
 ### Modules 

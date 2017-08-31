@@ -46,7 +46,16 @@ postgres database. This loads module titles, descriptions, keywords, and start d
     ``` 
     Once you have done this, the api is available [here](http://localhost:8080), whilst the front-end is available  
     [here](http://localhost:12345/glance-eval/js/target/scala-2.11/classes/index-dev.html).
+    
+11. If you want to load specific surveys (rather than the default) then you need to use the following url structure: 
+`.../index-dev.html#survey/{id}` where `{id}` corresponds to the uuid string for the the survey in question. E.g:
 
+    ```
+    .../index-dev.html#survey/13927f7f-ded8-4862-a61f-66b7dd90b709   
+    ```
+    
+    I suggest we keep a list of the links and the surveys they correspond to so that we can quickly load them at the 
+    start of each in person session.
 
 ### Updating (no data changes)
 

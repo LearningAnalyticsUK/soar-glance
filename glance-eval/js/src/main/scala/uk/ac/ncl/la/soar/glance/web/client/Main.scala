@@ -17,6 +17,8 @@
   */
 package uk.ac.ncl.la.soar.glance.web.client
 
+import java.util.UUID
+
 import cats._
 import cats.implicits._
 import diode.data.Pot
@@ -47,7 +49,8 @@ object Main extends js.JSApp {
   case object AboutLoc extends Loc
 
   sealed trait SurveyLoc extends Loc
-  case object SurveyFormLoc extends SurveyLoc
+  case object AnySurveyFormLoc extends SurveyLoc
+  case class SurveyFormLoc(id: UUID) extends SurveyLoc
   case object SurveyCompleteLoc extends SurveyLoc
 
   /** Lets initialise the router config */
@@ -56,8 +59,21 @@ object Main extends js.JSApp {
 
     val surveyConnector: ReactConnectProxy[Pot[SurveyModel]] = GlanceCircuit.connect(_.survey)
     //Construct routes
+
+    def allSurveys = staticRoute(root, AnySurveyFormLoc) ~> renderR { ctl =>
+      GlanceCircuit.dispatch(RefreshSurveys)
+      surveyConnector(p => SurveyView.component(SurveyView.Props(p, ctl.narrow[Main.SurveyLoc])))
+    }
+
+    //TODO: Work out why redirects after initial page loads don't reload the ranking table contents.
+    def survey = dynamicRouteCT("#survey" / uuid.caseClass[SurveyFormLoc]) ~> dynRenderR { (s, ctl) =>
+      GlanceCircuit.dispatch(RefreshSurvey(s.id))
+      surveyConnector(p => SurveyView.component(SurveyView.Props(p, ctl.narrow[Main.SurveyLoc])))
+    }
+
     val listRt =
-      (staticRoute(root, SurveyFormLoc) ~> renderR(ctl => surveyConnector(p => SurveyView.component(SurveyView.Props(p, ctl.narrow[Main.SurveyLoc]))))
+      (allSurveys
+        | survey
         | staticRoute("#thanks", SurveyCompleteLoc) ~> renderR(ctl => SurveyCompleteView.component()))
 
     //Construct and return final routing table, adding a "Not Found" behaviour
@@ -97,8 +113,6 @@ object Main extends js.JSApp {
   override def main(): Unit = {
     //Load the styles
     GlobalStyle.addToDocument()
-    //Load the survey data and render
-    GlanceCircuit.dispatch(RefreshSurveys)
     //Find undeprecated way of doing this
     router.renderIntoDOM(dom.document.getElementById("soar-app"))
     ()

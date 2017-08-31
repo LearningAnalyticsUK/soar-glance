@@ -107,39 +107,10 @@ object SurveyView {
       )
     }
 
-    //TODO: Lookup React-collapse. Preferrably do not render unless expanded. For now we just don't show the training table
-    private val trainingTable = ScalaComponent.builder[Pot[SurveyModel]]("TrainingTable")
+    private val rankingTable =
+      ScalaComponent.builder[(ModelProxy[Pot[SurveyModel]], Option[StudentRecords[SortedMap, ModuleCode, Double]])]("RankingTable")
       .render($ => {
-        val model = $.props
-
-          <.div(
-            ^.className := "col-md-6",
-            <.span(
-              ^.className := "sub-title",
-              Icon.list(Icon.Medium),
-              <.h2("Training Data")),
-            <.div(
-              ^.className := "table-responsive",
-              model.renderFailed(ex => "Error loading survey"),
-              model.renderPending(_ > 50, _ => <.p("Loading ...")),
-              model.render { sm =>
-                StudentsDataTable.component(
-                  StudentsDataTable.Props(
-                    students(sm.survey),
-                    headings(sm.survey, sm.modules),
-                    renderCell(" "),
-                    handleStudentClick
-                  )
-                )
-              }
-            )
-          )
-      })
-      .build
-
-    private val rankingTable = ScalaComponent.builder[ModelProxy[Pot[SurveyModel]]]("RankingTable")
-      .render($ => {
-        val proxy = $.props
+        val (proxy, focused) = $.props
         val model = proxy()
 
         <.div(
@@ -161,7 +132,8 @@ object SurveyView {
                   headings(sm.survey, sm.modules),
                   renderCell(" "),
                   handleStudentClick,
-                  (ranks, change) => proxy.dispatchCB(ChangeRanks(ranks, change))
+                  (ranks, change) => proxy.dispatchCB(ChangeRanks(ranks, change)),
+                  focused
                 )
               )
             )
@@ -235,12 +207,16 @@ object SurveyView {
               ". Higher is better."
             ),
             //Why is the type annotation necessary below?
-            <.p(<.strong("Module aims: "), sm.modules.get(rankModule).flatMap(m => m.description).getOrElse(""): String)
+            <.p(<.strong("Module aims: "), sm.modules.get(rankModule).flatMap(m => m.description).getOrElse(""): String),
+            <.p(
+              <.strong("Module keywords: "),
+              sm.modules.get(rankModule).fold(List.empty[String])(_.keywords).mkString(", ")
+            )
           )
         },
         <.div(
           ^.id := "training",
-          rankingTable(p.proxy)
+          rankingTable((p.proxy, s.selectedR))
         ),
         detailedView,
         submissionForm

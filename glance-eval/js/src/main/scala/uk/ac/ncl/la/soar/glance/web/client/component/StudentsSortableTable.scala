@@ -36,9 +36,10 @@ object StudentsSortableTable {
                    headings: List[(String, Option[String])],
                    renderCell: (Record, String) => String,
                    selectStudent: Record => Callback,
-                   changeRanks: (List[StudentNumber], IndexChange) => Callback) {
+                   changeRanks: (List[StudentNumber], IndexChange) => Callback,
+                   focused: Option[Record] = None) {
 
-    val rankModuleIdx = headings.indexWhere(_ == rankModule)
+    val rankModuleIdx = headings.indexWhere { case (title, tip) => title == rankModule }
   }
 
   // As in original SortableComponent
@@ -94,8 +95,13 @@ object StudentsSortableTable {
           )
         }).toList
 
+        val rowClass = wrappedP.focused match {
+          case Some(st) if st.number == bs.props.number => "react-sortable-item active"
+          case _ =>  "react-sortable-item"
+        }
+
         <.tr(
-          ^.className := "react-sortable-item",
+          ^.className := rowClass,
           TagMod.fromTraversableOnce(<.td(SortableView.handle) :: renderedColumns)
         )
       })

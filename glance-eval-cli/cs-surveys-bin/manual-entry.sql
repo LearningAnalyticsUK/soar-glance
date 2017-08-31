@@ -30,7 +30,7 @@ UPDATE module SET title = 'Database Systems', keywords = '{}' WHERE num = 'CSC25
 
 UPDATE module
 SET title = 'Project and Dissertation in Computing Science',
-  keywords = '{"Written comm", "Independent Learning", "Research"}'
+  keywords = '{"Written comm", "Independent learning", "Research"}'
 WHERE num = 'CSC3095';
 
 UPDATE module
@@ -106,7 +106,7 @@ WHERE num = 'CSC3323';
 
 UPDATE module
 SET title = 'Understanding Concurrency',
-  keywords = '{"Exam heavy", "Independent heavy", "Independent learning"}'
+  keywords = '{"Exam heavy", "Independent learning"}'
 WHERE num = 'CSC3324';
 
 UPDATE module

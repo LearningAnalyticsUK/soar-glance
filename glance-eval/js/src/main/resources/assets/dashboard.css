@@ -161,6 +161,22 @@ span.sub-title {
     background-color: #fcf8e3;
 }
 
+.table-responsive.selecting .table-hover tbody tr:hover td {
+    background-color: #dff0d8;
+}
+
+.table-responsive.comparing .table-hover tbody tr:hover td {
+    background-color: #d9edf7;
+}
+
+tr.active-selecting {
+    background-color: #dff0d8;
+}
+
+tr.active-comparing {
+    background-color: #d9edf7;
+}
+
 @media(min-width: 1000px) {
     .border-between > [class*='col-']:before {
         background: #e3e3e3;
@@ -220,6 +236,16 @@ span.sub-title {
 
 .chart-controls .input-group-addon {
     padding-right: 20px;
+}
+
+.has-info .input-group-addon {
+    background-color: #d9edf7;
+    color: #003965;
+    border-color: #003965;
+}
+
+.has-info .form-control {
+    border-color: #003965;
 }
 
 .form-inline > * {

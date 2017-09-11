@@ -363,7 +363,11 @@ object StudentCharts {
               } else {
                 ^.className := "input-group has-success"
               },
-              <.div(^.className := "input-group-addon", "Select Student"),
+              <.div(
+                ^.className := "input-group-addon",
+                "Select Student",
+                ^.onClick --> toggleSelect(false)
+              ),
               <.div(
                 ^.className := "form-control",
                 ^.id := "selectedStudentL",
@@ -380,11 +384,15 @@ object StudentCharts {
               "Compared to"),
             <.div(
               if(selectingR) {
-                ^.className := "input-group has-success"
+                ^.className := "input-group has-info"
               } else {
                 ^.className := "input-group"
               },
-              <.div(^.className := "input-group-addon", "Compared to"),
+              <.div(
+                ^.className := "input-group-addon",
+                "Compared to",
+                ^.onClick --> toggleSelect(true)
+              ),
               <.div(
                 ^.className := "form-control",
                 ^.id := "selectedStudentR",

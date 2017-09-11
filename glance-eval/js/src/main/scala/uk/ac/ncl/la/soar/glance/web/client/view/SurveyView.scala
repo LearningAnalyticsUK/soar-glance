@@ -108,10 +108,13 @@ object SurveyView {
     }
 
     private val rankingTable =
-      ScalaComponent.builder[(ModelProxy[Pot[SurveyModel]], Option[StudentRecords[SortedMap, ModuleCode, Double]])]("RankingTable")
+      ScalaComponent.builder[(ModelProxy[Pot[SurveyModel]], State)]("RankingTable")
       .render($ => {
-        val (proxy, focused) = $.props
+        val (proxy, state) = $.props
         val model = proxy()
+
+        val focused = (state.selectedL, state.selectedR)
+
 
         <.div(
           ^.id := "ranking",
@@ -124,7 +127,12 @@ object SurveyView {
 
             val rankModule = sm.survey.moduleToRank
             <.div(
-              ^.className := "table-responsive",
+              ^.className := s"table-responsive",
+              ^.classSet1(
+                "table-responsive",
+                "selecting" -> !state.selectingR,
+                "comparing" -> state.selectingR
+              ),
               StudentsSortableTable.component(
                 StudentsSortableTable.Props(
                   rankModule,
@@ -216,7 +224,7 @@ object SurveyView {
         },
         <.div(
           ^.id := "training",
-          rankingTable((p.proxy, s.selectedR))
+          rankingTable((p.proxy, s))
         ),
         detailedView,
         submissionForm

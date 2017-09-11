@@ -37,7 +37,7 @@ object StudentsSortableTable {
                    renderCell: (Record, String) => String,
                    selectStudent: Record => Callback,
                    changeRanks: (List[StudentNumber], IndexChange) => Callback,
-                   focused: Option[Record] = None) {
+                   focused: (Option[Record], Option[Record]) = (None, None)) {
 
     val rankModuleIdx = headings.indexWhere { case (title, tip) => title == rankModule }
   }
@@ -96,7 +96,8 @@ object StudentsSortableTable {
         }).toList
 
         val rowClass = wrappedP.focused match {
-          case Some(st) if st.number == bs.props.number => "react-sortable-item active"
+          case (Some(sel), _) if sel.number == bs.props.number => "react-sortable-item active-selecting"
+          case (_, Some(comp)) if comp.number == bs.props.number => "react-sortable-item active-comparing"
           case _ =>  "react-sortable-item"
         }
 

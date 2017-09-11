@@ -57,7 +57,7 @@ case class SurveyModel(survey: Survey,
                        recapSummary: SessionSummary,
                        ranks: List[StudentNumber],
                        modules: Map[ModuleCode, Module],
-                       rankHistory: List[(IndexChange, Time)] = Nil,
+                       rankHistory: List[(StudentNumber, IndexChange, Time)] = Nil,
                        startTime: Double = Date.now)
 
 object SurveyModel {
@@ -115,10 +115,11 @@ class SurveyHandler[M](modelRW: ModelRW[M, Pot[SurveyModel]]) extends ActionHand
     case SubmitSurveyResponse(response) =>
       effectOnly(Effect(ApiClient.postResponse(response).map(_ => DoNothing)))
     case ChangeRanks(ranks, change) =>
+      //TODO: Make the ranks/select more efficient and safer at some point (IndexedSeq and applyOrElse)
       updated(value.map { m =>
         m.copy(
           ranks = ranks,
-          rankHistory = (change, Times.now) :: m.rankHistory
+          rankHistory = (ranks(change.newIndex) ,change, Times.now) :: m.rankHistory
         )
       })
     case DoNothing => noChange

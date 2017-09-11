@@ -42,7 +42,7 @@ import uk.ac.ncl.la.soar.glance.web.client.component.sortable.IndexChange
 sealed trait SurveyResponse {
   def survey: Survey
   def ranks: List[StudentNumber]
-  def rankHistory: List[(IndexChange, Time)]
+  def rankHistory: List[(StudentNumber, IndexChange, Time)]
   def respondent: String
   def start: Double
   def id: UUID
@@ -52,7 +52,7 @@ object SurveyResponse {
 
   def apply(survey: Survey,
             ranks: List[StudentNumber],
-            ranksHistory: List[(IndexChange, Time)],
+            ranksHistory: List[(StudentNumber, IndexChange, Time)],
             respondent: String,
             start: Double,
             id: UUID): SurveyResponse = IncompleteResponse(survey, ranks, ranksHistory, respondent, start, id)
@@ -87,7 +87,7 @@ object SurveyResponse {
       for {
         survey <- c.downField("survey").as[Survey]
         ranks <- c.downField("ranks").as[List[StudentNumber]]
-        rankHistory <- c.downField("rankHistory").as[List[(IndexChange, Time)]]
+        rankHistory <- c.downField("rankHistory").as[List[(StudentNumber, IndexChange, Time)]]
         respondent <- c.downField("respondent").as[String]
         start <- c.downField("start").as[Double]
       } yield { id: UUID =>
@@ -99,14 +99,14 @@ object SurveyResponse {
 
 case class IncompleteResponse(survey: Survey,
                               ranks: List[StudentNumber],
-                              rankHistory: List[(IndexChange, Time)], 
+                              rankHistory: List[(StudentNumber, IndexChange, Time)],
                               respondent: String,
                               start: Double,
                               id: UUID) extends SurveyResponse
 
 case class CompleteResponse(survey: Survey,
                             ranks: List[StudentNumber],
-                            rankHistory: List[(IndexChange, Time)],
+                            rankHistory: List[(StudentNumber, IndexChange, Time)],
                             respondent: String,
                             start: Double,
                             finish: Double,

@@ -223,7 +223,8 @@ object SurveyResponseDb extends RepositoryCompanion[SurveyResponse, SurveyRespon
   /** Type aliases for Db rows */
   type ResponseRow = (UUID, String, UUID, Double, Double)
   type RankRow = (StudentNumber, Int)
-  type RankChangeRow = (IndexChange, Time)
+  //TODO: Update this alias 
+  type RankChangeRow = (StudentNumber, IndexChange, Time)
 
   implicit val uuidMeta: Meta[UUID] = Meta[String].nxmap(UUID.fromString, _.toString)
   implicit val timeMeta: Meta[Time] = Meta[Double].xmap(Times.fromDouble , _.millis)
@@ -251,7 +252,10 @@ object SurveyResponseDb extends RepositoryCompanion[SurveyResponse, SurveyRespon
   }
 
   private def rankChangeRowsQ(id: UUID): ConnectionIO[List[RankChangeRow]] =
-    sql"SELECT rnkC FROM rank_change WHERE rnkC.response_id = $id;".query[RankChangeRow].list
+    sql"""
+      SELECT rnkC.student_number, rnkC.start_rank, rnkC.end_rank, rnkC.time
+      FROM rank_change rnkC WHERE rnkC.response_id = $id;
+    """.query[RankChangeRow].list
 
   private def responsesFromRows(rows: List[(ResponseRow, Option[RankRow])]): ConnectionIO[List[CompleteResponse]] = {
 
@@ -325,8 +329,8 @@ object SurveyResponseDb extends RepositoryCompanion[SurveyResponse, SurveyRespon
     //Finally batch insert entries in rank_change table
     val addChangesSQL =
       """
-        INSERT INTO rank_change (start_rank, end_rank, time, response_id)
-        VALUES (?, ?, ?, ?);
+        INSERT INTO rank_change (student_num, start_rank, end_rank, time, response_id)
+        VALUES (?, ?, ?, ?, ?);
       """
 
     val ranks = ListBuffer.empty[(String, UUID, Int)]
@@ -334,15 +338,16 @@ object SurveyResponseDb extends RepositoryCompanion[SurveyResponse, SurveyRespon
       ranks += ((e, entry.id, idx))
     }
 
-    val rankHistory = ListBuffer.empty[(Int, Int, Timestamp, UUID)]
+    val rankHistory = ListBuffer.empty[(StudentNumber, Int, Int, Timestamp, UUID)]
     for( r <- entry.rankHistory ) {
-      val ts = new Timestamp(r._2.millis.toLong)
-      rankHistory += ((r._1.oldIndex, r._1.newIndex, ts, entry.id))
+      val (student, change, time) = r
+      val ts = new Timestamp(time.millis.toLong)
+      rankHistory += ((student, change.oldIndex, change.newIndex, ts, entry.id))
     }
 
 
-    val addRanksQ = Update[(String, UUID, Int)](addRanksSQL).updateMany(ranks.result())
-    val addRankChangesQ = Update[(Int, Int, Timestamp, UUID)](addChangesSQL).updateMany(rankHistory.result())
+    val addRanksQ = Update[(StudentNumber, UUID, Int)](addRanksSQL).updateMany(ranks.result())
+    val addRankChangesQ = Update[(StudentNumber, Int, Int, Timestamp, UUID)](addChangesSQL).updateMany(rankHistory.result())
 
     //Actually construct the combined query program
     for {

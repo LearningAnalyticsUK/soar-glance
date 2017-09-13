@@ -45,7 +45,7 @@ class SurveyResponsesApi(repository: SurveyResponseDb) {
     }
   }
 
-  private val postedResponse: Endpoint[SurveyResponse] = jsonBody[UUID => SurveyResponse].map(_(UUID.randomUUID()))
+  private val postedResponse = jsonBody[UUID => SurveyResponse].map(_(UUID.randomUUID()))
 
   /** Endpoint to accept new SurveyResponses */
   val write: Endpoint[SurveyResponse] = post("responses" :: postedResponse) { r: SurveyResponse =>

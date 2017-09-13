@@ -89,9 +89,12 @@ object StudentsSortableTable {
         //TODO: Find out why no cells are getting the warning class anymore
         val renderedColumns = columns.iterator.zipWithIndex.map({ case (c, idx) =>
           <.td(
-            (^.className := "warning").when(idx == wrappedP.rankModuleIdx),
             ^.onClick --> wrappedP.selectStudent(bs.props),
-            c
+            if(idx == wrappedP.rankModuleIdx) {
+              <.strong("?")
+            } else {
+              c
+            }
           )
         }).toList
 

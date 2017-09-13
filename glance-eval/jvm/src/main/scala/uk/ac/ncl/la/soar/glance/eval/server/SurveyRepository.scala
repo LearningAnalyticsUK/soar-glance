@@ -28,7 +28,7 @@ import doobie.imports._
 import monix.eval.Task
 import uk.ac.ncl.la.soar.data.ModuleScore
 import uk.ac.ncl.la.soar.db.{RepositoryCompanion, Repository => DbRepository}
-import uk.ac.ncl.la.soar.glance.eval.{CompleteResponse, Survey, SurveyResponse}
+import uk.ac.ncl.la.soar.glance.eval.{CompleteResponse, Ranking, Survey, SurveyResponse}
 import uk.ac.ncl.la.soar.glance.util.{Time, Times}
 import uk.ac.ncl.la.soar.glance.web.client.component.sortable.IndexChange
 import uk.ac.ncl.la.soar.{ModuleCode, StudentNumber}
@@ -220,10 +220,17 @@ class SurveyResponseDb private[glance] (xa: Transactor[Task]) extends DbReposito
 
 object SurveyResponseDb extends RepositoryCompanion[SurveyResponse, SurveyResponseDb] {
 
-  /** Type aliases for Db rows */
-  type ResponseRow = (UUID, String, UUID, Double, Double)
+  /* Struct types and type aliases to represent Db rows */
+  case class ResponseRow(id: UUID,
+                         respondentEmail: String,
+                         surveyId: UUID,
+                         started: Double,
+                         finished: Double,
+                         dRankingId: UUID,
+                         sRankingId: UUID)
+
   type RankRow = (StudentNumber, Int)
-  //TODO: Update this alias 
+  //TODO: Update this alias
   type RankChangeRow = (StudentNumber, IndexChange, Time)
 
   implicit val uuidMeta: Meta[UUID] = Meta[String].nxmap(UUID.fromString, _.toString)
@@ -235,125 +242,129 @@ object SurveyResponseDb extends RepositoryCompanion[SurveyResponse, SurveyRespon
     sql"SELECT r.id FROM survey_response r;".query[UUID].list
 
   override val listQ: ConnectionIO[List[SurveyResponse]] = {
-    val rowsQ: ConnectionIO[List[(ResponseRow, Option[RankRow])]] =
-      sql"""
-        SELECT rsp, rnk.student_num, rnk.rank,
-        FROM survey_response rsp
-        LEFT OUTER JOIN student_rank rnk
-        ON rnk.response_id = rsp.id;
-      """.query[(ResponseRow, Option[StudentNumber], Option[Int])].map({
-        case (rsp, stud, rank) => (rsp, (stud, rank).map2( _ -> _ ))
-      }).list
+    val rowsQ: ConnectionIO[List[ResponseRow]] =
+      sql"SELECT * FROM survey_response;".query[ResponseRow].list
 
     for {
-      rows <- rowsQ
-      completeResponse <- responsesFromRows(rows)
+      surveyRows <- rowsQ
+      completeResponse <- surveyRows.traverse(responseFromRow).map(_.flatten)
     } yield completeResponse
   }
 
-  private def rankChangeRowsQ(id: UUID): ConnectionIO[List[RankChangeRow]] =
+  private def rankRowsQ(id: UUID): ConnectionIO[List[RankRow]] = {
+    sql"""
+      SELECT rnk.student_num, rnk.rank,
+      FROM student_rank rnk
+      WHERE rnk.ranking_id = $id;
+    """.query[RankRow].list
+  }
+
+  private def rankChangeRowsQ(id: UUID): ConnectionIO[List[RankChangeRow]] = {
     sql"""
       SELECT rnkC.student_number, rnkC.start_rank, rnkC.end_rank, rnkC.time
       FROM rank_change rnkC WHERE rnkC.response_id = $id;
     """.query[RankChangeRow].list
-
-  private def responsesFromRows(rows: List[(ResponseRow, Option[RankRow])]): ConnectionIO[List[CompleteResponse]] = {
-
-    val groupedRows = rows.groupBy(_._1).mapValues(_.flatMap(_._2))
-    val withRanks = groupedRows.mapValues(_.sortBy(_._2).map(_._1))
-
-    withRanks.toList.traverse({ case (row, ranks) => responseFromRow(row, ranks) }).map(_.flatten)
   }
 
-  private def responseFromRow(row: ResponseRow, ranks: List[StudentNumber]): ConnectionIO[Option[CompleteResponse]] = {
-    val (id, respondent, surveyId, start, finish) = row
+  private def rankingQ(id: UUID): ConnectionIO[Ranking] = (id, id).bitraverse(rankRowsQ, rankChangeRowsQ).map {
+    case (ranks, rankChanges) =>
+      Ranking(ranks.sortBy(_._2).map(_._1), rankChanges)
+  }
 
-    //TODO: get the survey db side with a join rather than programme side like this.
-    //Get survey
-    //Get the rank changes
-    //Build the CompleteResponse
-    val respT = for {
-      s <- OptionT(SurveyDb.findQ(surveyId))
-      rC <- OptionT.liftF(rankChangeRowsQ(id))
+  private def responseFromRow(row: ResponseRow): ConnectionIO[Option[SurveyResponse]] = {
+
+
+    //Get the survey
+    //If it exists, get the ranks and rank changes
+    //Build the complete response
+    //Note that the return type annotation is required because ConnectionIO is not Covariant
+    val responseT: OptionT[ConnectionIO, SurveyResponse] = for {
+      survey <- OptionT(SurveyDb.findQ(row.surveyId))
+      sR <- OptionT.liftF(rankingQ(row.sRankingId))
+      dR <- OptionT.liftF(rankingQ(row.dRankingId))
     } yield {
-      CompleteResponse(s, ranks, rC, respondent, start, finish, id)
+      CompleteResponse(survey, sR, dR, row.respondentEmail, row.started, row.finished, row.id)
     }
-    respT.value
+    responseT.value
   }
 
 
   override def findQ(id: UUID): ConnectionIO[Option[SurveyResponse]] = {
+    val rowQ = sql"SELECT rsp FROM survey_response rsp WHERE rsp.id = $id;".query[ResponseRow].option
 
-    //TODO: Factor common query parts into fragments
-    //Also groupBy can't ge the best way surely?
-    val rowQ =
-      sql"""
-        SELECT rsp, rnk.student_num, rnk.rank,
-        FROM survey_response rsp
-        WHERE rsp.id = $id
-        LEFT OUTER JOIN student_rank rnk
-        ON rnk.response_id = rsp.id;
-      """.query[(ResponseRow, Option[StudentNumber], Option[Int])].map({
-        case (rsp, stud, rank) => (rsp, (stud, rank).map2( _ -> _ ))
-      }).list
+    val responseT = for {
+      row <- OptionT(rowQ)
+      completeResponse <- OptionT(responseFromRow(row))
+    } yield completeResponse
 
-    for {
-      rows <- rowQ
-      completeResponse <- responsesFromRows(rows)
-    } yield completeResponse.headOption
+    responseT.value
   }
 
   //TODO: Return persisted Response
   override def saveQ(entry: SurveyResponse): ConnectionIO[Unit] = {
 
-    //Get the retrieve survey Id from nested survey in entry
-    val sId = entry.survey.id
 
     //Cast the start time from Double to Timestamp
     val startTs = new Timestamp(entry.start.toLong)
 
+    //Create UUIDs for detailed and simple rankings
+    val sRankingId = UUID.randomUUID()
+    val dRankingId = UUID.randomUUID()
+
     //Insert entry in respondents table
     val addResponseQ =
       sql"""
-         INSERT INTO survey_response (id, respondent_email, survey_id, time_started, time_finished)
-         VALUES (${entry.id}, ${entry.respondent}, ${entry.survey.id}, $startTs, CURRENT_TIMESTAMP);
+         INSERT INTO survey_response (id, respondent_email, survey_id, time_started, time_finished, detail_ranking, simple_ranking)
+         VALUES (${entry.id}, ${entry.respondent}, ${entry.survey.id}, $startTs, CURRENT_TIMESTAMP, $dRankingId, $sRankingId);
       """.update.run
+
+    //Insert entries into ranking table;
+    val addRankingsQ =
+      sql"""
+         INSERT INTO ranking (id, response_id, detailed)
+         VALUES ($sRankingId, ${entry.id},  FALSE), ($dRankingId, ${entry.id}, TRUE);
+      """.update.run
+
+    //Actually construct the combined query program
+    for {
+      _ <- addResponseQ
+      _ <- addRankingsQ
+      _ <- saveRankingQ(entry.simple, sRankingId) *> saveRankingQ(entry.detailed, dRankingId)
+    } yield ()
+  }
+
+  private def saveRankingQ(ranking: Ranking, id: UUID) = {
+
+    val ranks = ListBuffer.empty[(String, UUID, Int)]
+    for ( (e, idx) <- ranking.ranks.zipWithIndex ) {
+      ranks += ((e, id, idx))
+    }
+
+    val rankHistory = ListBuffer.empty[(StudentNumber, Int, Int, Timestamp, UUID)]
+    for( r <- ranking.rankHistory ) {
+      val (student, change, time) = r
+      val ts = new Timestamp(time.millis.toLong)
+      rankHistory += ((student, change.oldIndex, change.newIndex, ts, id))
+    }
 
     //Then batch insert entries in student_ranks table
     val addRanksSQL =
       """
-        INSERT INTO student_rank (student_num, response_id, rank)
+        INSERT INTO student_rank (student_num, ranking_id, rank)
         VALUES (?, ?, ?);
       """
 
     //Finally batch insert entries in rank_change table
     val addChangesSQL =
       """
-        INSERT INTO rank_change (student_num, start_rank, end_rank, time, response_id)
+        INSERT INTO rank_change (student_num, start_rank, end_rank, time, ranking_id)
         VALUES (?, ?, ?, ?, ?);
       """
-
-    val ranks = ListBuffer.empty[(String, UUID, Int)]
-    for ( (e, idx) <- entry.ranks.zipWithIndex ) {
-      ranks += ((e, entry.id, idx))
-    }
-
-    val rankHistory = ListBuffer.empty[(StudentNumber, Int, Int, Timestamp, UUID)]
-    for( r <- entry.rankHistory ) {
-      val (student, change, time) = r
-      val ts = new Timestamp(time.millis.toLong)
-      rankHistory += ((student, change.oldIndex, change.newIndex, ts, entry.id))
-    }
 
 
     val addRanksQ = Update[(StudentNumber, UUID, Int)](addRanksSQL).updateMany(ranks.result())
     val addRankChangesQ = Update[(StudentNumber, Int, Int, Timestamp, UUID)](addChangesSQL).updateMany(rankHistory.result())
-
-    //Actually construct the combined query program
-    for {
-      _ <- addResponseQ
-      _ <- addRanksQ *> addRankChangesQ
-    } yield ()
+    addRanksQ *> addRankChangesQ
   }
 
   override def deleteQ(id: UUID): ConnectionIO[Boolean] =

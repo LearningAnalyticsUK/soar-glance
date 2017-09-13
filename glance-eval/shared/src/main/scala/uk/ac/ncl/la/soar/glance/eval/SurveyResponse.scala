@@ -41,30 +41,36 @@ import uk.ac.ncl.la.soar.glance.web.client.component.sortable.IndexChange
   */
 sealed trait SurveyResponse {
   def survey: Survey
-  def ranks: List[StudentNumber]
-  def rankHistory: List[(StudentNumber, IndexChange, Time)]
+  def simple: Ranking
+  def detailed: Ranking
   def respondent: String
   def start: Double
   def id: UUID
 }
 
+/**
+  * Simple structure representing Ranking info. Reified here because we store two sets of ranking info per survey
+  * response.
+  */
+final case class Ranking(ranks: List[StudentNumber], rankHistory: List[(StudentNumber, IndexChange, Time)])
+
 object SurveyResponse {
 
   def apply(survey: Survey,
-            ranks: List[StudentNumber],
-            ranksHistory: List[(StudentNumber, IndexChange, Time)],
+            simple: Ranking,
+            detailed: Ranking,
             respondent: String,
             start: Double,
-            id: UUID): SurveyResponse = IncompleteResponse(survey, ranks, ranksHistory, respondent, start, id)
+            id: UUID): SurveyResponse = IncompleteResponse(survey, simple, detailed, respondent, start, id)
 
 
-  /** Typeclass instances for SurveResponse */
+  /* Typeclass instances for SurveResponse */
   implicit val encodeSurveyResponse: Encoder[SurveyResponse] = new Encoder[SurveyResponse] {
     final def apply(a: SurveyResponse): Json = Json.obj(
       "id" -> a.id.toString.asJson,
       "survey" -> a.survey.asJson,
-      "ranks" -> a.ranks.asJson,
-      "rankHistory" -> a.rankHistory.asJson,
+      "simple" -> a.simple.asJson,
+      "detailed" -> a.detailed.asJson,
       "respondent" -> a.respondent.asJson,
       "start" -> a.start.asJson,
     )
@@ -86,27 +92,29 @@ object SurveyResponse {
     override def apply(c: HCursor): Decoder.Result[UUID => SurveyResponse] = {
       for {
         survey <- c.downField("survey").as[Survey]
-        ranks <- c.downField("ranks").as[List[StudentNumber]]
-        rankHistory <- c.downField("rankHistory").as[List[(StudentNumber, IndexChange, Time)]]
+        simple <- c.downField("simple").as[Ranking]
+        detailed <- c.downField("detailed").as[Ranking]
         respondent <- c.downField("respondent").as[String]
         start <- c.downField("start").as[Double]
       } yield { id: UUID =>
-        IncompleteResponse(survey, ranks, rankHistory, respondent, start, id)
+        IncompleteResponse(survey, simple, detailed, respondent, start, id)
       }
     }
   }
+
+
 }
 
 case class IncompleteResponse(survey: Survey,
-                              ranks: List[StudentNumber],
-                              rankHistory: List[(StudentNumber, IndexChange, Time)],
+                              simple: Ranking,
+                              detailed: Ranking,
                               respondent: String,
                               start: Double,
                               id: UUID) extends SurveyResponse
 
 case class CompleteResponse(survey: Survey,
-                            ranks: List[StudentNumber],
-                            rankHistory: List[(StudentNumber, IndexChange, Time)],
+                            simple: Ranking,
+                            detailed: Ranking,
                             respondent: String,
                             start: Double,
                             finish: Double,

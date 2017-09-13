@@ -7,6 +7,13 @@ CREATE TABLE IF NOT EXISTS ranking (
 
 -- Alter survey response to reference two rankings.
 ALTER TABLE survey_response
+  DROP CONSTRAINT IF EXISTS survey_response_response_id_fkey,
+  DROP COLUMN IF EXISTS detailed;
+
+ALTER TABLE survey_response
+  DROP COLUMN IF EXISTS precedes;
+
+ALTER TABLE survey_response
   ADD COLUMN detailed_ranking VARCHAR(40),
   ADD COLUMN simple_ranking VARCHAR(40);
 
@@ -16,7 +23,9 @@ ALTER TABLE survey_response
 
 -- Alter student_rank and rank_change to reference ranking, rather than response_id directly
 ALTER TABLE rank_change
-  DROP CONSTRAINT IF EXISTS rank_change_response_id_fkey,
+  DROP CONSTRAINT IF EXISTS rank_change_response_id_fkey;
+
+ALTER TABLE rank_change
   RENAME COLUMN response_id TO ranking_id;
 
 ALTER TABLE rank_change
@@ -24,7 +33,9 @@ ALTER TABLE rank_change
   FOREIGN KEY (ranking_id) REFERENCES ranking;
 
 ALTER TABLE student_rank
-  DROP CONSTRAINT IF EXISTS student_rank_response_id_fkey,
+  DROP CONSTRAINT IF EXISTS student_rank_response_id_fkey;
+
+ALTER TABLE student_rank
   RENAME COLUMN response_id TO ranking_id;
 
 ALTER TABLE student_rank

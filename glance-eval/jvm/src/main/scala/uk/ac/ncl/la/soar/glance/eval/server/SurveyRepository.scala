@@ -314,7 +314,7 @@ object SurveyResponseDb extends RepositoryCompanion[SurveyResponse, SurveyRespon
     //Insert entry in respondents table
     val addResponseQ =
       sql"""
-         INSERT INTO survey_response (id, respondent_email, survey_id, time_started, time_finished, detail_ranking, simple_ranking)
+         INSERT INTO survey_response (id, respondent_email, survey_id, time_started, time_finished, detailed_ranking, simple_ranking)
          VALUES (${entry.id}, ${entry.respondent}, ${entry.survey.id}, $startTs, CURRENT_TIMESTAMP, $dRankingId, $sRankingId);
       """.update.run
 

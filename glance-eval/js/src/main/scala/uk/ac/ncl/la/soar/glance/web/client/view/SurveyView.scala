@@ -41,7 +41,6 @@ import scala.scalajs.js
   * React Component for the SurveyView
   */
 object SurveyView {
-  
 
   case class Props(proxy: ModelProxy[Pot[SurveyModel]], ctrl: RouterCtl[Main.SurveyLoc])
 
@@ -115,7 +114,6 @@ object SurveyView {
 
         val focused = (state.selectedL, state.selectedR)
 
-
         <.div(
           ^.id := "ranking",
           <.span(
@@ -127,7 +125,6 @@ object SurveyView {
 
             val rankModule = sm.survey.moduleToRank
             <.div(
-              ^.className := s"table-responsive",
               ^.classSet1(
                 "table-responsive",
                 "selecting" -> !state.selectingR,

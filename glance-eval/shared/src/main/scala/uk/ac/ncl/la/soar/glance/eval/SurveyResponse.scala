@@ -52,7 +52,7 @@ sealed trait SurveyResponse {
   * Simple structure representing Ranking info. Reified here because we store two sets of ranking info per survey
   * response.
   */
-final case class Ranking(ranks: List[StudentNumber], rankHistory: List[(StudentNumber, IndexChange, Time)])
+final case class Ranking(ranks: List[StudentNumber], rankHistory: List[(StudentNumber, IndexChange, Time)] = Nil)
 
 object SurveyResponse {
 

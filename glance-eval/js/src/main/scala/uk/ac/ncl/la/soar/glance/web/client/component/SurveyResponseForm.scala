@@ -64,7 +64,7 @@ object SurveyResponseForm {
 
     private def buildResponseFromProps(p: Props, s: State) = {
       p.proxy().toOption.map { sm =>
-        IncompleteResponse(sm.survey, sm.ranks, sm.rankHistory, s.respondent, sm.startTime, UUID.randomUUID)
+        IncompleteResponse(sm.survey, sm.simpleRanking, sm.detailedRanking, s.respondent, sm.startTime, UUID.randomUUID)
       }
     }
 

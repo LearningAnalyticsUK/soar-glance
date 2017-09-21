@@ -112,11 +112,13 @@ object Survey {
     val qSet = s.queries.toSet
     val dEntries = ListBuffer.empty[StudentRecords[SortedMap, ModuleCode, Double]]
 
+
     for(e <- s.entries) {
-      if (qSet.contains(e.number))
-        dEntries += StudentRecords(e.number, e.record.until(s.moduleToRank))
-      else
+      if (qSet.contains(e.number)) {
+        dEntries += StudentRecords(e.number, e.record - s.moduleToRank)
+      } else {
         dEntries += e
+      }
     }
 
     s.copy(entries = dEntries.result())

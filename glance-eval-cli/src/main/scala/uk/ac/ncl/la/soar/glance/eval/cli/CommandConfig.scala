@@ -58,7 +58,10 @@ final case class TansformConfig(clusterPath: String = "",
 /**
   * Config "bag" case class for the job which loads transformed soar data to support surveys. Also the parser ...
   */
-final case class LoadSupportConfig(clusterPath: String = "", recapPath: String = "") extends CommandConfig
+final case class LoadSupportConfig(clusterPath: String = "",
+                                   recapPath: String = "") extends CommandConfig
+
+final case class LoadExtraMarksConfig(extraMarks: String = "") extends CommandConfig
 
 object CommandConfig {
 
@@ -68,6 +71,7 @@ object CommandConfig {
     case "assess" => assessParser.parse(args.tail, AssessConfig())
     case "transform" => transformParser.parse(args.tail, TansformConfig())
     case "load-support" => loadParser.parse(args.tail, LoadSupportConfig())
+    case "load-extra-marks" => extraMarkParser.parse(args.tail, LoadExtraMarksConfig())
     case _ => None
   }
 
@@ -175,6 +179,16 @@ object CommandConfig {
       .action((x, c) => c.copy(recapPath = x))
       .text("recap-sessions is a required .csv file containing student sessions using the ReCap video lecture service " +
         "Format \"SessionStartTime, RecapId, StudentId, StudyId, StageId, SecondsListened\"")
+
+
+  }
+
+  private[cli] val extraMarkParser = new OptionParser[LoadExtraMarksConfig]("SoarEvalLoadExtraMarks") {
+
+    opt[String]('m', "marks").required().valueName("<file>")
+      .action((x, c) => c.copy(extraMarks = x))
+      .text("marks is an optional .csv file containing extra student marks to load (perhaps with a different module " +
+        "code).")
   }
 }
 

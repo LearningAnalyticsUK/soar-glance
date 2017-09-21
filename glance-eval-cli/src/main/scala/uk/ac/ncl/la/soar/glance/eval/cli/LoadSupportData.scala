@@ -31,9 +31,11 @@ import kantan.csv.java8._
 import monix.eval.Task
 import monix.cats._
 import CsvRow._
+import uk.ac.ncl.la.soar.data.ModuleScore
 import uk.ac.ncl.la.soar.glance.eval.{ClusterSession, RecapSession}
 import uk.ac.ncl.la.soar.glance.eval.server._
 
+import scala.io.Source
 import scala.util.Try
 
 /**
@@ -63,6 +65,7 @@ object LoadSupportData extends Command[LoadSupportConfig, Unit] {
 
     sessions
   }
+
 
   /** Data provided with ms precision which is mal-formatted, so we drop it */
   private def prepTs(ts: String) = Try(Instant.parse(ts.dropRight(4).concat("Z"))).getOrElse(Instant.now)

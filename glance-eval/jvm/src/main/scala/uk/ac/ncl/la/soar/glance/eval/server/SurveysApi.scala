@@ -43,7 +43,7 @@ class SurveysApi(surveyRepository: SurveyDb, clusterRepository: ClusterSessionDb
   val read = get("surveys" :: path[UUID] ) { (id: UUID) =>
     println(s"received a request for this survey: $id")
     surveyRepository.find(id).toFuture.map {
-      case Some(s) => Ok(Survey.truncateQueryRecords(s))
+      case Some(s) => Ok(s)
       case None => notFound(id)
     }
   }

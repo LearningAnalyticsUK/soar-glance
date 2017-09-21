@@ -21,7 +21,7 @@ import doobie.util.transactor.DriverManagerTransactor
 import monix.eval.Task
 import org.flywaydb.core.Flyway
 import pureconfig.loadConfigOrThrow
-import uk.ac.ncl.la.soar.db.{Config, ModuleDb}
+import uk.ac.ncl.la.soar.db.{Config, ModuleDb, ModuleScoreDb}
 import uk.ac.ncl.la.soar.server.Implicits._
 
 /** Description of Class
@@ -38,6 +38,7 @@ object Repositories {
   lazy val ClusterSession: Task[ClusterSessionDb] = schema.map(_._3)
   lazy val RecapSession: Task[RecapSessionDb] = schema.map(_._4)
   lazy val Module: Task[ModuleDb] = schema.map(_._5)
+  lazy val ModuleScore: Task[ModuleScoreDb] = schema.map(_._6)
 
   /** Method to perform db db.migrations */
   private def migrate(dbUrl: String, user: String, pass: String) = Task {
@@ -49,7 +50,7 @@ object Repositories {
   private lazy val schema = createSchema.memoize
 
   /** Init method to set up the database */
-  private val createSchema: Task[(SurveyDb, SurveyResponseDb, ClusterSessionDb, RecapSessionDb, ModuleDb)] = {
+  private val createSchema: Task[(SurveyDb, SurveyResponseDb, ClusterSessionDb, RecapSessionDb, ModuleDb, ModuleScoreDb)] = {
 
     //Lazy config for memoization?
     lazy val config = loadConfigOrThrow[Config]
@@ -72,11 +73,13 @@ object Repositories {
       cSDb = new ClusterSessionDb(xa)
       rSDb = new RecapSessionDb(xa)
       mDb = new ModuleDb(xa)
+      msDb = new ModuleScoreDb(xa)
       - <- { println("Initialising Survey tables");sDb.init }
       _ <- { println("Initialising Survey response tables");sRDb.init }
       _ <- { println("Initialising Cluster session tables");cSDb.init }
       _ <- { println("Initialising Recap session tables");rSDb.init }
       _ <- { println("Initialising Module tables"); mDb.init}
-    } yield (sDb, sRDb, cSDb, rSDb, mDb)
+      _ <- { println("Initialising Module Score tables"); msDb.init}
+    } yield (sDb, sRDb, cSDb, rSDb, mDb, msDb)
   }
 }

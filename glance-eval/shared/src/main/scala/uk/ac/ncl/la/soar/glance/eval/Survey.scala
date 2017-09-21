@@ -96,7 +96,7 @@ object Survey {
     val allModules = records.iterator.map(_.module).toSet
     //Pass the StudentRecords objects to generate a set of queries
     //TODO: provide a config parameter for training rather than magically deriving it
-    val queries = sampleQueries(stRecords, numQueries*2, numQueries, queryModules.toSet, seed)
+    val queries = sampleQueries(stRecords, 5, numQueries, queryModules.toSet, seed)
     //Each entry in queries represents the query set for one survey. Split them out and and make surveys
     queries.iterator.map { case (module, students) =>
         Survey(allModules, module, students, stRecords)
@@ -131,7 +131,7 @@ object Survey {
     }
 
     //TODO: replace magic number filter to drop students with few records with a conf option
-    fullRecords.filter(_.record.size > 7).toList
+    fullRecords.filter(_.record.size > 4).toList
   }
 
   /** Split a list of student records into records with a score for the given module (upto n records) and the remainder */

@@ -61,7 +61,18 @@ final case class TansformConfig(clusterPath: String = "",
 final case class LoadSupportConfig(clusterPath: String = "",
                                    recapPath: String = "") extends CommandConfig
 
+/**
+  * Config "bag" case class for the job which loads extra marks data in, besides that depended on by a survey.
+  * Useful if students in a survey are expected to have taken modules with a different prefix code.
+  */
 final case class LoadExtraMarksConfig(extraMarks: String = "") extends CommandConfig
+
+/**
+  * Config "bag" case class for the job which exports csv results from survey response tables in the database.
+  */
+final case class ExportSurveyResultsConfig(outputPath: String = "", surveyId: String = "") extends CommandConfig
+
+
 
 object CommandConfig {
 
@@ -72,6 +83,7 @@ object CommandConfig {
     case "transform" => transformParser.parse(args.tail, TansformConfig())
     case "load-support" => loadParser.parse(args.tail, LoadSupportConfig())
     case "load-extra-marks" => extraMarkParser.parse(args.tail, LoadExtraMarksConfig())
+    case "export-results" => exportResultsParser.parse(args.tail, ExportSurveyResultsConfig())
     case _ => None
   }
 
@@ -180,7 +192,6 @@ object CommandConfig {
       .text("recap-sessions is a required .csv file containing student sessions using the ReCap video lecture service " +
         "Format \"SessionStartTime, RecapId, StudentId, StudyId, StageId, SecondsListened\"")
 
-
   }
 
   private[cli] val extraMarkParser = new OptionParser[LoadExtraMarksConfig]("SoarEvalLoadExtraMarks") {
@@ -189,6 +200,17 @@ object CommandConfig {
       .action((x, c) => c.copy(extraMarks = x))
       .text("marks is an optional .csv file containing extra student marks to load (perhaps with a different module " +
         "code).")
+  }
+
+  private[cli] val exportResultsParser = new OptionParser[ExportSurveyResultsConfig]("SoarEvalExportResults") {
+
+    opt[String]('o', "output").required().valueName("<directory>")
+      .action((x, c) => c.copy(outputPath = x))
+      .text("ouput is a required parameter specifying the directory to write the survey results into")
+
+    opt[String]('s', "survey").required().valueName("<uuid>")
+      .action((x, c) => c.copy(surveyId = x))
+      .text("survey is a required parameter specifying the survey id to write the results for")
   }
 }
 

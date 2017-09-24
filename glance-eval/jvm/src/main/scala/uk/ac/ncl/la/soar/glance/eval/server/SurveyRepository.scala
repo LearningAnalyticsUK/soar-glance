@@ -212,6 +212,8 @@ class SurveyResponseDb private[glance] (xa: Transactor[Task]) extends DbReposito
 
   override def find(id: UUID): Task[Option[SurveyResponse]] = findQ(id).transact(xa)
 
+  def listForSurvey(id: UUID): Task[List[SurveyResponse]] = listForSurveyQ(id).transact(xa)
+
   override def save(entry: SurveyResponse): Task[Unit] = saveQ(entry).transact(xa)
 
   override def delete(id: UUID): Task[Boolean] = deleteQ(id).transact(xa)
@@ -224,14 +226,14 @@ object SurveyResponseDb extends RepositoryCompanion[SurveyResponse, SurveyRespon
   case class ResponseRow(id: UUID,
                          respondentEmail: String,
                          surveyId: UUID,
-                         started: Double,
-                         finished: Double,
+                         started: Timestamp,
+                         finished: Timestamp,
                          dRankingId: UUID,
                          sRankingId: UUID)
 
   type RankRow = (StudentNumber, Int)
   //TODO: Update this alias
-  type RankChangeRow = (StudentNumber, IndexChange, Time)
+  type RankChangeRow = (StudentNumber, IndexChange, Timestamp)
 
   implicit val uuidMeta: Meta[UUID] = Meta[String].nxmap(UUID.fromString, _.toString)
   implicit val timeMeta: Meta[Time] = Meta[Double].xmap(Times.fromDouble , _.millis)
@@ -246,14 +248,24 @@ object SurveyResponseDb extends RepositoryCompanion[SurveyResponse, SurveyRespon
       sql"SELECT * FROM survey_response;".query[ResponseRow].list
 
     for {
-      surveyRows <- rowsQ
-      completeResponse <- surveyRows.traverse(responseFromRow).map(_.flatten)
+      responseRows <- rowsQ
+      completeResponse <- responseRows.traverse(responseFromRow).map(_.flatten)
+    } yield completeResponse
+  }
+
+  private def listForSurveyQ(id: UUID): ConnectionIO[List[SurveyResponse]] = {
+    val rowsQ: ConnectionIO[List[ResponseRow]] = 
+      sql"SELECT * FROM survey_response WHERE survey_id = $id;".query[ResponseRow].list
+
+    for {
+      responseRows <- rowsQ
+      completeResponse <- responseRows.traverse(responseFromRow).map(_.flatten)
     } yield completeResponse
   }
 
   private def rankRowsQ(id: UUID): ConnectionIO[List[RankRow]] = {
     sql"""
-      SELECT rnk.student_num, rnk.rank,
+      SELECT rnk.student_num, rnk.rank
       FROM student_rank rnk
       WHERE rnk.ranking_id = $id;
     """.query[RankRow].list
@@ -261,18 +273,18 @@ object SurveyResponseDb extends RepositoryCompanion[SurveyResponse, SurveyRespon
 
   private def rankChangeRowsQ(id: UUID): ConnectionIO[List[RankChangeRow]] = {
     sql"""
-      SELECT rnkC.student_number, rnkC.start_rank, rnkC.end_rank, rnkC.time
-      FROM rank_change rnkC WHERE rnkC.response_id = $id;
+      SELECT rnkC.student_num, rnkC.start_rank, rnkC.end_rank, rnkC.time
+      FROM rank_change rnkC WHERE rnkC.ranking_id = $id;
     """.query[RankChangeRow].list
   }
 
+  //TODO: Fix horrible TS to Time conversions by basing the Time Meta on timestamp
   private def rankingQ(id: UUID): ConnectionIO[Ranking] = (id, id).bitraverse(rankRowsQ, rankChangeRowsQ).map {
     case (ranks, rankChanges) =>
-      Ranking(ranks.sortBy(_._2).map(_._1), rankChanges)
+      Ranking(ranks.sortBy(_._2).map(_._1), rankChanges.map { case (s, i, ts) => (s, i, Times.fromLong(ts.getTime)) })
   }
 
   private def responseFromRow(row: ResponseRow): ConnectionIO[Option[SurveyResponse]] = {
-
 
     //Get the survey
     //If it exists, get the ranks and rank changes
@@ -283,7 +295,8 @@ object SurveyResponseDb extends RepositoryCompanion[SurveyResponse, SurveyRespon
       sR <- OptionT.liftF(rankingQ(row.sRankingId))
       dR <- OptionT.liftF(rankingQ(row.dRankingId))
     } yield {
-      CompleteResponse(survey, sR, dR, row.respondentEmail, row.started, row.finished, row.id)
+      CompleteResponse(survey, sR, dR, row.respondentEmail, row.started.getTime.toDouble,
+        row.finished.getTime.toDouble, row.id)
     }
     responseT.value
   }

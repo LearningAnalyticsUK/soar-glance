@@ -30,14 +30,14 @@ sealed trait HasStudent { this: CsvRow =>
 
 object CsvRow {
 
-  case class NessMarkRow(student: StudentNumber, study: Int, stage: Int, year: String, progression: String, module: ModuleCode,
+  final case class NessMarkRow(student: StudentNumber, study: Int, stage: Int, year: String, progression: String, module: ModuleCode,
                          score: Int, component: String, componentAttempt: Int, componentScore: Int,
                          componentWeight: Double, due: Option[Instant]) extends CsvRow with HasStudent
 
-  case class ClusterSessionRow(start: String, end: String, student: StudentNumber, study: Int, stage: Int,
+  final case class ClusterSessionRow(start: String, end: String, student: StudentNumber, study: Int, stage: Int,
                                machine: String) extends CsvRow with HasStudent
 
-  case class RecapSessionRow(start: String, recap: String, student: StudentNumber, study: Int, stage: Int,
+  final case class RecapSessionRow(start: String, recap: String, student: StudentNumber, study: Int, stage: Int,
                              duration: Double) extends CsvRow with HasStudent
 
   implicit val moduleScoreEncoder: RowEncoder[ModuleScore] = RowEncoder.ordered { ms: ModuleScore =>

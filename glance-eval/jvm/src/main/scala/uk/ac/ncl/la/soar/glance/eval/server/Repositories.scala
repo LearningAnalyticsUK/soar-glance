@@ -74,12 +74,12 @@ object Repositories {
       rSDb = new RecapSessionDb(xa)
       mDb = new ModuleDb(xa)
       msDb = new ModuleScoreDb(xa)
-      - <- { println("Initialising Survey tables");sDb.init }
+      _ <- { println("Initialising Survey tables");sDb.init }
       _ <- { println("Initialising Survey response tables");sRDb.init }
       _ <- { println("Initialising Cluster session tables");cSDb.init }
       _ <- { println("Initialising Recap session tables");rSDb.init }
-      _ <- { println("Initialising Module tables"); mDb.init}
-      _ <- { println("Initialising Module Score tables"); msDb.init}
+      _ <- { println("Initialising Module tables");mDb.init }
+      _ <- { println("Initialising Module Score tables");msDb.init }
     } yield (sDb, sRDb, cSDb, rSDb, mDb, msDb)
   }
 }

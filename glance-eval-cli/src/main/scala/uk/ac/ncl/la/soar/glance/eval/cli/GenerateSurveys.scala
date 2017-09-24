@@ -65,40 +65,6 @@ object GenerateSurveys extends Command[GenerateConfig, Unit] {
     ModuleScore.parse(lineList.iterator, ',').toList
   }
 
-
-  //TODO: Refactor writeOut method for Survey objects and produce csv with ??? fields
-//  private def writeOut(modules: List[ModuleCode],
-//                       chunks: Map[ModuleCode, List[StudentRecords[SortedMap, ModuleCode, Double]]],
-//                       conf: GeneratorConfig): Either[Throwable, Unit] = Either.catchNonFatal {
-//
-//    val header = s"Student Number, ${modules.mkString(", ")}"
-//    val metaFn = List((s: StudentRecords[SortedMap, ModuleCode, Double]) => s.number)
-//    val csvs = chunks.mapValues { surveyLines =>
-//      surveyLines.map(_.toCSV(metaFn, modules)).mkString(Properties.lineSeparator)
-//    }
-//
-//    val out = Paths.get(conf.outputPath)
-//
-//    val outPath = if(Files.exists(out)) out else Files.createDirectories(out)
-//
-//    //Prepare folder structure
-//    val subPaths = chunks.map { case (k,_) => k -> Files.createDirectory(Paths.get(s"$outPath/$k")) }
-//    //Foreach subpath, write out survey
-//
-//    def write(module: ModuleCode, entries: Map[ModuleCode, String], path: Path) = {
-//      //Scala monadic version of try with resources
-//      for {
-//        writer <- managed(Files.newBufferedWriter(path.resolve("survey.csv"), StandardCharsets.UTF_8, StandardOpenOption.CREATE,
-//          StandardOpenOption.APPEND))
-//      } {
-//        writer.write(header)
-//        writer.newLine()
-//        writer.write(entries.getOrElse(module, ""))
-//      }
-//    }
-//
-//    subPaths.foreach { case (k,v) => write(k, csvs, v) }
-//  }
 }
 
 

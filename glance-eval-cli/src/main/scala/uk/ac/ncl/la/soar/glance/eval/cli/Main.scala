@@ -46,10 +46,12 @@ object Main {
       case a: TansformConfig => TransformData.run(a)
       case a: LoadSupportConfig => LoadSupportData.run(a)
       case a: LoadExtraMarksConfig => LoadExtraMarks.run(a)
+      case a: ExportSurveyResultsConfig => ExportSurveyResults.run(a)
     } runOnComplete {
       case Failure(e) =>
         println(s"There has been a failure: $e")
         //In the event of an error, log and crash out.
+        e.printStackTrace(System.out)
         System.err.println(e.toString)
         sys.exit(1)
       case Success(_) =>

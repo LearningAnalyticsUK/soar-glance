@@ -113,7 +113,7 @@ object ExportSurveyResults extends Command[ExportSurveyResultsConfig, Unit] {
         //Drop all scores for query students except the scores in the module they were ranked for
         val trueScores = qStudentRecords.flatMap(r => r.record.get(module).map(r.number -> _))
         //Sort students by the score, then drop it and replace with a rank index
-        val ranks = trueScores.toList.sortBy(_._2).map(_._1).zipWithIndex.toMap
+        val ranks = trueScores.toList.sortBy(- _._2).map(_._1).zipWithIndex.toMap
         //Get the rank index for each column in the row, and add the respondent as the first cell
         response.respondent :: queryColumns.flatMap(ranks.get).map(_.toString)
     }

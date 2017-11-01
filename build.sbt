@@ -258,7 +258,7 @@ def commonAssembly(main: String, jar: String) = Seq(
     case "log4j.properties" => MergeStrategy.last
     case "overview.html" => MergeStrategy.rename
     case "JS_DEPENDENCIES" => MergeStrategy.discard
-    case "application.conf" => MergeStrategy.last
+    case "application.conf" => MergeStrategy.first
     case x =>
       val oldStrategy = (assemblyMergeStrategy in assembly).value
       oldStrategy(x)
@@ -419,7 +419,7 @@ lazy val glanceEvalJVM = glanceEval.jvm
     mainClass in Compile := Some("uk.ac.ncl.la.soar.glance.eval.server.Main"))
   .settings(commonBackendDeps:_*)
   .settings(flywaySettings("glance_eval"):_*)
-  .settings(commonAssembly("uk.ac.ncl.la.soar.glance.web.server.Main", "soar-glance-eval.jar"))
+  .settings(commonAssembly("uk.ac.ncl.la.soar.glance.eval.server.Main", "soar-glance-eval.jar"))
 
 //TODO: Investigate intermittent heap space OOM error on assembly of this module
 lazy val glanceEvalCli = soarProject("glance-eval-cli")

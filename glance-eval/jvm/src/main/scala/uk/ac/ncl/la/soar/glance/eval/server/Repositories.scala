@@ -56,12 +56,13 @@ object Repositories {
     lazy val config = loadConfigOrThrow[Config]
 
     for {
-      cfg <- Task(config)
-      _ <- migrate(
-        s"${cfg.database.url}${cfg.database.name}",
-        cfg.database.user,
-        cfg.database.password
-      )
+      cfg <- Task {println(config); config}
+//      _ <- migrate(
+//        s"${cfg.database.url}${cfg.database.name}",
+//        cfg.database.user,
+//        cfg.database.password
+//      )
+      
       xa = DriverManagerTransactor[Task](
         "org.postgresql.Driver",
         s"${cfg.database.url}${cfg.database.name}",

@@ -337,50 +337,6 @@ lazy val glanceCore = soarCrossProject("glance-core", CrossType.Full)
 lazy val glanceCoreJS = glanceCore.js
 lazy val glanceCoreJVM = glanceCore.jvm
 
-//TODO: Fix this so that the js/jvm dependencies are separate and I can build a proper server jar
-lazy val glanceWeb = soarCrossProject("glance-web", CrossType.Full)
-  .settings(
-    name := "Soar Glance Web",
-    moduleName := "soar-glance-web",
-    unmanagedSourceDirectories in Compile += baseDirectory.value / "shared" / "main" / "scala")
-  .settings(sjsCrossVersionPatch:_*)
-  .jvmSettings(commonBackendDeps:_*)
-  .jvmSettings(
-    libraryDependencies ++= Seq(
-      "org.flywaydb" % "flyway-core" % "4.0.3",
-      "com.github.pureconfig" %% "pureconfig" % "0.7.0")
-  )
-  .jsSettings(commonFrontendDeps:_*)
-  .jsSettings(
-    libraryDependencies ++= Seq (
-      //What is the point of having these dependencies in libraryDependencies?
-      "org.webjars" %   "bootstrap"  % bootstrapVersion,
-      "org.webjars" %   "datatables" % datatablesVersion
-    ),
-    jsDependencies ++= Seq(
-      "org.webjars.bower" % "react" % reactVersion / "react-with-addons.js" minified "react-with-addons.min.js",
-      "org.webjars.bower" % "react" % reactVersion / "react-dom.js" minified "react-dom.min.js" dependsOn "react-with-addons.js",
-      "org.webjars" % "jquery" % "1.11.1" / "jquery.js" minified "jquery.min.js",
-      "org.webjars" % "bootstrap" % bootstrapVersion / "bootstrap.js" minified "bootstrap.min.js" dependsOn "jquery.js",
-      "org.webjars" % "datatables" % datatablesVersion / "jquery.dataTables.js" minified "jquery.dataTables.min.js" dependsOn "jquery.js",
-      "org.webjars" % "datatables" % datatablesVersion / "dataTables.bootstrap.js" minified "dataTables.bootstrap.min.js" dependsOn "jquery.js",
-      "org.webjars" % "chartjs" % "2.1.3" / "Chart.js" minified "Chart.min.js"
-    ),
-    scalaJSUseMainModuleInitializer := true)
-  .enablePlugins(SbtWeb)
-  .enablePlugins(WorkbenchPlugin)
-
-lazy val glanceWebJS = glanceWeb.js
-  .dependsOn(coreJS, glanceCoreJS)
-
-lazy val glanceWebJVM = glanceWeb.jvm
-  .dependsOn(coreJVM, server)
-  .settings(
-    (resources in Compile) += (fastOptJS in (glanceWebJS, Compile)).value.data,
-    mainClass in Compile := Some("uk.ac.ncl.la.soar.glance.web.server.Main"))
-  .settings(commonAssembly("uk.ac.ncl.la.soar.glance.web.server.Main", "soar-glance-web.jar"))
-
-
 lazy val glanceEval = soarCrossProject("glance-eval", CrossType.Full)
   .settings(
     name := "Soar Glance Eval",
@@ -446,8 +402,6 @@ addCommandAlias("testAll",
    "; glance-evalJVM/test",
    "; glance-evalJS/test",
    "; glance-eval-cli/test",
-   "; glance-webJS/test",
-   "; glance-webJVM/test",
    "; model/test",
    "; server/test").mkString)
 addCommandAlias("cleanAll",
@@ -461,8 +415,6 @@ addCommandAlias("cleanAll",
    "; glance-evalJVM/clean",
    "; glance-evalJS/clean",
    "; glance-eval-cli/clean",
-   "; glance-webJS/clean",
-   "; glance-webJVM/clean",
    "; model/clean",
    "; server/clean").mkString)
 addCommandAlias("compileAll",
@@ -476,7 +428,5 @@ addCommandAlias("compileAll",
    "; glance-evalJVM/compile",
    "; glance-evalJS/compile",
    "; glance-eval-cli/compile",
-//   "; glance-webJS/compile",
-//   "; glance-webJVM/compile",
    "; model/compile",
    "; server/compile").mkString)

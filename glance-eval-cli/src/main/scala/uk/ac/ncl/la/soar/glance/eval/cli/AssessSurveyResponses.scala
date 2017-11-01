@@ -141,7 +141,8 @@ object AssessSurveyResponses extends Command[AssessConfig, Unit] {
     * Given the header of a csv, return all the column headers except the first.
     * These are the module codes in the survey
     */
-  private def parseHeader(header: String): Either[String, Seq[ModuleCode] =  {
+
+  private def parseHeader(header: String): Either[String, Seq[ModuleCode]] =  {
     //Parse out "Student Number" and the module codes as an indexed vector
     val columns = header.split(',').map(_.trim)
     //Check if student number is first column -

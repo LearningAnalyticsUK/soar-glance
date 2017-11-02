@@ -345,6 +345,7 @@ lazy val glanceEval = soarCrossProject("glance-eval", CrossType.Full)
   .settings(sjsCrossVersionPatch:_*)
   .enablePlugins(SbtWeb)
   .enablePlugins(WorkbenchPlugin)
+  .enablePlugins(DockerPlugin)
 
 lazy val glanceEvalJS = glanceEval.js
   .dependsOn(coreJS, glanceCoreJS)
@@ -365,14 +366,35 @@ lazy val glanceEvalJS = glanceEval.js
       "org.webjars" % "chartjs" % "2.1.3" / "Chart.js" minified "Chart.min.js",
       ProvidedJS / "react-sortable-hoc.js" minified "react-sortable-hoc.min.js" dependsOn("react-with-addons.js", "react-dom.js")
     ),
-    scalaJSUseMainModuleInitializer := true)
+    scalaJSUseMainModuleInitializer := true,
+    dockerfile in docker := {
+      val app = (fullOptJS in Compile).value.data
+      val appTarget = "/nginx/share/nginx/html"
+
+      new Dockerfile {
+        from("nginx")
+        copy(app, appTarget)
+      }
+    }
+  )
 
 
 lazy val glanceEvalJVM = glanceEval.jvm
   .dependsOn(coreJVM, glanceCoreJVM, server)
   .settings(
     (resources in Compile) += (fastOptJS in (glanceEvalJS, Compile)).value.data,
-    mainClass in Compile := Some("uk.ac.ncl.la.soar.glance.eval.server.Main"))
+    mainClass in Compile := Some("uk.ac.ncl.la.soar.glance.eval.server.Main"),
+    dockerfile in docker := {
+      val fatJar: File = assembly.value
+      val jarTarget = s"/app/${fatJar.name}"
+
+      new Dockerfile {
+        from("java")
+        add(fatJar, jarTarget)
+        entryPoint("java", "-Xms512M -Xmx2G -jar", jarTarget)
+        expose(8080)
+      }
+    })
   .settings(commonBackendDeps:_*)
   .settings(flywaySettings("glance_eval"):_*)
   .settings(commonAssembly("uk.ac.ncl.la.soar.glance.eval.server.Main", "soar-glance-eval.jar"))

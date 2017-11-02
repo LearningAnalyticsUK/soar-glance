@@ -49,7 +49,7 @@ object Repositories {
 
   private lazy val schema = createSchema.memoize
 
-  /** Init method to set up the database */
+  /* Init method to set up the database */
   private val createSchema: Task[(SurveyDb, SurveyResponseDb, ClusterSessionDb, RecapSessionDb, ModuleDb, ModuleScoreDb)] = {
 
     //Lazy config for memoization?

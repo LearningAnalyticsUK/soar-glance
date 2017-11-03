@@ -17,13 +17,14 @@
   */
 package uk.ac.ncl.la.soar.glance.eval
 
-import cats._
 import cats.implicits._
 import io.circe._
-import io.circe.syntax._
 import io.circe.generic.auto._
+import io.circe.syntax._
 import uk.ac.ncl.la.soar.StudentNumber
 import uk.ac.ncl.la.soar.glance.util.{Time, Times}
+import uk.ac.ncl.la.soar.glance.util.Times._
+
 
 import scala.util.Try
 
@@ -36,8 +37,6 @@ trait SessionSummary {
 }
 
 object SessionSummary {
-
-  import Times._
 
   /** Typeclass instances */
   implicit val encodeSessionSummary: Encoder[SessionSummary] = new Encoder[SessionSummary] {

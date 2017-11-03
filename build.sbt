@@ -193,10 +193,10 @@ lazy val soarJSSettings = commonSettings ++ Seq(
 )
 
 def flywaySettings(dbName: String) = Seq(
-  flywayUrl  := s"jdbc:postgresql:$dbName",
+  flywayUrl  := s"jdbc:postgresql://glance-eval-db:8003/$dbName",
   flywayUser := "postgres",
   flywayLocations := Seq(
-    s"filesystem:${baseDirectory.value}/src/main/resources/db/migrations"
+    s"filesystem:${baseDirectory.value}/src/main/resources/db/db.migrations"
   )
 )
 
@@ -265,6 +265,7 @@ def commonAssembly(main: String, jar: String) = Seq(
   }
 )
 
+
 /**
   * Definition of modules
   */
@@ -276,7 +277,7 @@ lazy val core = soarCrossProject("core", CrossType.Pure)
 lazy val coreJS = core.js
 lazy val coreJVM = core.jvm
 
-//Db module of the project - contains all database queries, db.migrations, definitions etc...
+//Db module of the project - contains all database queries, db.db.migrations, definitions etc...
 lazy val db = soarProject("db")
   .dependsOn(coreJVM)
   .settings(
@@ -327,25 +328,29 @@ lazy val model = soarProject("model")
 
 //Module which contains code for the empirical evaluation of Soar, and an explanation of its methodology
 lazy val glanceCore = soarCrossProject("glance-core", CrossType.Full)
-  .dependsOn(core)
   .settings(
     name := "Soar Glance Core",
-    moduleName := "soar-glance-core"
-  )
+    moduleName := "soar-glance-core" )
   .jsSettings(sjsCrossVersionPatch:_*)
 
 lazy val glanceCoreJS = glanceCore.js
+  .dependsOn(coreJS)
+
 lazy val glanceCoreJVM = glanceCore.jvm
+  .enablePlugins(DockerPlugin)
+  .dependsOn(coreJVM, db, server)
+  .settings(flywaySettings("glance_eval"):_*)
+
 
 lazy val glanceEval = soarCrossProject("glance-eval", CrossType.Full)
+  .enablePlugins(SbtWeb)
+  .enablePlugins(WorkbenchPlugin)
+  .enablePlugins(DockerPlugin)
   .settings(
     name := "Soar Glance Eval",
     moduleName := "soar-glance-eval",
     unmanagedSourceDirectories in Compile += baseDirectory.value / "shared" / "main" / "scala")
   .settings(sjsCrossVersionPatch:_*)
-  .enablePlugins(SbtWeb)
-  .enablePlugins(WorkbenchPlugin)
-  .enablePlugins(DockerPlugin)
 
 lazy val glanceEvalJS = glanceEval.js
   .dependsOn(coreJS, glanceCoreJS)
@@ -368,19 +373,27 @@ lazy val glanceEvalJS = glanceEval.js
     ),
     scalaJSUseMainModuleInitializer := true,
     dockerfile in docker := {
-      val app = (fullOptJS in Compile).value.data
+      val appStatics = (resources in Compile).value
+      val appJs = (fullOptJS in Compile).value.data
       val appTarget = "/nginx/share/nginx/html"
-
+      
       new Dockerfile {
         from("nginx")
-        copy(app, appTarget)
+        copy(appStatics, appTarget)
+        copy(appJs, s"$appTarget/assets")
       }
-    }
-  )
+    },
+    imageNames in docker := Seq(
+      ImageName(s"${organization.value}/glance-eval-frontend:latest"),
+      ImageName(
+        namespace = Some(organization.value),
+        repoisitory = "glance-eval-frontend",
+        tag = Some(s"v${version.value}"))
+    ))
 
 
 lazy val glanceEvalJVM = glanceEval.jvm
-  .dependsOn(coreJVM, glanceCoreJVM, server)
+  .dependsOn(coreJVM, db, server, glanceCoreJVM)
   .settings(
     (resources in Compile) += (fastOptJS in (glanceEvalJS, Compile)).value.data,
     mainClass in Compile := Some("uk.ac.ncl.la.soar.glance.eval.server.Main"),
@@ -394,14 +407,19 @@ lazy val glanceEvalJVM = glanceEval.jvm
         entryPoint("java", "-Xms512M -Xmx2G -jar", jarTarget)
         expose(8080)
       }
-    })
-  .settings(commonBackendDeps:_*)
-  .settings(flywaySettings("glance_eval"):_*)
+    },
+    imageNames in docker := Seq(
+      ImageName(s"${organization.value}/glance-eval-backend:latest"),
+      ImageName(
+        namespace = Some(organization.value),
+        repoisitory = "glance-eval-backend",
+        tag = Some(s"v${version.value}"))
+    ))
   .settings(commonAssembly("uk.ac.ncl.la.soar.glance.eval.server.Main", "soar-glance-eval.jar"))
 
 //TODO: Investigate intermittent heap space OOM error on assembly of this module
 lazy val glanceEvalCli = soarProject("glance-eval-cli")
-  .dependsOn(coreJVM, glanceCoreJVM, glanceEvalJVM)
+  .dependsOn(coreJVM, db, server, glanceCoreJVM, glanceEvalJVM)
   .settings(
     name := "Soar Glance Eval CLI",
     moduleName := "soar-glance-eval-cli",

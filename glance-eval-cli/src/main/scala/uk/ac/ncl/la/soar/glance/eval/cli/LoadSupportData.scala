@@ -32,6 +32,7 @@ import monix.eval.Task
 import monix.cats._
 import CsvRow._
 import uk.ac.ncl.la.soar.data.ModuleScore
+import uk.ac.ncl.la.soar.glance.eval.db.{ClusterSessionTable, RecapSessionTable, Repositories}
 import uk.ac.ncl.la.soar.glance.eval.{ClusterSession, RecapSession}
 import uk.ac.ncl.la.soar.glance.eval.server._
 

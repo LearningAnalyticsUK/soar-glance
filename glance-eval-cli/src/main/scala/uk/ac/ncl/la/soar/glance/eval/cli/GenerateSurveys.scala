@@ -32,7 +32,7 @@ import uk.ac.ncl.la.soar.Record._
 import uk.ac.ncl.la.soar.data.{ModuleScore, StudentRecords}
 import uk.ac.ncl.la.soar.server.Implicits._
 import uk.ac.ncl.la.soar.glance.eval.Survey
-import uk.ac.ncl.la.soar.glance.eval.server.Repositories
+import uk.ac.ncl.la.soar.glance.eval.db.Repositories
 
 import scala.collection.immutable.SortedMap
 import scala.util.{Properties, Random}

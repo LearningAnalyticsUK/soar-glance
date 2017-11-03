@@ -19,21 +19,18 @@ package uk.ac.ncl.la.soar.glance.eval
 
 import java.util.UUID
 
-import cats._
 import cats.implicits._
+import io.circe.Decoder.Result
+import io.circe._
+import io.circe.generic.auto._
+import io.circe.syntax._
+import uk.ac.ncl.la.soar.Record._
 import uk.ac.ncl.la.soar._
 import uk.ac.ncl.la.soar.data._
-import uk.ac.ncl.la.soar.Record._
 
 import scala.collection.immutable.SortedMap
-import scala.util.Random
-import io.circe._
-import io.circe.Decoder.Result
-import io.circe.syntax._
-import io.circe.generic.auto._
-
-import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
+import scala.util.Random
 
 /**
   * Case class representing an unanswered survey which will be presented to members of staff to fill out.

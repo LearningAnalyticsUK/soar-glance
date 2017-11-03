@@ -19,7 +19,7 @@ package uk.ac.ncl.la.soar.glance.eval.cli
 
 import monix.eval.Task
 import uk.ac.ncl.la.soar.data.ModuleScore
-import uk.ac.ncl.la.soar.glance.eval.server.Repositories
+import uk.ac.ncl.la.soar.glance.eval.db.Repositories
 
 import scala.io.Source
 

@@ -26,6 +26,7 @@ import io.finch._
 import io.finch.circe._
 import monix.cats._
 import monix.eval.Task
+import uk.ac.ncl.la.soar.glance.eval.db.{ClusterSessionDb, RecapSessionDb, SurveyDb}
 import uk.ac.ncl.la.soar.glance.eval.{ClusterSession, RecapSession, Session, Survey}
 import uk.ac.ncl.la.soar.server.Implicits._
 

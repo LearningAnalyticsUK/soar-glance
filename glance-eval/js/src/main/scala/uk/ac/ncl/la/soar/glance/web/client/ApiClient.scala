@@ -31,14 +31,19 @@ import io.circe.parser._
 import io.circe.syntax._
 import uk.ac.ncl.la.soar.data.Module
 import uk.ac.ncl.la.soar.glance.eval.{SessionSummary, Survey, SurveyResponse}
+import org.scalajs.dom
 
 /**
   * Object defining methods for talking to remote API and parsing results
   */
 object ApiClient {
 
+  private val protocol = dom.window.location.protocol
+  private val host = dom.window.location.host
+  private val port = "8080"
+
   /** TODO: Figure out if there is a way to do compiletime config? Or something of that sort. Setting this here is bad */
-  def url(rel: String) = s"http://localhost:8080/$rel"
+  def url(rel: String) = s"$protocol//$host:$port/$rel"
 
   /* Surveys */
 

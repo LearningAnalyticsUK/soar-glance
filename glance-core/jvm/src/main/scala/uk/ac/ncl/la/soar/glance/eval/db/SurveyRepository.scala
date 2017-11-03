@@ -15,13 +15,12 @@
   * See the License for the specific language governing permissions and
   * limitations under the License.
   */
-package uk.ac.ncl.la.soar.glance.eval.server
+package uk.ac.ncl.la.soar.glance.eval.db
 
-import java.time.Instant
 import java.sql.Timestamp
+import java.time.Instant
 import java.util.UUID
 
-import cats._
 import cats.data._
 import cats.implicits._
 import doobie.imports._
@@ -32,7 +31,6 @@ import uk.ac.ncl.la.soar.glance.eval.{CompleteResponse, Ranking, Survey, SurveyR
 import uk.ac.ncl.la.soar.glance.util.{Time, Times}
 import uk.ac.ncl.la.soar.glance.web.client.component.sortable.IndexChange
 import uk.ac.ncl.la.soar.{ModuleCode, StudentNumber}
-import uk.ac.ncl.la.soar.server.Implicits._
 
 import scala.collection.mutable.ListBuffer
 

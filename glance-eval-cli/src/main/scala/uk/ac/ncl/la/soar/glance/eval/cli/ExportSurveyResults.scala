@@ -28,9 +28,8 @@ import kantan.csv.cats._
 import kantan.csv.generic._
 import monix.eval.Task
 import uk.ac.ncl.la.soar.StudentNumber
+import uk.ac.ncl.la.soar.glance.eval.db.Repositories
 import uk.ac.ncl.la.soar.glance.eval.{Ranking, SurveyResponse}
-import uk.ac.ncl.la.soar.glance.eval.server.Repositories
-
 
 
 /**

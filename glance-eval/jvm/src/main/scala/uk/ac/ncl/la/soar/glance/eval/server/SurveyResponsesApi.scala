@@ -24,6 +24,7 @@ import io.finch.circe._
 import io.circe.generic.auto._
 import uk.ac.ncl.la.soar.glance.eval.SurveyResponse
 import uk.ac.ncl.la.soar.glance.eval.SurveyResponse._
+import uk.ac.ncl.la.soar.glance.eval.db.SurveyResponseDb
 import uk.ac.ncl.la.soar.server.Implicits._
 
 /**

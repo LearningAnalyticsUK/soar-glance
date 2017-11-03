@@ -48,7 +48,7 @@ class StudentDb(xa: Transactor[Task]) extends Repository[Student] {
 
 object StudentDb extends RepositoryCompanion[Student, StudentDb] {
 
-  //TODO, remove unnecessary DDL now that we use Flyway for db.migrations
+  //TODO, remove unnecessary DDL now that we use Flyway for db.db.migrations
   override val initQ: ConnectionIO[Unit] =  ().pure[ConnectionIO]
 
   override val listQ: ConnectionIO[List[Student]] = sql"SELECT * FROM students;".query[Student].list

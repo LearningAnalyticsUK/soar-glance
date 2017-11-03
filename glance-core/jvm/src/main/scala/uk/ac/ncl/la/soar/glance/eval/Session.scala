@@ -17,12 +17,13 @@
   */
 package uk.ac.ncl.la.soar.glance.eval
 
-import java.time.{Duration, Instant}
 import java.time.temporal.TemporalAmount
+import java.time.{Duration, Instant}
 import java.util.UUID
 
 import uk.ac.ncl.la.soar.StudentNumber
-import uk.ac.ncl.la.soar.glance.util.{Time, Times}
+import uk.ac.ncl.la.soar.glance.util.Time
+import uk.ac.ncl.la.soar.glance.util.Times._
 
 import scala.annotation.tailrec
 
@@ -59,9 +60,6 @@ object Session {
                                startInstant: Instant,
                                endInstant: Instant,
                                chunk: TemporalAmount): SessionSummary = new SessionSummary {
-
-
-    import Times._
 
     //Build list of time chunks
     @tailrec

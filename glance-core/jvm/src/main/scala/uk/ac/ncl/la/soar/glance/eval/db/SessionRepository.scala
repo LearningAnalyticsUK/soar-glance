@@ -15,7 +15,7 @@
   * See the License for the specific language governing permissions and
   * limitations under the License.
   */
-package uk.ac.ncl.la.soar.glance.eval.server
+package uk.ac.ncl.la.soar.glance.eval.db
 
 import java.sql.Timestamp
 import java.time.Instant

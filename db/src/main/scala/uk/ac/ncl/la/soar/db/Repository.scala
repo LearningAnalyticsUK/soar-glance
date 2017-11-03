@@ -52,7 +52,7 @@ object Repository {
   lazy val Student: Task[StudentDb] = createSchema.map(_._1)
   lazy val Module: Task[ModuleDb] = createSchema.map(_._2)
 
-  /** Method to perform db db.migrations */
+  /** Method to perform db db.db.migrations */
   private def migrate(dbUrl: String, user: String, pass: String) = Task {
     val flyway = new Flyway()
     flyway.setDataSource(dbUrl, user, pass)

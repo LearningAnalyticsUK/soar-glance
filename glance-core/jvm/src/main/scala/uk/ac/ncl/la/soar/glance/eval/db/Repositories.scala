@@ -15,7 +15,7 @@
   * See the License for the specific language governing permissions and
   * limitations under the License.
   */
-package uk.ac.ncl.la.soar.glance.eval.server
+package uk.ac.ncl.la.soar.glance.eval.db
 
 import doobie.util.transactor.DriverManagerTransactor
 import monix.eval.Task
@@ -40,7 +40,7 @@ object Repositories {
   lazy val Module: Task[ModuleDb] = schema.map(_._5)
   lazy val ModuleScore: Task[ModuleScoreDb] = schema.map(_._6)
 
-  /** Method to perform db db.migrations */
+  /** Method to perform db db.db.migrations */
   private def migrate(dbUrl: String, user: String, pass: String) = Task {
     val flyway = new Flyway()
     flyway.setDataSource(dbUrl, user, pass)
@@ -56,13 +56,7 @@ object Repositories {
     lazy val config = loadConfigOrThrow[Config]
 
     for {
-      cfg <- Task {println(config); config}
-//      _ <- migrate(
-//        s"${cfg.database.url}${cfg.database.name}",
-//        cfg.database.user,
-//        cfg.database.password
-//      )
-      
+      cfg <- Task(config)
       xa = DriverManagerTransactor[Task](
         "org.postgresql.Driver",
         s"${cfg.database.url}${cfg.database.name}",

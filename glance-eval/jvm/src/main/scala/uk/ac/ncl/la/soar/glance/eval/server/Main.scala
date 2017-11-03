@@ -30,6 +30,7 @@ import io.finch._
 import io.finch.circe._
 import io.circe.generic.auto._
 import uk.ac.ncl.la.soar.data.Module
+import uk.ac.ncl.la.soar.glance.eval.db.Repositories
 
 /**
   * Main class for the glance server

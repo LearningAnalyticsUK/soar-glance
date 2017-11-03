@@ -17,18 +17,13 @@
   */
 package uk.ac.ncl.la.soar.glance.eval
 
-import java.time.Instant
 import java.util.UUID
 
-import cats._
 import cats.implicits._
-import uk.ac.ncl.la.soar._
-import uk.ac.ncl.la.soar.data._
-import uk.ac.ncl.la.soar.Record._
-import io.circe._
-import io.circe.{Decoder, Encoder, Json}
-import io.circe.syntax._
 import io.circe.generic.auto._
+import io.circe.syntax._
+import io.circe.{Decoder, Encoder, Json, _}
+import uk.ac.ncl.la.soar._
 import uk.ac.ncl.la.soar.glance.util.Time
 import uk.ac.ncl.la.soar.glance.util.Times._
 import uk.ac.ncl.la.soar.glance.web.client.component.sortable.IndexChange

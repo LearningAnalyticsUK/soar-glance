@@ -470,3 +470,8 @@ addCommandAlias("compileAll",
    "; glance-eval-cli/compile",
    "; model/compile",
    "; server/compile").mkString)
+addCommandAlias("dockerize",
+  List(
+    "; glance-evalJVM/docker",
+    "; glance-evalJS/docker"
+  ).mkString)

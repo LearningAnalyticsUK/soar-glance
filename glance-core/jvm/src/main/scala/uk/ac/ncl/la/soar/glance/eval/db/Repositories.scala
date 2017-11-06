@@ -56,7 +56,7 @@ object Repositories {
     lazy val config = loadConfigOrThrow[Config]
 
     for {
-      cfg <- Task(config)
+      cfg <- Task {println(s"HI THIS IS CONFIG: $config"); config}
       xa = DriverManagerTransactor[Task](
         "org.postgresql.Driver",
         s"${cfg.database.url}${cfg.database.name}",

@@ -46,42 +46,42 @@ abstract class Repository[A] {
   def delete(id: PK): F[Boolean]
 }
 
-object Repository {
-
-  //Is this the best/safest way to expose the Repository classes? Not really....
-  lazy val Student: Task[StudentDb] = createSchema.map(_._1)
-  lazy val Module: Task[ModuleDb] = createSchema.map(_._2)
-
-  /** Method to perform db db.db.migrations */
-  private def migrate(dbUrl: String, user: String, pass: String) = Task {
-    val flyway = new Flyway()
-    flyway.setDataSource(dbUrl, user, pass)
-    flyway.migrate()
-  }
-
-  /** Init method to set up the database */
-  private val createSchema: Task[(StudentDb, ModuleDb)] = {
-
-    //TODO: use loadConfig to Either and lift result into EitherT[Task,...]
-    //TODO: paramaterise over transactor as in gem example then return tuple or HList of repositories
-
-    for {
-      cfg <- Task(loadConfigOrThrow[Config])
-      _ <- migrate(
-        s"${cfg.database.url}${cfg.database.name}",
-        cfg.database.user,
-        cfg.database.password
-      )
-      xa = DriverManagerTransactor[Task](
-        "org.postgresql.Driver",
-        s"${cfg.database.url}${cfg.database.name}",
-        cfg.database.user,
-        cfg.database.password
-      )
-      stDb = new StudentDb(xa)
-      mDb = new ModuleDb(xa)
-      - <- { println("Initialising Student tables");stDb.init }
-      _ <- { println("Initialising Module tables");mDb.init }
-    } yield (stDb, mDb)
-  }
-}
+//object Repository {
+//
+//  //Is this the best/safest way to expose the Repository classes? Not really....
+//  lazy val Student: Task[StudentDb] = createSchema.map(_._1)
+//  lazy val Module: Task[ModuleDb] = createSchema.map(_._2)
+//
+//  /** Method to perform db db.db.migrations */
+//  private def migrate(dbUrl: String, user: String, pass: String) = Task {
+//    val flyway = new Flyway()
+//    flyway.setDataSource(dbUrl, user, pass)
+//    flyway.migrate()
+//  }
+//
+//  /** Init method to set up the database */
+//  private val createSchema: Task[(StudentDb, ModuleDb)] = {
+//
+//    //TODO: use loadConfig to Either and lift result into EitherT[Task,...]
+//    //TODO: paramaterise over transactor as in gem example then return tuple or HList of repositories
+//
+//    for {
+//      cfg <- Task(loadConfigOrThrow[Config])
+//      _ <- migrate(
+//        s"${cfg.database.url}${cfg.database.name}",
+//        cfg.database.user,
+//        cfg.database.password
+//      )
+//      xa = DriverManagerTransactor[Task](
+//        "org.postgresql.Driver",
+//        s"${cfg.database.url}${cfg.database.name}",
+//        cfg.database.user,
+//        cfg.database.password
+//      )
+//      stDb = new StudentDb(xa)
+//      mDb = new ModuleDb(xa)
+//      - <- { println("Initialising Student tables");stDb.init }
+//      _ <- { println("Initialising Module tables");mDb.init }
+//    } yield (stDb, mDb)
+//  }
+//}

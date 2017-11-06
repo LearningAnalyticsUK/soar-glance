@@ -258,7 +258,7 @@ def commonAssembly(main: String, jar: String) = Seq(
     case "log4j.properties" => MergeStrategy.last
     case "overview.html" => MergeStrategy.rename
     case "JS_DEPENDENCIES" => MergeStrategy.discard
-    case "application.conf" => MergeStrategy.first
+    case "application.conf" => MergeStrategy.last
     case x =>
       val oldStrategy = (assemblyMergeStrategy in assembly).value
       oldStrategy(x)

@@ -387,7 +387,7 @@ lazy val glanceEvalJS = glanceEval.js
       ImageName(s"${organization.value}/glance-eval-frontend:latest"),
       ImageName(
         namespace = Some(organization.value),
-        repoisitory = "glance-eval-frontend",
+        repository = "glance-eval-frontend",
         tag = Some(s"v${version.value}"))
     ))
 
@@ -412,7 +412,7 @@ lazy val glanceEvalJVM = glanceEval.jvm
       ImageName(s"${organization.value}/glance-eval-backend:latest"),
       ImageName(
         namespace = Some(organization.value),
-        repoisitory = "glance-eval-backend",
+        repository = "glance-eval-backend",
         tag = Some(s"v${version.value}"))
     ))
   .settings(commonAssembly("uk.ac.ncl.la.soar.glance.eval.server.Main", "soar-glance-eval.jar"))

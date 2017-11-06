@@ -9,10 +9,10 @@ sudo sbt dockerize
 mkdir -p pg-data
 
 # Then we run docker compose up to launch the database container
-sudo docker-compose up glance-eval-db
+sudo docker-compose up --build glance-eval-db
 
 # run flyway migrations
 eval "$(cat .env)"
 sudo sbt -Dflyway.password=$GLANCE_DB_PASS -Dflyway.user=$GLANCE_DB_USER -Dflyway.url="jdbc:postgresql://localhost:8003/$GLANCE_DB_NAME" glance-coreJVM/flywayMigrate
 
-sudo docker-compose up
+sudo docker-compose up --build glance-eval-backend glance-eval-frontend

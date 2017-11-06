@@ -380,7 +380,7 @@ lazy val glanceEvalJS = glanceEval.js
       new Dockerfile {
         from("nginx")
         copy(appStatics, appTarget)
-        copy(appJs, s"$appTarget/assets/")
+        copy(appJs, s"${appTarget}assets/")
       }
     },
     imageNames in docker := Seq(
@@ -404,7 +404,7 @@ lazy val glanceEvalJVM = glanceEval.jvm
       new Dockerfile {
         from("java")
         add(fatJar, jarTarget)
-        entryPoint("java", "-Xms512M -Xmx2G -jar", jarTarget)
+        entryPoint("java", "-jar", jarTarget)
         expose(8080)
       }
     },

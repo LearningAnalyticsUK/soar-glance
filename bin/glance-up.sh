@@ -11,6 +11,6 @@ docker-compose up glance-eval-db
 
 # run flyway migrations
 eval "$(cat .env)"
-sbt -Dflyway.password=$GLANCE_DB_PASS -Dflyway.user=$GLANCE_DB_USER -Dflyway.url="jdbc:postgresql://glance-eval-db:8003/$(GLANCE_DB_NAME)" "glance-coreJVM/flywayMigrate"
+sbt -Dflyway.password=$GLANCE_DB_PASS -Dflyway.user=$GLANCE_DB_USER -Dflyway.url="jdbc:postgresql://localhost:8003/$(GLANCE_DB_NAME)" glance-coreJVM/flywayMigrate
 
 docker-compose up

@@ -375,12 +375,12 @@ lazy val glanceEvalJS = glanceEval.js
     dockerfile in docker := {
       val appStatics = (resources in Compile).value
       val appJs = (fullOptJS in Compile).value.data
-      val appTarget = "/nginx/share/nginx/html"
+      val appTarget = "/nginx/share/nginx/html/"
       
       new Dockerfile {
         from("nginx")
         copy(appStatics, appTarget)
-        copy(appJs, s"$appTarget/assets")
+        copy(appJs, s"$appTarget/assets/")
       }
     },
     imageNames in docker := Seq(

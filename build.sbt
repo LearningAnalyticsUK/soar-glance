@@ -375,7 +375,7 @@ lazy val glanceEvalJS = glanceEval.js
     dockerfile in docker := {
       val appStatics = (resources in Compile).value
       val appJs = (fullOptJS in Compile).value.data
-      val appTarget = "/nginx/share/nginx/html/"
+      val appTarget = "/usr/share/nginx/html/"
       
       new Dockerfile {
         from("nginx")

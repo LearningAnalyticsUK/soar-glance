@@ -40,7 +40,7 @@ object Repositories {
   lazy val Module: Task[ModuleDb] = schema.map(_._5)
   lazy val ModuleScore: Task[ModuleScoreDb] = schema.map(_._6)
 
-  /** Method to perform db db.db.migrations */
+  /** Method to perform db migrations */
   private def migrate(dbUrl: String, user: String, pass: String) = Task {
     val flyway = new Flyway()
     flyway.setDataSource(dbUrl, user, pass)
@@ -59,6 +59,11 @@ object Repositories {
       cfg <- Task {println(s"HI THIS IS CONFIG: $config"); config}
       xa = DriverManagerTransactor[Task](
         "org.postgresql.Driver",
+        s"${cfg.database.url}${cfg.database.name}",
+        cfg.database.user,
+        cfg.database.password
+      )
+      _ <- migrate(
         s"${cfg.database.url}${cfg.database.name}",
         cfg.database.user,
         cfg.database.password

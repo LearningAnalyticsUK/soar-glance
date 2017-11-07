@@ -17,7 +17,7 @@ services:
       - "8080:8080"
     environment:
       JAVA_OPTS: "-Xms512M -Xmx2G"
-      GLANCE_DB_URL: "jdbc:postgresql://glance-eval-db:5432/${GLANCE_DB_NAME}"
+      GLANCE_DB_URL: "jdbc:postgresql://glance-eval-db:5432/"
   glance-eval-db:
     image: postgres:9.6.5
     ports:

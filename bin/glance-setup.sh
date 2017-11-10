@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
 
-
 # Active sudo session required
 sudo true
 
-echo "[info] - Installing build time dependencies of glance"
+echo "[info] - Welcome to the install script for glance."
+echo "[info] - This process may take many minutes."
+echo "[info] - Installing build time dependencies of glance."
 
 # Function to return boolean if package is installed
 installed () {
@@ -28,11 +29,30 @@ then
   sudo apt-get install bc;
 fi
 
+# check that java is installed, otherwise install oracle jdk 8. Attempt to answer prompts automatically
+if [ installed "oracle-java8-installer" ];
+then
+  bash bin/installers/java.sh
+fi
+
+# check that sbt is installed, otherwise install it
+if [ installed "sbt" ];
+then
+  bash bin/installers/sbt.sh
+fi
+
+# check that docker is installed, otherwise install it
+if [ installed "docker-ce" ];
+then
+  echo "[info] - installing docker now using the official install script. You may be asked for prompts."
+  bash bin/installers/docker.sh
+fi
+
 # First we need to execute sbt-docker
 sudo sbt dockerize
 
 # Then we need to create the pg-data directory to be mounted as a volume in docker up
-mkdir -p ~/pg-data
+mkdir -p ~/glance/pg-data
 
 # Also create the directory to mount glance's front end files to in the local filestystem, in case changes are needed
 mkdir -p ~/glance/www

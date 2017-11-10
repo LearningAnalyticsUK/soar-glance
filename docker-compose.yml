@@ -8,6 +8,8 @@ services:
       - glance-eval-backend
     ports:
       - "80:80"
+    volumes:
+      - ~/glance/www:/usr/share/nginx/html
   glance-eval-backend:
     env_file: .env
     build: ./glance-eval/jvm/target/docker/
@@ -23,7 +25,7 @@ services:
     ports:
       - "8003:5432"
     volumes:
-      - ./pg-data:/var/lib/postgresql/data
+      - ~/glance/pg-data:/var/lib/postgresql/data
     environment:
       POSTGRES_DB: ${GLANCE_DB_NAME}
       POSTGRES_USER: ${GLANCE_DB_USER}

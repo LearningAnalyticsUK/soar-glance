@@ -375,12 +375,15 @@ lazy val glanceEvalJS = glanceEval.js
     dockerfile in docker := {
       val appStatics = (resources in Compile).value
       val appJs = (fullOptJS in Compile).value.data
-      val appTarget = "/usr/share/nginx/html/"
+      val appJsDeps = (packageJSDependencies in Compile).value
+      
+      val appTarget = "/usr/share/nginx/html"
       
       new Dockerfile {
         from("nginx")
-        copy(appStatics, appTarget)
-        copy(appJs, s"${appTarget}assets/")
+        copy(appStatics,s"$appTarget/")
+        copy(appJsDeps, s"$appTarget/assets/")
+        copy(appJs, s"$appTarget/assets/")
       }
     },
     imageNames in docker := Seq(
@@ -395,7 +398,6 @@ lazy val glanceEvalJS = glanceEval.js
 lazy val glanceEvalJVM = glanceEval.jvm
   .dependsOn(coreJVM, db, server, glanceCoreJVM)
   .settings(
-    (resources in Compile) += (fastOptJS in (glanceEvalJS, Compile)).value.data,
     mainClass in Compile := Some("uk.ac.ncl.la.soar.glance.eval.server.Main"),
     dockerfile in docker := {
       val fatJar: File = assembly.value

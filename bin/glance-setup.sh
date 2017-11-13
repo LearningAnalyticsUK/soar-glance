@@ -9,40 +9,45 @@ echo "[info] - Installing build time dependencies of glance."
 
 # Function to return boolean if package is installed
 installed () {
-    $(dpkg-query -W -showformat='${Status}\n' $1 | grep -c "ok installed") -eq 0
+
+    (($(dpkg-query -W -showformat='${Status}\n' $1 | grep -c "ok installed") == 0))
 }
 
 # Glance is a scala js build, which requires node js
-if [ installed "nodejs" ];
+if installed "nodejs"
 then
+  echo "[info] - installing nodejs now."
   sudo apt-get install nodejs;
 fi
 
-if [ installed "nodejs-legacy" ];
+if installed "nodejs-legacy"
 then
   sudo apt-get install nodejs-legacy;
 fi
 
 # sbt requires the bc package to check java versions
-if [ installed "bc" ];
+if installed "bc"
 then
+  echo "[info] - isntalling bc now."
   sudo apt-get install bc;
 fi
 
 # check that java is installed, otherwise install oracle jdk 8. Attempt to answer prompts automatically
-if [ installed "oracle-java8-installer" ];
+if installed "oracle-java8-installer"
 then
+  echo "[info] - isntalling oracle jdk 8 now."
   bash bin/installers/java.sh
 fi
 
 # check that sbt is installed, otherwise install it
-if [ installed "sbt" ];
+if installed "sbt"
 then
+  echo "[info] - isntalling sbt now."
   bash bin/installers/sbt.sh
 fi
 
 # check that docker is installed, otherwise install it
-if [ installed "docker-ce" ];
+if installed "docker-ce"
 then
   echo "[info] - installing docker now using the official install script. You may be asked for prompts."
   bash bin/installers/docker.sh

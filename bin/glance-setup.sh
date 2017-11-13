@@ -10,7 +10,7 @@ echo "[info] - Installing build time dependencies of glance."
 # Function to return boolean if package is installed
 installed () {
 
-    (($(dpkg-query -W -showformat='${Status}\n' $1 | grep -c "ok installed") == 0))
+    (($(dpkg-query -W --showformat='${Status}\n' $1 | grep -c "ok installed") == 0))
 }
 
 # Glance is a scala js build, which requires node js

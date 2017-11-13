@@ -8,8 +8,6 @@ services:
       - glance-eval-backend
     ports:
       - "80:80"
-    volumes:
-      - ~/glance/www:/usr/share/nginx/html
   glance-eval-backend:
     env_file: .env
     build: ./glance-eval/jvm/target/docker/

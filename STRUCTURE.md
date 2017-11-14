@@ -9,10 +9,8 @@ training data.
 (though not __glance-eval*__).
 * **db-cli**: Contains cli tool for bulk import/export to/from the **soar** database.
 * **server**: Contains the finch API for serving **soar** data, used by **glance**, **reports** etc...
-* **glance-core**: Contains typeclasses, data types, react components and utilities common to the **glance-web**, 
-**glance-eval** and **glance-eval-cli** submodules.
-* **glance-web**: Contains the front end application Glance. Essentially a dashboard which provides many different 
-descriptive statistics for student performance.
+* **glance-core**: Contains typeclasses, data types, react components and utilities common to the **glance-eval** and 
+**glance-eval-cli** submodules.
 * **glance-eval**: Contains a version of the glance dashboard used for evaluation. Presents surveys which consist of 
 "training" student data and a number of queries (students with certain module records elided). Surveyed staff members 
 are asked to rank the query students by their expected performance in the elided modules. How accurate the ranking is 

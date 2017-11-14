@@ -8,7 +8,10 @@ etc...) will work perfectly.
 If you are comfortable with the technology involved in building Glance and don't want to 
 use the "default" configuration for some reason then of course you can just build it yourself. To that end we also
 provide a list of software prerequisites and a brief description of the build structure. Most people should try and use 
-Ubuntu 16 however, as this has been well tested and we produce a number of helpful scripts for installations with that OS. 
+Ubuntu 16 however, as this has been well tested and we provide a number of helpful scripts for installations with that OS. 
+
+The guide does assume very basic familiarity with the use of a bash shell on Ubuntu, though all commands to be executed 
+are listed verbatim and explained. 
 
 ### Installing Glance on Ubuntu 16 (the first path) 
 
@@ -64,27 +67,77 @@ source root. You should make a copy of the defaults, then edit the `.env` file t
 7. Check that the installation is working by vistiting the domain or ip address for your server in your web server. You 
 should see a webpage with almost no content (yet) but 3 large titles, _Rank students_, _Detailed view_ and _Submit survey_.
 
-8. Remove the .env file and restore the defaults file
+8. Remove the `.env` file containing your passwords and replace it with the backed up defaults:
+    ```bash
+    rm .env && mv defaults.env .env
+    ``` 
+    **Note**: You must remember your passwords after this point.
 
-9. Build the cli tools
+### Importing data and generating Glance surveys
 
-10. Copy the data, according to our Data format, to some location on your server's hard drive
+Now that you have a working and web accessible installation of the Glance software - its time to actually generate some 
+surveys. The steps below walk you through the simple process of building a command line tool from the sources in this 
+folder.
 
-11. Transform the data
+This command line tool is used for:
 
-12. Generate the Surveys
+* Transforming and importing data into Glance.
+* Generating Glance surveys.
+* Exporting survey results from Glance.
 
-13. Load the data to support the surveys
+The commands for each of these tasks will also be listed and explained.
 
-14. Check the surveys are working. 
+**Note**: Continuing on from the previous guide, it is assumed that all the commands listed below are executed within 
+the root of this folder (in the same location as this file). To check that this is correct, you can run the command 
+`pwd`. You should see something along the lines of `/home/ubuntu/student-outcome-accelerator`. 
 
-15. Download some results.
+1. Build the glance cli tools:
+    ```bash
+    sbt glance-eval-cli/assembly
+    mv glance-eval-cli/target/scala-2.11/soar-glance-eval-cli.jar bin/
+    ```
+    **Note**: As with earlier steps in this guide, the first command above take some time (usually less than two minutes)
+    and produce a lot of output. This is to be expected.
 
-16. Take a full backup of the data.
+2. Copy the data, according to our specified "schema", to some location on your server's hard drive
 
-17. Restore a full backup of the data.
+3. Transform the data
 
-8. Back in a shell session, its now time to import some data to our Glance install, and generate some surveys! 
+4. Generate the Surveys
+
+5. Load the data to support the surveys
+
+6. Check the surveys are working. 
+
+7. Download some results.
+
+### Performing miscellaneous tasks 
+
+1. Take a full backup of the data.
+
+2. Restore a full backup of the data.
+
+3. Re-installing Glance if there are source changes
+
+4. Removing Glance completely. 
+
+5. Starting and Stopping Glance
+
+6. Rebranding Glance
+
+### Support and issues
+
+If you have any issues with any of the steps in this Guide, please submit an issue here according to the following template:
+
+### Other information
+
+If you have followed the above guides successfully you may safely ignore this section.
+
+##### Software prerequisites for Glance
+
+
+##### Glance build description
+
 
 1. Create Postgres database with correct details using the following two commands:
     ```

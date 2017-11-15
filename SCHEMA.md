@@ -19,75 +19,85 @@ them. You can see which visualisations require which files [here](VISUALISATIONS
 
 If you have any questions about the files specified in this document, please create an issue with the following format:
 
+
 ### Files
 
 ##### Printer.csv
 
-This file simply contains a list of the printers in an institution. An example row would look something like the 
-following:
+This file simply contains a list of the printers in an institution. 
 
-```
-2, 'Library - First floor'
-```
-
-Frequency: Intermittent/On Change
 
 | Id      | Location |
 |:-------:|:--------:|
 | Integer | String   |
 
+An example row would look something like the following:
+
+```
+2,Library - First floor
+```
+
 ##### Printed.csv
 
-This file contains a list of events corresponding to student's printing documents. 
-
-Again, essentially a stripped down version of `STAR_Print`
-
-**Note**: On the subject of timestamps, if Talend provides easy options for
-this, then my preference is for ISO 8601 standards compliant strings including
-timezone offset. Assuming that is possible, the strings will probably come out
-looking something like this: `1999-01-08 04:05:00 +00:00` (where date portion is
-yyyy-mm-dd). If the output doesn't look like this, please don't worry about it
-as it may still be standards compliant or easily convertible. 
-
-Frequency: Daily
+This file contains a list of events corresponding to students printing documents. 
 
 | Timestamp | Student Id | Study Id | Stage Id | Printer Id | Num Sides |
 |:---------:|:----------:|:--------:|:--------:|:----------:|:---------------:|
 | ISO 8601 String | Integer | Integer | Integer | Integer | Integer |
 
+**Note**: On the subject of timestamps: these should be expressed with ISO 8601 standards compliant strings including
+timezone offset. The strings will look something like this: `1999-01-08T04:05:00+01:00` (where date portion is
+yyyy-mm-dd). You can read about the ISO 8601 specification [here](https://en.wikipedia.org/wiki/ISO_8601).
+
+An example row would look something like the following:
+
+```
+2015-09-07T07:58:10000Z,26567,249,23,104,1
+```
+
 ##### Cluster.csv
 
-Based on `DIM_Cluster`
-
-Frequency: Intermittent/On Change
+This file contains a list of the computing clusters in an institution. I.e. The distinct locations or labs where a 
+student may use a computer.
 
 | Id | PC Name | Cluster Name | Building Name |
 |:--:|:-------:|:------------:|:-------------:|
 | Integer | String | String | String |
 
-##### CSClusterSession.csv
+**Note**: The _PC Name_ column is expected to correspond to a prefix common to the names of all computers in a cluster. 
+If this does information does not make sense in the context of your institution's data, it can be safely discarded.
 
-Based on `STAR_CS_Cluster`
+An example row would look something like the following: 
 
-Frequency: Daily
+```
+6,COOKSONB,Cookson - Cluster,Medical School
+```
+
+Without the _PC Name_ field, this would be: 
+
+```
+6,,Cookson - Cluster,Medical School
+```
+
+**Note**: Remember to include the blank commas `6,,...`
+
+##### ClusterSession.csv
+
+This file contains a list of events corresponding to a student session using a computer in an institution's cluster. 
+
 
 | Session Start Timestamp | Session End Timestamp | Student Id | Study Id | Stage Id | Machine Name |
 |:-----------------------:|:---------------------:|:----------:|:--------:|:--------:|:------------:|
 | ISO 8601 String         | ISO 8601 String       | Integer    | Integer  | Integer | String |
 
-##### ClusterSession.csv
+An example row would look something like the following: 
 
-Based on `STAR_Cluster`
+```
+2015-08-30T08:04:40000Z,2015-08-30T08:36:10000Z,22186,1074,23,COOKSONB282
+```
 
-**Note**: In Sql12, only `STAR_CS_Cluster` has the machine name field. Is this
-an artifact of the import job or is machine name info only reported for sessions
-in CS clusters?
-
-Frequency: Daily
-
-| Session Start Timestamp | Session End Timestamp | Student Id | Study Id | Stage Id | 
-|:-----------------------:|:---------------------:|:----------:|:--------:|:--------:|
-| ISO 8601 String         | ISO 8601 String       | Integer    | Integer  | Integer  | 
+**Note**: If the _PC Name_ field is present in the `Cluster.csv` file then we can match that prefix against the 
+_Machine Name_ field of `ClusterSession.csv` rows in order to determine in which cluster a session physically took place. 
 
 ##### Recap.csv
 
@@ -215,3 +225,17 @@ Frequency: Weekly
 | Student Id | Study Id | Stage Id | Academic Year | Progression Code | Module Code | Module Mark | Component Text | Component Attempt | Weighting | Timestamp Due | Timestamp Submitted | Submission Type |
 |:----------:|:--------:|:--------:|:-------------:|:----------------:|:-----------:|:-----------:|:--------------:|:-----------------:|:---------:|:-------------:|:-------------------:|:---------------:|
 | Integer | Integer | Integer | String | String | String | Decimal | String | Integer | Decimal | ISO 8601 String | ISO 8601 String | String |
+
+### Data anonymity and consistency 
+
+Throughout this guide, fields such as _Student Id_ are referenced many times. Exactly how identifying such information is 
+will vary from instituion to institution. For instance, can student ids be used to lookup contact info on some widely 
+accessible service? If so, student ids will often need to be anonymised before use with Glance in order to preserve 
+student privacy.
+
+This anonymisation will often involve simply replacing a student id with some other integer which has no meaning; i.e. 
+10378592 becomes 17. 
+
+**If this anonymisation takes place, it must be consistent accross all files!**. If the id 17 refers to studnent number 
+10378592 in `Printed.csv`, then it must also refer to student number 10378592 in `ClusterSession.csv`. If the anonymisation
+of student data is inconsistent then Glance will link unrelated records to one another and present incorrect information. 

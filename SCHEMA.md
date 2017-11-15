@@ -19,6 +19,7 @@ them. You can see which visualisations require which files [here](VISUALISATIONS
 
 If you have any questions about the files specified in this document, please create an issue with the following format:
 
+TODO: Write an issue template for reporting schema issues.
 
 ### Files
 
@@ -101,130 +102,155 @@ _Machine Name_ field of `ClusterSession.csv` rows in order to determine in which
 
 ##### Recap.csv
 
-Based on `DIM_Recap`
-
-Frequency: Weekly/On Change
+This file contains instances of lecture recordings which students may (re)watch at their leisure. This file is called 
+`Recap.csv` as Recap is the lecture recording and playback software used at Newcastle, provided by [Panopto](https://www.panopto.com/).
+Any conceptually similar lecture replay system will be fine as long as it can report the necessary information.
 
 | Id | Session Name | Module Code |
 |:--:|:------------:|:-----------:|
 | Integer | String | String |
 
+An example row would look something like the following: 
+
+```
+139,TCP3099/L03/01,TCP3099
+```
+
+**Note**: the _Module Code_ field is an identifier for the course, module or workshop from which the recording was 
+produced. Also note that whilst the _Session Name_ field in the example contains the module code, this is not required. 
+_Session Name_ simply identifies the actual thing being recorded and has no explicit structure. For instance, 
+`TCP3099/L03/01` likely corresponds to the third lecture from the course with code TCP3099, but this could just as easily 
+be `FooBar Lecture 124` 
+
 ##### RecapSession.csv
 
-Based on `RECAP` and/or `STAR_Recap`:
-
-<!--**Note**: Some of the data in the Recap Sql12 table does not seem to be-->
-<!--anonymised. For example, here is a row from `[dbo].[RECAP]`, where the 2nd and-->
-<!--3rd columns are titled `student_id` and `login_id` respectively:-->
-
-<!--```-->
-<!--(2015-03-02 00:02:02 +0000,'S140191338','b4019133','MAS1341','Sampling the rows of a data frame',69.989,'01:02'),-->
-<!--```-->
-
-<!--Whereas here is a row from `STAR_BB_Sessions`, where the 2nd column is titled-->
-<!--`PKstudent`: -->
-
-<!--```-->
-<!--(2015-10-07 17:35:51 +0000,15680,1019,23,0,24,6,299366454,2015-10-07 18:50:56 +0000),-->
-<!--```-->
-
-<!--As it stands I have no way to consistently join records from the RECAP table to-->
-<!--records from any other table (by student anyway). Is there any chance we could-->
-<!--replace the student/login id fields with a single anonymised Integer student id-->
-<!--as with the other tables?-->
-
-**Note**: Seconds Listened is a String field in Sql12. I indicate
-Integer/Decimal below, but thats mostly because that feels semantically correct.
-If String is easier thats no problem. I have to parse it all from CSV anyway 
-(which is a string).
-
-Frequency: Daily
+This file contains a list of events corresponding to a student watching a lecture recording.
 
 | Session Start Timestamp | Recap Id | Student Id | Study Id | Stage Id | Seconds Listened |
 |:-----------------------:|:--------:|:----------:|:--------:|:--------:|:----------------:|
 | ISO 8601 String         | Integer  | Integer    | Integer  | Integer  | Integer/Decimal  |
 
+An example row would look something like the following: 
+
+```
+2015-01-01T00:06:48000Z,52837,23349,996,23,1140.135
+```
+
+**Note**: the _Recap Id_ field should correspond to entries in the _Id_ field of `Recap.csv`.
+
 ##### Stage.csv
 
-Based on `DIM_Stage`
-
-**Note**: Any chance you could shed some semantic light on the difference
-between Study Description (column 3) and Study Stage (column 4) for me? Here 
-is an example from Sql12: 
-
-```
-(2,2,'Stage 1','UG Stage 1'),
-...
-(46,75,'Year 5 Writing Up','PGR Year 3+'),
-```
-
-Also - do you happen to know what the Stage number is used for vs the Id 
-(PKStage in Sql12)?
-
-Frequency: Intermittent/On Change
+This file simply contains a list of the stages a student may occupy throughout their time at an institution. These normally
+correspond to academic years.
 
 | Id | Stage Number | Study Stage |
 |:--:|:------------:|:-----------------:|
 | Integer | Integer | String |
 
+An example row would look something like the following: 
+
+```
+(2,1,'Undergraduate Stage 1'),
+```
+
 ##### Study.csv
 
-Based on `DIM_Study`
-
-Frequency: Intermittent/On Change
+This file simply contains a list of the programmes of study students may be enrolled on. 
 
 | Id | Programme Code | Program Title | Programme Type | School Code | School | Faculty Code | 
 |:--:|:--------------:|:-------------:|:--------------:|:-----------:|:------:|:------------:|
 | Integer | String | String | String | String | String | String |
 
-##### BlackboardSession.csv
+An example row would look something like the following: 
 
-Based on `STAR_BB_Session`
+```
+5,09MD,Doctor of Medicine,Postgraduate Research,D-SCMS,CLINICAL MEDICAL SCIENCES,F-FMED
+```
 
-Frequency: Daily
 
-| Id | Start Timestamp | End Timestamp | Student Id | Study Id | Stage Id | Num Events | Num Clicks |
-|:--:|:---------------:|:-------------:|:----------:|:--------:|:--------:|:----------:|:----------:|
-| Integer | ISO 8601 String | ISO 8601 String | Integer | Integer | Integer | Integer | Integer | 
+##### VLESession.csv
 
-##### BlackboardSessionContent.csv
+This file contains a list of events corresponding to student sessions in an institution's Virtual Learning Environment (VLE).
+A common example of a VLE is the software [Blackboard](https://blackboard.com/). 
 
-Based on `STAR_BB_sessioncontent`
+| Id | Start Timestamp | End Timestamp | Student Id | Study Id | Stage Id | Num Clicks |
+|:--:|:---------------:|:-------------:|:----------:|:--------:|:--------:|:----------:|
+| Integer | ISO 8601 String | ISO 8601 String | Integer | Integer | Integer | Integer | 
 
-**Note**: Do you Know what the `OtherContent` field in SQL12 is supposed to
-represent? 
+An example row would look something like the following: 
 
-Also Module code below corresponds to BBModule field in Sql12.
+```
+331440600,2017-07-04T18:01:55000Z,2017-07-04T18:02:00000Z,50873,249,23,4
+```
 
-Frequency: Daily
+##### VLESessionContent.csv
 
-| Session Id | Student Id | Module Code | Monitored Content | Discussion | Tasks | Announcement | Assessment |
-|:----------:|:----------:|:-----------:|:-----------------:|:----------:|:-----:|:------------:|:----------:|
-| Integer | Integer | String | String | String | Integer | Integer | Integer |
+Within each VLE Session, a student may engage with multiple pieces of content. This file contains a list of events 
+corresponding to a student engaging with (viewing, downloading etc...) a specific piece of content. 
 
-##### Eportfolio.csv
+| Session Id | Student Id | Module Code | Monitored Content |
+|:----------:|:----------:|:-----------:|:-----------------:|
+| Integer | Integer | String | String | 
 
-Based on `STAR_LAeportfolio`
+An example row would look something like the following:
 
-**Note**: The Meeting Date is just a date field in the Sql12, but a date string,
-(yyyy-mm-dd) without a time or timezone adjustment is also ISO 8601 compatible: 
-`1999-01-08`
+```
+300296073,12488,ECO3001,Teaching Material/Exercise Sets/1
+```
 
-Frequency: Weekly
+**Note**: the _Monitored Content_ field's structure has no significance. `Teaching Material/Exercise Sets/1` could just
+as easily be `Economics Exercises Set 1` etc... Also note that the _Module Code_ field corresponds to the course to which 
+the content being accessed belongs (it is assumed that all content will be owned by some module).
 
-| Meeting Date | Student Id | Study Id | Stage Id | Meeting Type | Contact Type |
-|:------------:|:----------:|:--------:|:--------:|:------------:|:------------:|
-| ISO 8601 String | Integer | Integer | Integer | String | String |
+**Note**: the _Session Id_ field is expected to correspond to entries in the _Id_ field of `VLESession.csv`.
 
-##### NessMarks.csv
+##### Meeting.csv
 
-Based on `STAR_NessMarks` 
 
-Frequency: Weekly
+This file contains a list of events corresponding to recorded student meetings, likely with a tutor, supervisor or lecturer.
 
-| Student Id | Study Id | Stage Id | Academic Year | Progression Code | Module Code | Module Mark | Component Text | Component Attempt | Weighting | Timestamp Due | Timestamp Submitted | Submission Type |
-|:----------:|:--------:|:--------:|:-------------:|:----------------:|:-----------:|:-----------:|:--------------:|:-----------------:|:---------:|:-------------:|:-------------------:|:---------------:|
-| Integer | Integer | Integer | String | String | String | Decimal | String | Integer | Decimal | ISO 8601 String | ISO 8601 String | String |
+| Meeting Date | Student Id | Study Id | Stage Id | Meeting Type | 
+|:------------:|:----------:|:--------:|:--------:|:------------:|
+| ISO 8601 String | Integer | Integer | Integer | String | 
+
+An example row would look something like the following: 
+
+```
+2016-08-31T09:00:00000Z,9982,1585,38,Tutor
+```
+
+**Note**: the type of the _Meeting Date_ field is listed as an ISO 8601 String. Meetings are often manually recorded and 
+may only include a date, rather than a date and start time. In this case it is acceptable to provide the row in the
+following form: 
+
+```
+2016-08-31,9982,1585,38,Tutor
+```
+
+The format `yyyy-mm-dd` is still technically valid according to ISO 8601 and will be parsed by Glance without issue. 
+
+##### Marks.csv
+
+This file contains a list of marks for student work (both exams and coursework).
+
+| Student Id | Study Id | Stage Id | Academic Year | Module Code | Module Mark | Component Text | Component Attempt | Weighting |  
+|:----------:|:--------:|:--------:|:-------------:|:-----------:|:-----------:|:--------------:|:-----------------:|:---------:|
+| Integer | Integer | Integer | String | String | Decimal | String | Integer | Decimal | 
+
+An example row would look something like the following: 
+
+```
+37802,5802,23,2015,GNM8002,84,Written Examination,1,84,100.0
+```
+
+**Note**: when a module/course has more than 1 component, students will achieve marks for both which will be recorded in
+separate rows. Something about the Module mark in every row ... an example etc....
+
+
+TODO: Module info file
+
+TODO: A note about data completeness. Both in handling gaps or noise in the data coming from an institution and in having to 
+discard potentially useful data to comply with the Glance spec. 
 
 ### Data anonymity and consistency 
 

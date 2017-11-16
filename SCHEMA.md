@@ -13,9 +13,14 @@ data-warehouse in the desired format.
 Alternatively, if your institution operates some sort of "Data Integration" team, they should be able to use this 
 document to provide you with the files.
 
+All `.csv` files below should conform to the widely accepted [RFC 4180](https://tools.ietf.org/html/rfc4180) spec except 
+where otherwise stated. 
+
 **Note**: Many files are required by only some of the visualisations that it is possible to include in a Glance survey. 
 If the set of visualisations you wish to include in your surveys do not require certain files, then you needn't prepare 
-them. You can see which visualisations require which files [here](VISUALISATIONS.md).
+them. You can see which visualisations require which files [here](VISUALISATIONS.md). Likewise, the files listed below 
+are unlikely to be an exhaustive description of all the useful student data available to each institution. Instead they 
+are simply the data which is needed to power Glance's various visualisations.  
 
 If you have any questions about the files specified in this document, please create an issue with the following format:
 
@@ -233,35 +238,67 @@ The format `yyyy-mm-dd` is still technically valid according to ISO 8601 and wil
 
 This file contains a list of marks for student work (both exams and coursework).
 
-| Student Id | Study Id | Stage Id | Academic Year | Module Code | Module Mark | Component Text | Component Attempt | Weighting |  
-|:----------:|:--------:|:--------:|:-------------:|:-----------:|:-----------:|:--------------:|:-----------------:|:---------:|
-| Integer | Integer | Integer | String | String | Decimal | String | Integer | Decimal | 
+| Student Id | Study Id | Stage Id | Academic Year | Module Code | Component Text | Component Attempt | Component Mark | Weighting |  
+|:----------:|:--------:|:--------:|:-------------:|:-----------:|:-----------:|:--------------:|:-----------------:|:--------------:|
+| Integer | Integer | Integer | String | String | String | Integer | Integer | Decimal | 
 
 An example row would look something like the following: 
 
 ```
-37802,5802,23,2015,GNM8002,84,Written Examination,1,84,100.0
+37802,5802,23,2015,GNM8002,Written Examination,1,84,100.0
 ```
 
 **Note**: when a module/course has more than 1 component, students will achieve marks for both which will be recorded in
-separate rows. Something about the Module mark in every row ... an example etc....
+separate rows. An example of this would look like the following: 
 
+```
+34814,1089,23,2015,SPG8027,Oral Presentation 1,1,70,20.0
+34814,1089,23,2015,SPG8027,Individual Project Plan,1,66,80.0
+```
 
-TODO: Module info file
+Together, these marks constitute student **34814**'s performance in the module **SPG8027**.
 
-TODO: A note about data completeness. Both in handling gaps or noise in the data coming from an institution and in having to 
-discard potentially useful data to comply with the Glance spec. 
+**Note**: In the background, Glance will group these rows together and combine component marks, multiplied by their 
+respective weights, to compute a total module/course mark. Therefore, if a given student completed a module, the _Weighting_
+fields of all associated rows in `Marks.csv` should sum to 100.
+ 
+##### Modules.csv
+
+This file contains a list of the modules/courses that a student may take, across an institution. 
+
+| Id | Module Code | Title | Description | Keywords |
+|:--:|:-----------:|:-----:|:-----------:|:--------:|
+| Integer | String | String | String | String\|String\| ... \|String |
+
+An example row would look something like the following: 
+
+```
+217,CSC2021,Software Engineering,"Teaches students the principles, tools and techniques of software engineering.",Programming|Commercial Accumen|Exam heavy 
+```
+
+**Note**: the _Description_ field is enclosed in double quotes as such a long field is likely to include commas. If left 
+outside double quotes, commas are treated as field separators. Columns which contain these will then have too many rows 
+may cause Glance to omit entries or even break. This is infact true of all files listed here, but mentioned specifically 
+here as the most likely place to encounter the problem. 
+
+**Note**: unlike any other fields in the other files listed here, the structure of the _Keywords_ field is important. The
+[csv format](https://tools.ietf.org/html/rfc4180) is not naturally good at representing fields which which may be lists of 
+arbitrary length. We choose here to represent multiple keywords in a single _Keyword_ field by separating them by pipe 
+symbols (**|**). If you have a row with 0 or 1 keywords, then no pipe symbols are needed. Equally, pipe symbols are only 
+needed to **separate** keywords; you do not need a trailing pipe symbol. Glance will parse such correctly formatted 
+_Keyword_ fields as lists of distinct keywords. As with the  _Description_ field incorrect formatting may cause Glance to
+omit entries or even break. 
 
 ### Data anonymity and consistency 
 
 Throughout this guide, fields such as _Student Id_ are referenced many times. Exactly how identifying such information is 
-will vary from instituion to institution. For instance, can student ids be used to lookup contact info on some widely 
+will vary from institution to institution. For instance, can student ids be used to lookup contact info on some widely 
 accessible service? If so, student ids will often need to be anonymised before use with Glance in order to preserve 
 student privacy.
 
 This anonymisation will often involve simply replacing a student id with some other integer which has no meaning; i.e. 
 10378592 becomes 17. 
 
-**If this anonymisation takes place, it must be consistent accross all files!**. If the id 17 refers to studnent number 
+**If this anonymisation takes place, it must be consistent accross all files!**. If the id 17 refers to student number 
 10378592 in `Printed.csv`, then it must also refer to student number 10378592 in `ClusterSession.csv`. If the anonymisation
 of student data is inconsistent then Glance will link unrelated records to one another and present incorrect information. 

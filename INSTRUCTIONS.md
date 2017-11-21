@@ -99,9 +99,43 @@ the root of this folder (in the same location as this file). To check that this 
     **Note**: As with earlier steps in this guide, the first command above take some time (usually less than two minutes)
     and produce a lot of output. This is to be expected.
 
-2. Copy the data, according to our specified "schema", to some location on your server's hard drive
+2. Copy the data, formatted according to our specified [schema](SCHEMA.md), to some location on your server's hard drive. If your
+server is remote (accessed using `ssh`) you can send files from your **local machine** as follows:
 
-3. Transform the data
+    * Assuming you are using Linux or MacOS on your **local machine**, then execute the following command in your 
+    **local terminal**:  
+
+    ```bash
+    scp -rp /local/location/data username@remote.address:/remote/location/
+    ```
+
+    The `username` and `remote.address` should be the same as those you use to log into your **remote machine** via 
+    `ssh`. Unless you use a key, this command will also prompt you for a password, which is also the same as the one you
+    use for `ssh`. If you **do** use a key to access your remote server, then that is currently out of scope for this 
+    documentation. 
+    
+    * Assuming you are using Windows on your local machine, then ensure you have installed the 
+    [PuTTy](https://www.chiark.greenend.org.uk/~sgtatham/putty/latest.html) program (you probably have, as PuTTy is by 
+    far the most common way of working with (linux) **remote machines** on Windows). PuTTy comes with a utility called 
+    `pscp`, the documentation for which is [here](https://tartarus.org/~simon/putty-snapshots/htmldoc/Chapter5.html#pscp).
+    Once you have setup `pscp` as per the documentation, you can run the following command in `cmd.exe`:
+    
+    ```bash
+    pscp -rp C:\local\location\data username@remote.address:/remote/location
+    ```
+    
+    **Note**: The local Windows filesystem locations may be given using either forward (/) or backward (\) slashes, but 
+    the remote linux filesystem location **must** be given using forward (/) slashes. Also note that if you don't know 
+    how to start `cmd.exe` on Windows you can do it by clicking **Start**, then **Run**, typing **cmd** and hitting enter.  
+
+
+3. On your remote machine again, we need to prune and transform the data to be presented in Glance surveys. This can be 
+done with the following commands:
+
+```bash
+./bin/glance-cli.sh transform -c /location/data/ClusterSession.csv -r /location/data/RecapSession.csv \
+    -m /location/data/Marks.csv -o /location/to/output/transformed/csvs -p CSC -y 2015 -s 2   
+```
 
 4. Generate the Surveys
 

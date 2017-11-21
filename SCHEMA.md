@@ -1,4 +1,4 @@
-## Schema
+# Schema
 
 This document describes the form that your data must be in, in order to be imported and used with Glance.
 
@@ -26,9 +26,9 @@ If you have any questions about the files specified in this document, please cre
 
 TODO: Write an issue template for reporting schema issues.
 
-### Files
+## Files
 
-##### Printer.csv
+#### Printer.csv
 
 This file simply contains a list of the printers in an institution. 
 
@@ -43,7 +43,7 @@ An example row would look something like the following:
 2,Library - First floor
 ```
 
-##### Printed.csv
+#### Printed.csv
 
 This file contains a list of events corresponding to students printing documents. 
 
@@ -61,7 +61,7 @@ An example row would look something like the following:
 2015-09-07T07:58:10000Z,26567,249,23,104,1
 ```
 
-##### Cluster.csv
+#### Cluster.csv
 
 This file contains a list of the computing clusters in an institution. I.e. The distinct locations or labs where a 
 student may use a computer.
@@ -87,7 +87,7 @@ Without the _PC Name_ field, this would be:
 
 **Note**: Remember to include the blank commas `6,,...`
 
-##### ClusterSession.csv
+#### ClusterSession.csv
 
 This file contains a list of events corresponding to a student session using a computer in an institution's cluster. 
 
@@ -105,7 +105,7 @@ An example row would look something like the following:
 **Note**: If the _PC Name_ field is present in the `Cluster.csv` file then we can match that prefix against the 
 _Machine Name_ field of `ClusterSession.csv` rows in order to determine in which cluster a session physically took place. 
 
-##### Recap.csv
+#### Recap.csv
 
 This file contains instances of lecture recordings which students may (re)watch at their leisure. This file is called 
 `Recap.csv` as Recap is the lecture recording and playback software used at Newcastle, provided by [Panopto](https://www.panopto.com/).
@@ -127,7 +127,7 @@ _Session Name_ simply identifies the actual thing being recorded and has no expl
 `TCP3099/L03/01` likely corresponds to the third lecture from the course with code TCP3099, but this could just as easily 
 be `FooBar Lecture 124` 
 
-##### RecapSession.csv
+#### RecapSession.csv
 
 This file contains a list of events corresponding to a student watching a lecture recording.
 
@@ -143,7 +143,7 @@ An example row would look something like the following:
 
 **Note**: the _Recap Id_ field should correspond to entries in the _Id_ field of `Recap.csv`.
 
-##### Stage.csv
+#### Stage.csv
 
 This file simply contains a list of the stages a student may occupy throughout their time at an institution. These normally
 correspond to academic years.
@@ -155,10 +155,10 @@ correspond to academic years.
 An example row would look something like the following: 
 
 ```
-(2,1,'Undergraduate Stage 1'),
+2,1,Undergraduate Stage 1
 ```
 
-##### Study.csv
+#### Study.csv
 
 This file simply contains a list of the programmes of study students may be enrolled on. 
 
@@ -172,8 +172,7 @@ An example row would look something like the following:
 5,09MD,Doctor of Medicine,Postgraduate Research,D-SCMS,CLINICAL MEDICAL SCIENCES,F-FMED
 ```
 
-
-##### VLESession.csv
+#### VLESession.csv
 
 This file contains a list of events corresponding to student sessions in an institution's Virtual Learning Environment (VLE).
 A common example of a VLE is the software [Blackboard](https://blackboard.com/). 
@@ -188,7 +187,7 @@ An example row would look something like the following:
 331440600,2017-07-04T18:01:55000Z,2017-07-04T18:02:00000Z,50873,249,23,4
 ```
 
-##### VLESessionContent.csv
+#### VLESessionContent.csv
 
 Within each VLE Session, a student may engage with multiple pieces of content. This file contains a list of events 
 corresponding to a student engaging with (viewing, downloading etc...) a specific piece of content. 
@@ -209,7 +208,7 @@ the content being accessed belongs (it is assumed that all content will be owned
 
 **Note**: the _Session Id_ field is expected to correspond to entries in the _Id_ field of `VLESession.csv`.
 
-##### Meeting.csv
+#### Meeting.csv
 
 
 This file contains a list of events corresponding to recorded student meetings, likely with a tutor, supervisor or lecturer.
@@ -234,7 +233,7 @@ following form:
 
 The format `yyyy-mm-dd` is still technically valid according to ISO 8601 and will be parsed by Glance without issue. 
 
-##### Marks.csv
+#### Marks.csv
 
 This file contains a list of marks for student work (both exams and coursework).
 
@@ -262,7 +261,7 @@ Together, these marks constitute student **34814**'s performance in the module *
 respective weights, to compute a total module/course mark. Therefore, if a given student completed a module, the _Weighting_
 fields of all associated rows in `Marks.csv` should sum to 100.
  
-##### Modules.csv
+#### Modules.csv
 
 This file contains a list of the modules/courses that a student may take, across an institution. 
 
@@ -289,7 +288,7 @@ needed to **separate** keywords; you do not need a trailing pipe symbol. Glance 
 _Keyword_ fields as lists of distinct keywords. As with the  _Description_ field incorrect formatting may cause Glance to
 omit entries or even break. 
 
-### Data anonymity and consistency 
+## Data anonymity and consistency 
 
 Throughout this guide, fields such as _Student Id_ are referenced many times. Exactly how identifying such information is 
 will vary from institution to institution. For instance, can student ids be used to lookup contact info on some widely 

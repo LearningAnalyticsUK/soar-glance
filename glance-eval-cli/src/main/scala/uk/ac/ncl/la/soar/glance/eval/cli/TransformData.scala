@@ -28,6 +28,7 @@ import kantan.csv.cats._
 import kantan.csv.generic._
 import kantan.csv.java8._
 import monix.eval.Task
+import monix.cats._
 import uk.ac.ncl.la.soar.{ModuleCode, StudentNumber}
 import uk.ac.ncl.la.soar.data.ModuleScore
 import CsvRow._
@@ -38,28 +39,46 @@ import CsvRow._
 object TransformData extends Command[TansformConfig, Unit] {
 
   override def run(conf: TansformConfig): Task[Unit] = {
-    println("starting the transform")
-    for{
-      m <- parseMarks(conf.nessMarkPath, conf.prefix, conf.start, conf.stage)
-      s <- Task.zip2(parseSessions[ClusterSessionRow](conf.clusterPath, m._2),
-        parseSessions[RecapSessionRow](conf.recapPath, m._2))
-      _ <- Task.zip3(writeMarks(conf.outputPath, m._1),
-        writeSessions(conf.outputPath, s._1, "clusterSessions.csv"),
-        writeSessions(conf.outputPath, s._2, "recapSessions.csv"))
+    for {
+      //Read compulsory files (marks)
+      marks <- readMarks(conf.nessMarkPath, conf.prefix, conf.start, conf.stage)
+      //TODO: module info
+      //Transform and write compulsory files
+      _ <- writeMarks(conf.outputPath, marks._1, "marks.csv")
+      //Read, write and transform from whichever optional files are provided (recap, cluster, bb sessions etc...)
+      _ <- Task.zip2(
+        readWriteOptional[ClusterSessionRow](conf.clusterPath, marks._2, conf.outputPath, "clusterSessions.csv"),
+        readWriteOptional[RecapSessionRow](conf.recapPath, marks._2, conf.outputPath, "recapSessions.csv"))
     } yield ()
   }
 
-  /** Retrieve and parse all Mark rows from provided file if possible */
-  private def parseMarks(marksPath: String, prefix: String,
-                         year: String, stage: Int): Task[(Set[ModuleScore], Set[StudentNumber])] = Task {
+  private def readWriteOptional[R <: HasStudent : RowDecoder : RowEncoder](inPath: Option[String],
+                                                                           cohort: Set[StudentNumber],
+                                                                           outPath: String,
+                                                                           outName: String) = {
 
-    println("parsing marks")
+    //If an optional file has been provided, read it in, transform it and write it out, otherwise, perform a no-op.
+    inPath match {
+      case Some(in) =>
+        val parseTask = parseRecords[R](in, cohort)
+        parseTask.flatMap(r => writeRecords(outPath, r, outName))
+      case None =>
+        Task.unit
+    }
+  }
+
+  /** Retrieve and parse all Mark rows from provided file if possible */
+  private def readMarks(marksPath: String, prefix: String,
+                         year: String, stage: Int): Task[(Set[ModuleScore], Set[StudentNumber])] = Task {
 
     //Filter to find all NessMarks belonging to a particular student cohort, given start year and stage
     def rightCohort(m: NessMarkRow) =  m.year == year && m.module.startsWith(prefix+stage)
 
     //Pull in the NessMarks
     val readMarks = Paths.get(marksPath).asCsvReader[NessMarkRow](rfc.withHeader)
+
+    //TODO: Check that the below isn't doing more passes than necessary, there is something funny about the collects
+    //  could they be combined?
 
     //Drop errors and rows with the wrong prefix
     val prefixedRows = readMarks.collect({ case Success(m) if m.module.startsWith(prefix) => m }).toList
@@ -73,30 +92,25 @@ object TransformData extends Command[TansformConfig, Unit] {
     }).flatten.toSet, studentCohort)
   }
 
-  /** Retrieve and parse all session rows from the provided file if possible */
-  private def parseSessions[R <: HasStudent : RowDecoder](sessionsPath: String,
-                                              studentCohort: Set[StudentNumber]): Task[List[R]] = Task {
-    println("parsing sessions")
+  /** Retrieve and parse all rows from a file which contains a list of student records (i.e. contains a student number) */
+  private def parseRecords[R <: HasStudent : RowDecoder](recordsPath: String, cohort: Set[StudentNumber]) = Task {
+    //Pull in the Records
+    val readRecords = Paths.get(recordsPath).asCsvReader[R](rfc.withHeader)
 
-    //Pull in the Sessions
-    val readSessions = Paths.get(sessionsPath).asCsvReader[R](rfc.withHeader)
-
-    //Drop sessions not associated with cohort students
-    readSessions.collect({ case Success(cs) if studentCohort.contains(cs.student) => cs }).toList
+    //Drop the records not associated with the selected cohort of students
+    readRecords.collect({ case Success(cs) if cohort.contains(cs.student) => cs }).toList
   }
 
-  private def writeMarks(outputPath: String, marks: Set[ModuleScore]): Task[Unit] = Task {
-    println("writing marks")
+  private def writeMarks(outputPath: String, marks: Set[ModuleScore], fileName: String): Task[Unit] = Task {
     val out = Paths.get(outputPath)
 
     val outDir = if(Files.exists(out)) out else Files.createDirectories(out)
 
-    outDir.resolve("marks.csv").writeCsv(marks, rfc)
+    outDir.resolve(fileName).writeCsv(marks, rfc)
   }
 
-  private def writeSessions[R : RowEncoder](outputPath: String, rows: List[R], fileName: String): Task[Unit] = Task {
+  private def writeRecords[R : RowEncoder](outputPath: String, rows: List[R], fileName: String): Task[Unit] = Task {
 
-    println("writing sessions")
     val out = Paths.get(outputPath)
 
     val outDir = if(Files.exists(out)) out else Files.createDirectories(out)

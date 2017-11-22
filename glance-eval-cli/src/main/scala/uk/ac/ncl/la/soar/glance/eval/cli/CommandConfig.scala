@@ -34,7 +34,7 @@ sealed trait CommandConfig
 final case class GenerateConfig(recordsPath: String = "",
                                 elided: Int = 10,
                                 modules: Seq[String] = Seq.empty[String],
-                                seed: Int = 1921437) extends CommandConfig
+                                seed: Option[Int] = None) extends CommandConfig
 
 /**
   * Config "bag" case class for the survey evaluator and accompanying scopt parser.
@@ -47,9 +47,10 @@ final case class AssessConfig(inputPath: String = "",
 /**
   * Config "bag" case class for the job which transforms Soar data csv's and its accompanying scopt parser.
   */
-final case class TansformConfig(clusterPath: String = "",
-                                recapPath: String = "",
+final case class TansformConfig(clusterPath: Option[String] = None,
+                                recapPath: Option[String] = None,
                                 nessMarkPath: String = "",
+//                                moduleInfoPath: String = "",
                                 outputPath: String = "",
                                 prefix: String = "",
                                 start: String = "",
@@ -88,17 +89,16 @@ object CommandConfig {
   }
 
   /** Package private helper object for parsing command line arguments, provided by scopt */
-  private[cli] val generateParser = new OptionParser[GenerateConfig]("SoarEvalGen") {
+  private[cli] val generateParser = new OptionParser[GenerateConfig]("GlanceGen") {
     //Define the header for the command line display text
-    head("Soar Evaluation Survey Generator", "0.1.x")
+    head("Glance Survey Generator", "0.1.x")
 
     //Define the individual command line options
     opt[String]('i', "input").required().valueName("<file>")
       .action((x, c) => c.copy(recordsPath = x))
-      .text("input is a required .csv file containing student/module scores. " +
-        "Format \"StudentNumber, Module Code, Percentage\"")
+      .text("input is a required .csv file containing student marks.")
 
-    opt[Int]('e', "elided").valueName("e.g. 20")
+    opt[Int]('s', "num-students").valueName("e.g. 20")
       .action((x, c) => c.copy(elided = x))
       .text("elided is an optional parameter specifying how many student records to partially elide in the generated " +
         "surveys.")
@@ -108,21 +108,21 @@ object CommandConfig {
       .text("modules is the list of modules for which to elide a students records. Only one module record will be " +
         "elided per student. One survey is generated per elided module code.")
 
-    opt[Int]('s', "seed").valueName("<int>")
-      .action((x, c) => c.copy(seed = x))
-      .text("seed is an optional parameter specifying a number to use as a seed when randomly selecting student " +
-        "records to elide.")
+    opt[Int]('r', "random-seed").valueName("<int>")
+      .action((x, c) => c.copy(seed = Option(x)))
+      .text("random-seed is an optional integer to use as a seed when randomly (uniformly) selecting student records " +
+        "to include in a survey.")
   }
 
-  private[cli] val assessParser = new OptionParser[AssessConfig]("SoarEvalAssess") {
+  //TODO: Remove or Rewrite Assess task
+  private[cli] val assessParser = new OptionParser[AssessConfig]("GlanceAssess") {
     //Define the header for the command line display text
-    head("Soar Evaluation Survey Assessor", "0.1.x")
+    head("Glance Survey Assessor", "0.1.x")
 
     //Define the individual command line options
     opt[String]('i', "input").required().valueName("<directory>")
       .action((x, c) => c.copy(inputPath = x))
-      .text("input is a required directory containing completed survey csvs, in the folder structure producted by " +
-        "`generate`.")
+      .text("input is a required directory containing completed survey csvs, in the folder structure producted by `generate`.")
 
     opt[String]('o', "output").required().valueName("<file>")
       .action((x, c) => c.copy(outputPath = x))
@@ -139,26 +139,27 @@ object CommandConfig {
         "model and surveys. Default is rmse.")
   }
 
-  private[cli] val transformParser = new OptionParser[TansformConfig]("SoarEvalTransform") {
+  private[cli] val transformParser = new OptionParser[TansformConfig]("GlanceTransform") {
     //Define the header for the command line display text
-    head("Soar Evaluation Data Transformer", "0.1.x")
+    head("Glance Data Transformer", "0.1.x")
 
     //Define the individual command line options
-    opt[String]('c', "cluster-sessions").required().valueName("<file>")
-      .action((x, c) => c.copy(clusterPath = x))
-      .text("cluster-sessions is a required .csv file containing student sessions using University clusters " +
-        "Format \"SessionStartTimestamp, SessionEndTimestamp, StudentId, StudyId, StageId, MachineName\"")
+    opt[String]('c', "cluster-sessions").valueName("<file>")
+      .action((x, c) => c.copy(clusterPath = Option(x)))
+      .text("cluster-sessions is a required .csv file containing student sessions using University clusters.")
 
-    opt[String]('r', "recap-sessions").required().valueName("<file>")
-      .action((x, c) => c.copy(recapPath = x))
-      .text("recap-sessions is a required .csv file containing student sessions using the ReCap video lecture service " +
-        "Format \"SessionStartTime, RecapId, StudentId, StudyId, StageId, SecondsListened\"")
+    opt[String]('r', "recap-sessions").valueName("<file>")
+      .action((x, c) => c.copy(recapPath = Option(x)))
+      .text("recap-sessions is a required .csv file containing student sessions using the ReCap video lecture service.")
 
     opt[String]('m', "marks").required().valueName("<file>")
       .action((x, c) => c.copy(nessMarkPath = x))
-      .text("marks is a required .csv file containing student marks " +
-        "Format \"StudentId, StudyId, StageId, AcademicYear, ProgressionCode, ModuleCode, ModuleMark, ComponentText, " +
-        "ComponentAttempt, ComonentMark, Weighting, TimestampDue\"")
+      .text("marks is a required .csv file containing student marks.")
+
+//    opt[String]('i', "module-info").required().valueName("<file>")
+//      .action((x, c) => c.copy(moduleInfoPath = x))
+//      .text("module-info is a required .csv file containing information about each of the modules for which a student " +
+//        "may have received marks.")
 
     opt[String]('o', "output").required().valueName("<directory>")
       .action((x, c) => c.copy(outputPath = x))
@@ -166,44 +167,48 @@ object CommandConfig {
 
     opt[String]('p', "prefix").required().valueName("e.g. CSC")
       .action((x, c) => c.copy(prefix = x))
-      .text("prefix is a required parameter which indicates the module code prefix for which we should transform marks")
+      .text("prefix is a required parameter which indicates the module code prefix for which we should transform marks.")
 
     opt[String]('y', "year").required().valueName("e.g. 2015")
       .action((x, c) => c.copy(start = x))
-      .text("year is a required parameter which indicates the earliest academic year for which to transform marks")
+      .text("year is a required parameter which indicates the earliest academic year for which to transform marks.")
 
     opt[Int]('s', "stage").required().valueName("e.g. 2")
       .action((x, c) => c.copy(stage = x))
-      .text("stage is a required parameter which indicates the earliest academic stage for which to transform marks")
+      .text("stage is a required parameter which indicates the earliest academic stage for which to transform marks.")
   }
 
-  private[cli] val loadParser = new OptionParser[LoadSupportConfig]("SoarEvalLoadSupport") {
+  private[cli] val loadParser = new OptionParser[LoadSupportConfig]("GlanceLoadSupport") {
     //Define the header for the command line display text
-    head("Soar Evaluation Support Data Loader", "0.1.x")
+    head("Glance Support Data Loader", "0.1.x")
 
     //Define the individual command line options
     opt[String]('c', "cluster-sessions").required().valueName("<file>")
       .action((x, c) => c.copy(clusterPath = x))
-      .text("cluster-sessions is a required .csv file containing student sessions using University clusters " +
-        "Format \"SessionStartTimestamp, SessionEndTimestamp, StudentId, StudyId, StageId, MachineName\"")
+      .text("cluster-sessions is a required .csv file containing student sessions using University clusters.")
 
     opt[String]('r', "recap-sessions").required().valueName("<file>")
       .action((x, c) => c.copy(recapPath = x))
-      .text("recap-sessions is a required .csv file containing student sessions using the ReCap video lecture service " +
-        "Format \"SessionStartTime, RecapId, StudentId, StudyId, StageId, SecondsListened\"")
+      .text("recap-sessions is a required .csv file containing student sessions using the ReCap video lecture service.")
 
   }
 
-  private[cli] val extraMarkParser = new OptionParser[LoadExtraMarksConfig]("SoarEvalLoadExtraMarks") {
+  private[cli] val extraMarkParser = new OptionParser[LoadExtraMarksConfig]("GlanceLoadExtraMarks") {
+    //Define the header for the command line display text
+    head("Glance Extra Marks Loader", "0.1.x")
 
+    //Define the individual command line options
     opt[String]('m', "marks").required().valueName("<file>")
       .action((x, c) => c.copy(extraMarks = x))
       .text("marks is an optional .csv file containing extra student marks to load (perhaps with a different module " +
         "code).")
   }
 
-  private[cli] val exportResultsParser = new OptionParser[ExportSurveyResultsConfig]("SoarEvalExportResults") {
+  private[cli] val exportResultsParser = new OptionParser[ExportSurveyResultsConfig]("GlanceExportResults") {
+    //Define the header for the command line display text
+    head("Glance Survey Result Exporter", "0.1.x")
 
+    //Define the individual command line options
     opt[String]('o', "output").required().valueName("<directory>")
       .action((x, c) => c.copy(outputPath = x))
       .text("ouput is a required parameter specifying the directory to write the survey results into")

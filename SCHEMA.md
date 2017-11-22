@@ -261,7 +261,7 @@ Together, these marks constitute student **34814**'s performance in the module *
 respective weights, to compute a total module/course mark. Therefore, if a given student completed a module, the _Weighting_
 fields of all associated rows in `Marks.csv` should sum to 100.
  
-#### Modules.csv
+#### Module.csv
 
 This file contains a list of the modules/courses that a student may take, across an institution. 
 

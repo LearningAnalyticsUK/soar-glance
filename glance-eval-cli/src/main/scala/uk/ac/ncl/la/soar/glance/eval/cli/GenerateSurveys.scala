@@ -50,7 +50,7 @@ object GenerateSurveys extends Command[GenerateConfig, Unit] {
       scores <- parseScores(conf.recordsPath)
       surveys <- Task.now(Survey.generate(scores, conf.elided, conf.modules, conf.seed))
       db <- Repositories.Survey
-      _ <- { println("Finished creating tables.");surveys.traverse(db.save) }
+      _ <- { println("Finished creating tables."); surveys.traverse(db.save) }
     } yield ()
   }
 

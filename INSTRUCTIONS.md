@@ -130,12 +130,18 @@ server is remote (accessed using `ssh`) you can send files from your **local mac
 
 
 3. On your remote machine again, we need to prune and transform the data to be presented in Glance surveys. This can be 
-done with the following commands:
-
-```bash
-./bin/glance-cli.sh transform -c /location/data/ClusterSession.csv -r /location/data/RecapSession.csv \
-    -m /location/data/Marks.csv -o /location/to/output/transformed/csvs -p CSC -y 2015 -s 2   
-```
+done with the following command:
+    ```bash
+    ./bin/glance-cli.sh transform -c /location/data/ClusterSession.csv -r /location/data/RecapSession.csv \
+       -m /location/data/Marks.csv -o /location/to/output/transformed/csvs -p CSC -y 2015 -s 2   
+    ```
+    
+    **Note**: the above is only an example of a `transform` command. There are many possible command line options with 
+    distinct meanings. These are detailed in full below, or if you type the command: `./bin/glance-cli.sh transform --help`.
+    
+   ```bash
+   
+   ``` 
 
 4. Generate the Surveys
 

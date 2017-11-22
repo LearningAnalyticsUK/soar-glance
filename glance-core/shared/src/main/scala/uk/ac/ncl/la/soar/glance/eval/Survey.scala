@@ -85,7 +85,7 @@ object Survey {
   /**
     * Factory method for new surveys.
     */
-  def generate(records: List[ModuleScore], numQueries: Int, queryModules: Seq[ModuleCode], seed: Int): List[Survey] = {
+  def generate(records: List[ModuleScore], numQueries: Int, queryModules: Seq[ModuleCode], seed: Option[Int]): List[Survey] = {
     //Group the records by student and turn them into StudentRecords objects
     val stRecords = groupByStudents(records)
     println(s"Number of scores: ${records.size} Number of records: ${stRecords.size}")
@@ -148,7 +148,7 @@ object Survey {
                       trainingData: Int,
                       numQueries: Int,
                       queryModules: Set[ModuleCode],
-                      seed: Int): Map[ModuleCode, List[StudentNumber]] = {
+                      seed: Option[Int]): Map[ModuleCode, List[StudentNumber]] = {
 
     require(studentRecords.size > (numQueries * queryModules.size) + trainingData, "The number of students for which " +
       "you have records must be greater than the formula (Number of queries * number of modules) + (Number of " +
@@ -157,7 +157,10 @@ object Survey {
 
     //Take the list of students, shuffle then split off the training data from the head.
     //Create the rng with provided seed
-    val rand = new Random(seed)
+    val rand = seed match {
+      case Some(i) => new Random(i)
+      case None => new Random()
+    }
 
     def findNWithModule(n: Int, records: List[StudentRecords[SortedMap, ModuleCode, Double]], module: ModuleCode) = {
       records.iterator.filter(_.record.contains(module)).map(_.number).take(n).toList

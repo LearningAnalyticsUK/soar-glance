@@ -129,21 +129,54 @@ server is remote (accessed using `ssh`) you can send files from your **local mac
     how to start `cmd.exe` on Windows you can do it by clicking **Start**, then **Run**, typing **cmd** and hitting enter.  
 
 
-3. On your remote machine again, we need to prune and transform the data to be presented in Glance surveys. This can be 
-done with the following command:
+3. On your server again (not your local machine), we need to prune and transform the data to be presented in Glance 
+surveys. This can be done with the following command:
     ```bash
-    ./bin/glance-cli.sh transform -c /location/data/ClusterSession.csv -r /location/data/RecapSession.csv \
-       -m /location/data/Marks.csv -o /location/to/output/transformed/csvs -p CSC -y 2015 -s 2   
+    ./bin/glance-cli.sh transform -m /location/data/Marks.csv -o /location/to/output/transformed/csvs -p CSC -y 2015 -s 2 \
+        --cluster /location/data/ClusterSession.csv --recap /location/data/RecapSession.csv  
     ```
     
     **Note**: the above is only an example of a `transform` command. There are many possible command line options with 
     distinct meanings. These are detailed in full below, or if you type the command: `./bin/glance-cli.sh transform --help`.
     
-   ```bash
-   
-   ``` 
+    ```
+    Glance Data Transformer 0.1.x
+    Usage: GlanceTransform [options]
 
-4. Generate the Surveys
+    -m, --marks <file>     marks is a required .csv file containing student marks.
+    -o, --output <path>    output is a required parameter specifying the directory to write transformed data to.
+    -p, --prefix e.g. CSC  prefix is a required parameter which indicates the module code prefix for which we should transform marks.
+    -y, --year e.g. 2015   year is a required parameter which indicates the earliest academic year for which to transform marks.
+    -s, --stage e.g. 2     stage is a required parameter which indicates the earliest academic stage for which to transform marks.
+    --cluster <file>       cluster is an optional .csv file containing student sessions using University clusters.
+    --recap <file>         recap is an optional .csv file containing student sessions using the ReCap video lecture service.
+    --printed <file>       printed is an optional .csv file containing student print events.
+    --vle <file>           vlePath is an optional .csv file containing student VLE sessions.
+    --meetings <file>      meetingsPath is an optional .csv file containing student meeting records.
+    ```
+    
+    The first 5 options are compulsory, whilst the remaining 5 are optional depending on which data files you need for 
+    the [visualisations](VISUALISATIONS.md) you intend to include in your survey. This command, when run, will create 
+    the output directory specified by the `-o` option and subsequently create several small `.csv` files in said 
+    directory. These small files will contain only those records which may be relevant to the survey generated in the 
+    next step.
+    
+    **Note**: You may assume everything other than step 2 takes place on a server (remote or otherwise). 
+
+4. Now that we have pruned and filtered the data, it is time to generate the surveys themselves and persist them in 
+Glance's database: This can be done with the following command:
+    ```bash
+    ./bin/glance-cli.sh generate -i /location/of/transformed/data --modules CSC3621,CSC3222 \
+       --visualisations recap_vs_time,cluster_vs_time,stud_avg_vs_time,stud_module_scores
+    ```
+    
+    **Note**: The above is only an example of a `generate` command. There are many possible command line options with
+    distinct meanings. These are detailed in full below, or if you type the command: `./bin/glance-cli.sh generate --help`
+    ```
+
+    ```
+    
+    
 
 5. Load the data to support the surveys
 

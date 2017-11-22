@@ -33,6 +33,7 @@ sealed trait CommandConfig
   */
 final case class GenerateConfig(recordsPath: String = "",
                                 elided: Int = 10,
+                                visualisations: Seq[String] = Seq.empty[String],
                                 modules: Seq[String] = Seq.empty[String],
                                 seed: Option[Int] = None) extends CommandConfig
 
@@ -49,6 +50,9 @@ final case class AssessConfig(inputPath: String = "",
   */
 final case class TansformConfig(clusterPath: Option[String] = None,
                                 recapPath: Option[String] = None,
+                                printedPath: Option[String] = None,
+                                vlePath: Option[String] = None,
+                                meetingsPath: Option[String] = None,
                                 nessMarkPath: String = "",
 //                                moduleInfoPath: String = "",
                                 outputPath: String = "",
@@ -112,6 +116,10 @@ object CommandConfig {
       .action((x, c) => c.copy(seed = Option(x)))
       .text("random-seed is an optional integer to use as a seed when randomly (uniformly) selecting student records " +
         "to include in a survey.")
+
+    opt[Seq[String]]('v', "visualisations").required().valueName("e.g. recap_vs_time,stud_module_scores,...")
+      .action( (x,c) => c.copy(visualisations = x) )
+      .text("visualisations is a required parameter detailing the list of visualisations to use in a Glance survey.")
   }
 
   //TODO: Remove or Rewrite Assess task
@@ -144,24 +152,16 @@ object CommandConfig {
     head("Glance Data Transformer", "0.1.x")
 
     //Define the individual command line options
-    opt[String]('c', "cluster-sessions").valueName("<file>")
-      .action((x, c) => c.copy(clusterPath = Option(x)))
-      .text("cluster-sessions is a required .csv file containing student sessions using University clusters.")
-
-    opt[String]('r', "recap-sessions").valueName("<file>")
-      .action((x, c) => c.copy(recapPath = Option(x)))
-      .text("recap-sessions is a required .csv file containing student sessions using the ReCap video lecture service.")
-
     opt[String]('m', "marks").required().valueName("<file>")
       .action((x, c) => c.copy(nessMarkPath = x))
       .text("marks is a required .csv file containing student marks.")
 
-//    opt[String]('i', "module-info").required().valueName("<file>")
-//      .action((x, c) => c.copy(moduleInfoPath = x))
-//      .text("module-info is a required .csv file containing information about each of the modules for which a student " +
-//        "may have received marks.")
+    //    opt[String]('i', "module-info").required().valueName("<file>")
+    //      .action((x, c) => c.copy(moduleInfoPath = x))
+    //      .text("module-info is a required .csv file containing information about each of the modules for which a student " +
+    //        "may have received marks.")
 
-    opt[String]('o', "output").required().valueName("<directory>")
+    opt[String]('o', "output").required().valueName("<path>")
       .action((x, c) => c.copy(outputPath = x))
       .text("output is a required parameter specifying the directory to write transformed data to.")
 
@@ -176,6 +176,26 @@ object CommandConfig {
     opt[Int]('s', "stage").required().valueName("e.g. 2")
       .action((x, c) => c.copy(stage = x))
       .text("stage is a required parameter which indicates the earliest academic stage for which to transform marks.")
+    
+    opt[String]("cluster").valueName("<file>")
+      .action((x, c) => c.copy(clusterPath = Option(x)))
+      .text("cluster is an optional .csv file containing student sessions using University clusters.")
+
+    opt[String]("recap").valueName("<file>")
+      .action((x, c) => c.copy(recapPath = Option(x)))
+      .text("recap is an optional .csv file containing student sessions using the ReCap video lecture service.")
+
+    opt[String]("printed").valueName("<file>")
+      .action((x, c) => c.copy(printedPath = Option(x)))
+      .text("printed is an optional .csv file containing student print events.")
+
+    opt[String]("vle").valueName("<file>")
+      .action((x, c) => c.copy(vlePath = Option(x)))
+      .text("vlePath is an optional .csv file containing student VLE sessions.")
+
+    opt[String]("meetings").valueName("<file>")
+      .action((x, c) => c.copy(meetingsPath = Option(x)))
+      .text("meetingsPath is an optional .csv file containing student meeting records.")
   }
 
   private[cli] val loadParser = new OptionParser[LoadSupportConfig]("GlanceLoadSupport") {

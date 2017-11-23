@@ -143,16 +143,16 @@ surveys. This can be done with the following command:
     Glance Data Transformer 0.1.x
     Usage: GlanceTransform [options]
 
-    -m, --marks <file>     marks is a required .csv file containing student marks.
-    -o, --output <path>    output is a required parameter specifying the directory to write transformed data to.
-    -p, --prefix e.g. CSC  prefix is a required parameter which indicates the module code prefix for which we should transform marks.
-    -y, --year e.g. 2015   year is a required parameter which indicates the earliest academic year for which to transform marks.
-    -s, --stage e.g. 2     stage is a required parameter which indicates the earliest academic stage for which to transform marks.
-    --cluster <file>       cluster is an optional .csv file containing student sessions using University clusters.
-    --recap <file>         recap is an optional .csv file containing student sessions using the ReCap video lecture service.
-    --printed <file>       printed is an optional .csv file containing student print events.
-    --vle <file>           vlePath is an optional .csv file containing student VLE sessions.
-    --meetings <file>      meetingsPath is an optional .csv file containing student meeting records.
+        -m, --marks <file>     marks is a required .csv file containing student marks.
+        -o, --output <path>    output is a required parameter specifying the directory to write transformed data to.
+        -p, --prefix e.g. CSC  prefix is a required parameter which indicates the module code prefix for which we should transform marks.
+        -y, --year e.g. 2015   year is a required parameter which indicates the earliest academic year for which to transform marks.
+        -s, --stage e.g. 2     stage is a required parameter which indicates the earliest academic stage for which to transform marks.
+        --cluster <file>       cluster is an optional .csv file containing student sessions using University clusters.
+        --recap <file>         recap is an optional .csv file containing student sessions using the ReCap video lecture service.
+        --printed <file>       printed is an optional .csv file containing student print events.
+        --vle <file>           vlePath is an optional .csv file containing student VLE sessions.
+        --meetings <file>      meetingsPath is an optional .csv file containing student meeting records.
     ```
     
     The first 5 options are compulsory, whilst the remaining 5 are optional depending on which data files you need for 
@@ -173,16 +173,46 @@ Glance's database: This can be done with the following command:
     **Note**: The above is only an example of a `generate` command. There are many possible command line options with
     distinct meanings. These are detailed in full below, or if you type the command: `./bin/glance-cli.sh generate --help`
     ```
+     
+    Glance Survey Generator 0.1.x
+    Usage: GlanceGen [options]
 
+        -i, --input <directory>       
+                           a required path containing the output of a transform step.
+        -m, --modules e.g. CSC1021, CSC2024...
+                           a required list of modules for which to generate surveys. Unless the --collection option is used, only one survey will be generated per module.
+        -v, --visualisations e.g. recap_vs_time,stud_module_scores,...
+                           visualisations is a required parameter detailing the list of visualisations to use in a Glance survey.
+        -n, --num-students e.g. 10
+                           an optional parameter specifying how many student records to include in each generated survey.
+        -s, --students e.g. 3789,11722,98,...
+                           an optional parameter specifying exactly which student records to include in the generated surveys. Note that if --students are provided then --num-students and --collection will be ignored.
+        -c, --collection <int>   
+                           an optional number of surveys to generate in series. They will all use different students and may be completed one after another.
+        -r, --random-seed <int>  
+                           an optional integer to use as a seed when randomly (uniformly) selecting student records to include in a survey.
     ```
     
+    The first 3 options are compulsory, whilst the remaining 4 are optional depending on the surveys you wish to generate.
+    When run, the above command will create surveys in the Glance database and return links where they may be 
+    accessed and conducted by instructors. 
     
+    **Note**: Such a large number of options are included in the `glance-cli` tools in order to support configurability,
+    however they also create edge cases where combinations of commands or options may fail to behave as they should. 
+    For example, if you fail to provide files in a `transform` step which are then required by visualisations you select
+    in a `generate` step, Glance will not generate surveys. Additionally, if you use `--num-students` to specify more 
+    students than have marks for the chosen `--modules` then Glance will not generate surveys. 
+    
+    Effort has been made to make the error reporting of the `glance-cli` tools fairly comprehensive. If you encounter such 
+    an error, please adjust your combination of command line options accordingly. If you encounter no error, but Glance
+    still isn't generating surveys as you believe it should, please submit an [issue](). 
+    
+    **Note**: The optional `random-seed` option is used if you wish to ensure that `glance-cli`  generates the exact same
+    surveys as on a previous execution (selects the same students etc...). Most of the time it can be safely ignored.
+    
+5. Check the surveys are working. 
 
-5. Load the data to support the surveys
-
-6. Check the surveys are working. 
-
-7. Download some results.
+6. Download some results.
 
 ### Performing miscellaneous tasks 
 

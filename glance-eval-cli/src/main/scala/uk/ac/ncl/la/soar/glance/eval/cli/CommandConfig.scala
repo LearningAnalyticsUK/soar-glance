@@ -32,9 +32,11 @@ sealed trait CommandConfig
   * TODO: Remove common Option[String]
   */
 final case class GenerateConfig(recordsPath: String = "",
-                                elided: Int = 10,
+                                numStudents: Int = 10,
+                                students: Seq[String] = Seq.empty[String],
                                 visualisations: Seq[String] = Seq.empty[String],
                                 modules: Seq[String] = Seq.empty[String],
+                                collection: Option[Int] = None,
                                 seed: Option[Int] = None) extends CommandConfig
 
 /**
@@ -100,17 +102,26 @@ object CommandConfig {
     //Define the individual command line options
     opt[String]('i', "input").required().valueName("<file>")
       .action((x, c) => c.copy(recordsPath = x))
-      .text("input is a required .csv file containing student marks.")
+      .text("a required .csv file containing student marks.")
 
-    opt[Int]('s', "num-students").valueName("e.g. 20")
-      .action((x, c) => c.copy(elided = x))
-      .text("elided is an optional parameter specifying how many student records to partially elide in the generated " +
-        "surveys.")
+    opt[Int]('n', "num-students").valueName("e.g. 10")
+      .action((x, c) => c.copy(numStudents = x))
+      .text("an optional parameter specifying how many student records to include in the generated surveys")
+
+    opt[Seq[String]]('s', "students").valueName("e.g. 3789,11722,98,...")
+      .action((x, c) => c.copy(students = x))
+      .text("an optional parameter specifying exactly which student records to include in the generated surveys. " +
+        "Note that if --students are provided then --num-students and --collection will be ignored.")
 
     opt[Seq[String]]('m', "modules").required().valueName("e.g. CSC1021, CSC2024...")
       .action((x, c) => c.copy(modules = x))
-      .text("modules is the list of modules for which to elide a students records. Only one module record will be " +
-        "elided per student. One survey is generated per elided module code.")
+      .text("list of modules for which to generate surveys. Unless the --collection option is used, only one survey " +
+        "will be generated per module.")
+
+    opt[Int]('c', "collection").valueName("<int>")
+      .action((x, c) => c.copy(collection = Option(x)))
+      .text("a number of surveys to generate in series. They will all use different students and may be completed one " +
+        "after another.")
 
     opt[Int]('r', "random-seed").valueName("<int>")
       .action((x, c) => c.copy(seed = Option(x)))

@@ -41,10 +41,12 @@ import scala.util.{Properties, Random}
 /**
   * Job which generates csv based "surveys" which present student module scores in a table and elides certain results
   * so that they may be filled in (predicted) later by domain experts (module leaders).
+  *
   */
 object GenerateSurveys extends Command[GenerateConfig, Unit] {
 
 
+  
   override def run(conf: GenerateConfig): Task[Unit] = {
     for {
       scores <- parseScores(conf.recordsPath)

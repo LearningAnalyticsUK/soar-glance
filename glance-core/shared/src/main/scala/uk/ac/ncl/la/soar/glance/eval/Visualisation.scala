@@ -22,11 +22,14 @@ case class Visualisation(id: String, name: String, description: String)
 
 object Visualisation {
 
-  val all = List(
-    Visualisation("historic_performance_bars", "Historic Performance Bars", ""),
-    Visualisation("cluster_vs_time", "Cluster Usage vs Time", ""),
-    Visualisation("recap_vs_time", "Recap Usage vs Time", ""),
-    Visualisation("avg_trend_vs_time", "Trend in Student Average vs Time", ""))
+  @inline final def factory(id: String): Option[Visualisation] = all.find(_.id == id)
+
+  val histPerfBars = Visualisation("historic_performance_bars", "Historic Performance Bars", "")
+  val clusterVTime = Visualisation("cluster_vs_time", "Cluster Usage vs Time", "")
+  val recapVTime = Visualisation("recap_vs_time", "Recap Usage vs Time", "")
+  val avgVTime = Visualisation("avg_trend_vs_time", "Trend in Student Average vs Time", "")
+
+  val all = List(histPerfBars, clusterVTime, recapVTime, avgVTime)
 
 }
 

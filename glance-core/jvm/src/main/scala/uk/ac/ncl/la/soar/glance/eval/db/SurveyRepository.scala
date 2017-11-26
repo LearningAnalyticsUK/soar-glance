@@ -75,6 +75,7 @@ object SurveyDb extends RepositoryCompanion[Survey, SurveyDb] {
 
   override def findQ(id: UUID): ConnectionIO[Option[Survey]] = {
     //TODO: work out how to take advantage of the first query for early bail out
+    //TODO: Fetch visualisations for survey
     
     for {
       sr <- findSurveyRowQ(id)
@@ -92,7 +93,7 @@ object SurveyDb extends RepositoryCompanion[Survey, SurveyDb] {
   //TODO: This seems like a lot of imperative brittle boilerplate. Am I really doing this right?
   override def saveQ(entry: Survey): ConnectionIO[Unit] = {
     //First, break out the pieces of the Survey which correspond to tables
-    val Survey(_, rankModule, queries, records, sId) = entry
+    val Survey(_, rankModule, queries, records, viz, sId) = entry
     //First add a survey id. As this is a unary type which is generated there really isn't a concept of collision
     val addSurveyQ = sql"INSERT INTO survey (id, module_num) VALUES ($sId, $rankModule);".update.run
     //Once we have added the survey id, add students and surveys_students
@@ -144,6 +145,16 @@ object SurveyDb extends RepositoryCompanion[Survey, SurveyDb] {
         VALUES (?, ?) ON CONFLICT (survey_id, student_num) DO NOTHING;
       """
 
+    //Finally, add visualisation membership entries
+    val addVizMembershipsSQL =
+      """
+        INSERT INTO survey_visualisation  (survey_id, visualisation_id)
+        VALUES (?, ?) ON CONFLICT (survey_id, visualisation_id) DO NOTHING;
+      """
+
+    val membershipRows = entry.visualisations.map(entry.id -> _.id)
+    val addVizMembershipQ = Update[(UUID, String)](addVizMembershipsSQL).updateMany(membershipRows)
+
     val sQRows = queries.iterator.map(stud => (sId, stud)).toList
 
     val addSQueryQ = Update[(UUID, StudentNumber)](addSurveyQuerySQL).updateMany(sQRows)
@@ -152,7 +163,7 @@ object SurveyDb extends RepositoryCompanion[Survey, SurveyDb] {
     //TODO: Work out why we're actually using Cartesian ops here rather than normal monadic sequencing?
     for{
       _ <- addModulesQ *> addSurveyQ *> addStudentsQ
-      _ <- addEntryQ *> addModuleScoreQ *> addSQueryQ
+      _ <- addEntryQ *> addModuleScoreQ *> addVizMembershipQ *> addSQueryQ
     } yield ()
   }
 

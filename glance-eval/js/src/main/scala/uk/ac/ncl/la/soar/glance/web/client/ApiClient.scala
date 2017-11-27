@@ -62,6 +62,8 @@ object ApiClient {
   def loadSurveyT(id: UUID): EitherT[Future, Error, Survey] = EitherT(loadSurvey(id))
 
 
+  /* Survey specific data */
+
   /* Sessions */
 
   /** Load the recap sessions relevant to a given survey */
@@ -75,6 +77,8 @@ object ApiClient {
 
   def loadClustersT(id: UUID): EitherT[Future, Error, SessionSummary] = EitherT(loadClusters(id))
 
+  /* Other data */
+
   /* SurveyResponses */
 
   /** Post a survey response */
@@ -84,7 +88,7 @@ object ApiClient {
 
   /* Modules */
 
-  /** Load the modules for this survey */
+  /** Load the modules and module info */
   def loadModules: Future[Either[Error, List[Module]]] = Ajax.get(url("modules")).map(decodeReq[List[Module]])
 
   def loadModulesT: EitherT[Future, Error, List[Module]] = EitherT(loadModules)

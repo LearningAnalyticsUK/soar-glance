@@ -30,15 +30,24 @@ import uk.ac.ncl.la.soar.server.Implicits._
   */
 object Repositories {
 
-  //TODO: Really refactor this next of lazy snakes. Sure this is stupid
+  type Repos = (
+    SurveyDb,
+    SurveyResponseDb,
+    ClusterSessionDb,
+    RecapSessionDb,
+    ModuleDb,
+    ModuleScoreDb,
+    VisualisationDb)
 
-  //Is this the best/safest way to expose the Repository classes? Not really....
+  //TODO: Really refactor this next of lazy snakes. Sure this is stupid
   lazy val Survey: Task[SurveyDb] = schema.map(_._1)
   lazy val SurveyResponse: Task[SurveyResponseDb] = schema.map(_._2)
   lazy val ClusterSession: Task[ClusterSessionDb] = schema.map(_._3)
   lazy val RecapSession: Task[RecapSessionDb] = schema.map(_._4)
   lazy val Module: Task[ModuleDb] = schema.map(_._5)
   lazy val ModuleScore: Task[ModuleScoreDb] = schema.map(_._6)
+  lazy val Visualisation: Task[VisualisationDb] = schema.map(_._7)
+
 
   /** Method to perform db migrations */
   private def migrate(dbUrl: String, user: String, pass: String) = Task {
@@ -50,7 +59,7 @@ object Repositories {
   private lazy val schema = createSchema.memoize
 
   /* Init method to set up the database */
-  private val createSchema: Task[(SurveyDb, SurveyResponseDb, ClusterSessionDb, RecapSessionDb, ModuleDb, ModuleScoreDb)] = {
+  private val createSchema: Task[Repos] = {
 
     //Lazy config for memoization?
     lazy val config = loadConfigOrThrow[Config]
@@ -74,12 +83,14 @@ object Repositories {
       rSDb = new RecapSessionDb(xa)
       mDb = new ModuleDb(xa)
       msDb = new ModuleScoreDb(xa)
+      vDb = new VisualisationDb(xa)
       _ <- { println("Initialising Survey tables");sDb.init }
       _ <- { println("Initialising Survey response tables");sRDb.init }
       _ <- { println("Initialising Cluster session tables");cSDb.init }
       _ <- { println("Initialising Recap session tables");rSDb.init }
       _ <- { println("Initialising Module tables");mDb.init }
       _ <- { println("Initialising Module Score tables");msDb.init }
-    } yield (sDb, sRDb, cSDb, rSDb, mDb, msDb)
+      _ <- { println("Initialising Visualisation tables");vDb.init }
+    } yield (sDb, sRDb, cSDb, rSDb, mDb, msDb, vDb)
   }
 }

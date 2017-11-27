@@ -20,7 +20,7 @@ survey list, and if they come back to the same list later they resume the list f
 * [x] Add two additional tables to Glance's DB Schema `Visualisation` and `SurveyVisualisation`:
     * The `Visualisations` table should have a structure like `UUID | Name | Description` for now.
     * The `SurveyVisualisations` table is a classic pivot table. It should have a structure like `Survey Id| Visualisation Id`    
-* [ ] Create the repository types for the tables
+* [x] Create the repository types for the tables
 * [ ] Draw out a map of React Components to API calls, so that I can make sure the API is robust enough to handle this 
 kind of config. 
 * [ ] Create some kind of in memory component "index" and make sure we can retrieve components by whatever keys come along

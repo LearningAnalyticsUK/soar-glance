@@ -27,7 +27,7 @@ import doobie.imports._
 import monix.eval.Task
 import uk.ac.ncl.la.soar.data.ModuleScore
 import uk.ac.ncl.la.soar.db.{RepositoryCompanion, Repository => DbRepository}
-import uk.ac.ncl.la.soar.glance.eval.{CompleteResponse, Ranking, Survey, SurveyResponse}
+import uk.ac.ncl.la.soar.glance.eval._
 import uk.ac.ncl.la.soar.glance.util.{Time, Times}
 import uk.ac.ncl.la.soar.glance.web.client.component.sortable.IndexChange
 import uk.ac.ncl.la.soar.{ModuleCode, StudentNumber}
@@ -81,11 +81,12 @@ object SurveyDb extends RepositoryCompanion[Survey, SurveyDb] {
       sr <- findSurveyRowQ(id)
       scores <- listScoresForSurveyQ(id)
       qs <- listQueriesForSurveyQ(id)
+      viz <- listVizForSurveyQ(id)
     } yield {
       val moduleSet = scores.iterator.map(_.module).toSet
       //In memory group by potentially fine, but fs2 Stream has own groupBy operator. TODO: Check fs2.Stream.groupBy
       val records = Survey.groupByStudents(scores)
-      sr.map { case (id, rankModule) => Survey(moduleSet, rankModule, qs, records, id) }
+      sr.map { case (id, rankModule) => Survey(moduleSet, rankModule, qs, records, viz, id) }
     }
   }
 
@@ -208,6 +209,14 @@ object SurveyDb extends RepositoryCompanion[Survey, SurveyDb] {
       FROM survey_query sq
       WHERE sq.survey_id = $id;
     """.query[StudentNumber].list
+
+  private def listVizForSurveyQ(id: UUID): ConnectionIO[List[Visualisation]] =
+    sql"""
+      SELECT v.id, v.name, v.description
+      FROM survey_visualisation sv JOIN visualisation v
+      ON sv.visualisation_id = v.id
+      WHERE sv.survey_id = $id;
+    """.query[Visualisation].list
 }
 
 class SurveyResponseDb private[glance] (xa: Transactor[Task]) extends DbRepository[SurveyResponse] {

@@ -167,9 +167,8 @@ object SurveyView {
                 s.selectingR,
                 handleClearStudent,
                 handleToggleSelecting,
-                sm.attainmentSummary,
-                sm.clusterSummary,
-                sm.recapSummary,
+                sm.data,
+                sm.survey.visualisations,
                 buildFilters(sm.modules.values)
               )
             )

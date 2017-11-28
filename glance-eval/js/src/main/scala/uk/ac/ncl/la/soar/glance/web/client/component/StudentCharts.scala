@@ -28,10 +28,12 @@ import japgolly.scalajs.react._
 import japgolly.scalajs.react.vdom.html_<^._
 import uk.ac.ncl.la.soar.ModuleCode
 import uk.ac.ncl.la.soar.data.StudentRecords
-import uk.ac.ncl.la.soar.glance.eval.SessionSummary
+import uk.ac.ncl.la.soar.glance.eval.{SessionSummary, Visualisation}
 import uk.ac.ncl.la.soar.glance.web.client.data.CohortAttainmentSummary
 import uk.ac.ncl.la.soar.glance.web.client.style.Icon
 import uk.ac.ncl.la.soar.glance.util.Times
+import uk.ac.ncl.la.soar.glance.web.client.SurveyData
+
 import scala.collection.immutable.SortedMap
 import scala.collection.mutable.{ArrayBuffer, ListBuffer}
 import scala.scalajs.js
@@ -43,34 +45,62 @@ object StudentCharts {
 
   type Filter = (ModuleCode, Double) => Boolean
 
-  // Default options for filter component prototype, will be read in as part of props eventually.
   private val options: NonEmptyVector[Select.Choice[Filter]] =
     NonEmptyVector(
       Select.Choice((_, _) => true, "None"),
-      Vector(
-        Select.Choice((mc, _) => mc <= "CSC3723", "Stage 3"),
-        Select.Choice((mc, _) => mc <= "CSC2026", "Stage 2"),
-        Select.Choice((mc, _) => mc <= "CSC1026", "Stage 1")
-      )
-    )
+      Vector.empty[Select.Choice[Filter]])
 
   case class Props(studentL: Option[StudentRecords[SortedMap, ModuleCode, Double]],
                    studentR: Option[StudentRecords[SortedMap, ModuleCode, Double]],
                    selectingR: Boolean,
                    handleClearStudent: Callback,
                    toggleSelecting: (Boolean) => Callback,
-                   cohort: CohortAttainmentSummary,
-                   clusters: SessionSummary,
-                   recaps: SessionSummary,
+                   data: SurveyData,
+                   viz: List[Visualisation],
                    filterChoices: NonEmptyVector[Select.Choice[Filter]] = options)
 
   case class State(selectedFilters: Set[Select.Choice[Filter]], cohortComparison: Boolean)
 
   class Backend(bs: BackendScope[Props, State]) {
 
+    type Student = StudentRecords[SortedMap, ModuleCode, Double]
+    type Renderable = (Student, Props, State) => VdomElement
+
+    /** Define charts inline here for now */
+    private val charts: Map[Visualisation, Renderable] = Map(
+      Visualisation.histPerfBars -> { (s, p, st) =>
+        drawAttainmentBars(filtered(s, st.selectedFilters),
+          p.studentR.map(filtered(_, st.selectedFilters)),
+          filtered(p.data.cohort.toRecord, st.selectedFilters),
+          st.cohortComparison)
+      },
+      Visualisation.avgVTime -> { (s, p, st) =>
+        drawAvgTrend(filtered(s, st.selectedFilters),
+          p.studentR.map(filtered(_, st.selectedFilters)),
+          filtered(p.data.cohort.toRecord, st.selectedFilters),
+          st.cohortComparison)
+      },
+      Visualisation.clusterVTime -> { (s, p, _) =>
+        drawIndexedSession(s.number, p.studentR.map(_.number), p.data.cluster,
+          "Relative cluster usage", "Cluster usage over time",
+          "rgba(111, 203, 118, 0.1)", "#47CB50"),
+      },
+      Visualisation.recapVTime -> { (s, p, _) =>
+        drawIndexedSession(s.number, p.studentR.map(_.number), p.data.recap,
+          "Relative recap usage", "Recap usage over time",
+          "rgba(111, 203, 118, 0.1)", "#47CB50")
+      }
+    )
+
     def mounted(p: Props) = Callback { println("Bars did mount") }
 
     def render(p: Props, s: State): VdomElement = {
+
+      //Get the list of charts to draw
+      val renderCharts = p.viz.flatMap(charts.get)
+      //Split the charts into columns
+      val (leftCharts, rightCharts) = renderCharts.splitAt((renderCharts.length + 1) / 2)
+
       <.div(
         ^.id := "detailed",
         p.studentL.fold[TagMod](<.p(^.className := "chart-placedholder", "Click on a student")) { student =>
@@ -94,23 +124,11 @@ object StudentCharts {
               ^.className := "row border-between",
               <.div(
                 ^.className := "col-md-6",
-                drawAttainmentBars(filtered(student, s.selectedFilters),
-                  p.studentR.map(filtered(_, s.selectedFilters)),
-                  filtered(p.cohort.toRecord, s.selectedFilters),
-                  s.cohortComparison),
-                drawAvgTrend(filtered(student, s.selectedFilters),
-                  p.studentR.map(filtered(_, s.selectedFilters)),
-                  filtered(p.cohort.toRecord, s.selectedFilters),
-                  s.cohortComparison)
+                leftCharts.map(chart => chart(student, p, s)).toTagMod
               ),
               <.div(
                 ^.className := "col-md-6",
-                drawIndexedSession(student.number, p.studentR.map(_.number), p.clusters,
-                  "Relative cluster usage", "Cluster usage over time",
-                  "rgba(111, 203, 118, 0.1)", "#47CB50"),
-                drawIndexedSession(student.number, p.studentR.map(_.number), p.recaps,
-                  "Relative recap usage", "Cluster usage over time",
-                  "rgba(111, 203, 118, 0.1)", "#47CB50")
+                rightCharts.map(chart => chart(student, p, s)).toTagMod
               )
             )
           ).toTagMod

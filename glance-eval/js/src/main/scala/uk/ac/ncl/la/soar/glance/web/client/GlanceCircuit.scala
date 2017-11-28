@@ -44,14 +44,15 @@ import scala.collection.immutable.SortedMap
   */
 final case class GlanceModel(survey: Pot[SurveyModel])
 
+/** Struct which contains the data depended on by a survey's */
+case class SurveyData(cohort: CohortAttainmentSummary, recap: SessionSummary, cluster: SessionSummary)
+
 /**
   * Container for the survey data (a `glance.Survey`) which is bound to various UI elements throughout the Glance
   * application. There may be other models containing other data, but this is the primary one.
   */
 case class SurveyModel(survey: Survey,
-                       attainmentSummary: CohortAttainmentSummary,
-                       clusterSummary: SessionSummary,
-                       recapSummary: SessionSummary,
+                       data: SurveyData,
                        modules: Map[ModuleCode, Module],
                        simpleRanking: Ranking,
                        detailedRanking: Ranking,
@@ -116,9 +117,9 @@ class SurveyHandler[M](modelRW: ModelRW[M, Pot[SurveyModel]]) extends ActionHand
       decodedInfo.fold(
         err => updated(Failed(err)),
         { case (srv, cS, rS, ms) =>
-          val sm = SurveyModel(srv, CohortAttainmentSummary(srv.entries), cS, rS, ms, Ranking(srv.queries),
-            Ranking(srv.queries))
-          updated(Ready(sm))
+            val data = SurveyData(CohortAttainmentSummary(srv.entries), cS, rS)
+            val sm = SurveyModel(srv, data, ms, Ranking(srv.queries), Ranking(srv.queries))
+            updated(Ready(sm))
         })
 
     case SubmitSurveyResponse(response) =>
@@ -175,7 +176,4 @@ object GlanceCircuit extends Circuit[GlanceModel] with ReactConnector[GlanceMode
     new SurveyHandler(surveyRW),
     new RankingHandler(rankRW)
   )
-
-
-
 }

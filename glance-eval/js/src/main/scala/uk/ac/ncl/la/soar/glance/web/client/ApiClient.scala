@@ -39,7 +39,7 @@ import org.scalajs.dom
 object ApiClient {
 
   private val protocol = dom.window.location.protocol
-  private val host = dom.window.location.host
+  private val host = dom.window.location.hostname
   private val port = "8080"
 
   /** TODO: Figure out if there is a way to do compiletime config? Or something of that sort. Setting this here is bad */
@@ -92,4 +92,9 @@ object ApiClient {
   def loadModules: Future[Either[Error, List[Module]]] = Ajax.get(url("modules")).map(decodeReq[List[Module]])
 
   def loadModulesT: EitherT[Future, Error, List[Module]] = EitherT(loadModules)
+
+  /** No-op as a utility */
+  def noop: Future[Either[Error, Unit]] = Future.successful(Right(()))
+
+  def noopT: EitherT[Future, Error, Unit] = EitherT(noop)
 }

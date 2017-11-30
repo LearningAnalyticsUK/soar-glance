@@ -399,6 +399,10 @@ lazy val glanceEvalJVM = glanceEval.jvm
   .dependsOn(coreJVM, db, server, glanceCoreJVM)
   .settings(
     mainClass in Compile := Some("uk.ac.ncl.la.soar.glance.eval.server.Main"),
+    (resources in Compile) ++= {
+      // Seq((fullOptJS in (client, Compile)).value.data)
+      Seq((fastOptJS in (glanceEvalJS, Compile)).value.data)
+    },
     dockerfile in docker := {
       val fatJar: File = assembly.value
       val jarTarget = s"/app/${fatJar.name}"

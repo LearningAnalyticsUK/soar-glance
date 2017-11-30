@@ -15,17 +15,15 @@
   * See the License for the specific language governing permissions and
   * limitations under the License.
   */
-package uk.ac.ncl.la.soar.glance.web.client.component
+package uk.ac.ncl.la.soar.glance.web.client.component.chart
 
-import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react._
+import japgolly.scalajs.react.vdom.html_<^._
 import org.scalajs.dom.raw.HTMLCanvasElement
-import uk.ac.ncl.la.soar.glance.util.Time
-import uk.ac.ncl.la.soar.glance.util.Times._
 
 import scala.scalajs.js
 import scala.scalajs.js.JSConverters._
-import scala.scalajs.js.annotation.{JSGlobal, JSName}
+import scala.scalajs.js.annotation.JSGlobal
 
 //TODO: Introduce chart dataset which persists between props changes unless a boolean flag is set in props
 

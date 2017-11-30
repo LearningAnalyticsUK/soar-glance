@@ -210,13 +210,13 @@ object SurveyDb extends RepositoryCompanion[Survey, SurveyDb] {
       WHERE sq.survey_id = $id;
     """.query[StudentNumber].list
 
-  private def listVizForSurveyQ(id: UUID): ConnectionIO[List[Visualisation]] =
+  private def listVizForSurveyQ(id: UUID): ConnectionIO[List[VisualisationType]] =
     sql"""
       SELECT v.id, v.name, v.description
       FROM survey_visualisation sv JOIN visualisation v
       ON sv.visualisation_id = v.id
       WHERE sv.survey_id = $id;
-    """.query[Visualisation].list
+    """.query[VisualisationType].list
 }
 
 class SurveyResponseDb private[glance] (xa: Transactor[Task]) extends DbRepository[SurveyResponse] {

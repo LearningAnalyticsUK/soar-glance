@@ -23,12 +23,12 @@ import doobie.imports._
 import monix.eval.Task
 import monix.cats._
 import uk.ac.ncl.la.soar.db.{Repository, RepositoryCompanion}
-import uk.ac.ncl.la.soar.glance.eval.Visualisation
+import uk.ac.ncl.la.soar.glance.eval.VisualisationType
 
 /**
   * Database repository for Visualisations
   */
-class VisualisationDb private[glance] (xa: Transactor[Task]) extends Repository[Visualisation]{
+class VisualisationDb private[glance] (xa: Transactor[Task]) extends Repository[VisualisationType]{
 
   import VisualisationDbCompanion._
 
@@ -38,21 +38,21 @@ class VisualisationDb private[glance] (xa: Transactor[Task]) extends Repository[
 
   override def find(id: String) = findQ(id).transact(xa)
 
-  override def save(entry: Visualisation) = saveQ(entry).transact(xa)
+  override def save(entry: VisualisationType) = saveQ(entry).transact(xa)
 
   override def delete(id: String) = deleteQ(id).transact(xa)
 }
 
-object VisualisationDbCompanion extends RepositoryCompanion[Visualisation, VisualisationDb] {
+object VisualisationDbCompanion extends RepositoryCompanion[VisualisationType, VisualisationDb] {
 
-  override val initQ: ConnectionIO[Unit] = Visualisation.all.traverse(saveQ).void
-  override val listQ: ConnectionIO[List[Visualisation]] =
-    sql"SELECT * FROM visualisation;".query[Visualisation].list
+  override val initQ: ConnectionIO[Unit] = VisualisationType.all.traverse(saveQ).void
+  override val listQ: ConnectionIO[List[VisualisationType]] =
+    sql"SELECT * FROM visualisation;".query[VisualisationType].list
 
-  override def findQ(id: String): ConnectionIO[Option[Visualisation]] =
-    sql"SELECT v FROM visualisation v WHERE v.id = $id;".query[Visualisation].option
+  override def findQ(id: String): ConnectionIO[Option[VisualisationType]] =
+    sql"SELECT v FROM visualisation v WHERE v.id = $id;".query[VisualisationType].option
   
-  override def saveQ(entry: Visualisation): ConnectionIO[Unit] =
+  override def saveQ(entry: VisualisationType): ConnectionIO[Unit] =
     sql"""
       INSERT INTO visualisation (id, name, description)
       VALUES (${entry.id}, ${entry.name}, ${entry.description}) ON CONFLICT (id) DO UPDATE

@@ -89,6 +89,10 @@ final case class ChangeRanks(newRanks: List[StudentNumber], change: IndexChange)
   */
 class SurveyHandler[M](modelRW: ModelRW[M, Pot[SurveyModel]]) extends ActionHandler(modelRW) {
 
+  //For the moment this method should load all endpoints required by any possible set of visualisations. Yes this is
+  // Wasteful, but actually getting the visualisations to dictate what data they want without throwing away all code
+  // structure or type safety is worse, so for now we load too much. In theory the endpoints will be empty anyway.
+  //TODO: Try again to get the selective data loading working
   private def loadSurveyInfo(id: UUID) = Effect {
     val info = (ApiClient.loadSurveyT(id),
       ApiClient.loadClustersT(id),

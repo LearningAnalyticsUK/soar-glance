@@ -37,7 +37,7 @@ import scala.util.Random
   */
 case class Survey(modules: Set[ModuleCode], moduleToRank: ModuleCode, queries: List[StudentNumber],
                   entries: List[StudentRecords[SortedMap, ModuleCode, Double]],
-                  visualisations: List[Visualisation],
+                  visualisations: List[VisualisationType],
                   id: UUID = UUID.randomUUID)
 
 object Survey {
@@ -69,7 +69,7 @@ object Survey {
         moduleToRank <- c.downField("moduleToRank").as[ModuleCode]
         queries <- c.downField("queries").as[List[StudentNumber]]
         entries <- c.downField("entries").as[List[(StudentNumber, Map[ModuleCode, Double])]]
-        visualisations <- c.downField("visualisations").as[List[Visualisation]]
+        visualisations <- c.downField("visualisations").as[List[VisualisationType]]
       } yield {
         Survey(modules, moduleToRank, queries, recordsFrom(entries), visualisations, UUID.fromString(id))
       }
@@ -91,7 +91,7 @@ object Survey {
   def generate(records: List[ModuleScore],
                numQueries: Int,
                queryModules: Seq[ModuleCode],
-               visualisations: List[Visualisation],
+               visualisations: List[VisualisationType],
                seed: Option[Int]): List[Survey] = {
 
     //Group the records by student and turn them into StudentRecords objects

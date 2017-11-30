@@ -31,7 +31,7 @@ import uk.ac.ncl.la.soar.{ModuleCode, Record}
 import uk.ac.ncl.la.soar.Record._
 import uk.ac.ncl.la.soar.data.{ModuleScore, StudentRecords}
 import uk.ac.ncl.la.soar.server.Implicits._
-import uk.ac.ncl.la.soar.glance.eval.{Survey, Visualisation}
+import uk.ac.ncl.la.soar.glance.eval.{Survey, VisualisationType}
 import uk.ac.ncl.la.soar.glance.eval.db.Repositories
 
 import scala.collection.immutable.SortedMap
@@ -50,7 +50,7 @@ object GenerateSurveys extends Command[GenerateConfig, Unit] {
   override def run(conf: GenerateConfig): Task[Unit] = {
 
     //Retrieve the visualisation objects specified in the command line options, discarding any that are unrecognised
-    val viz = conf.visualisations.flatMap(Visualisation.factory).toList
+    val viz = conf.visualisations.flatMap(VisualisationType.factory).toList
 
     for {
       scores <- parseScores(conf.recordsPath)

@@ -31,6 +31,7 @@ import uk.ac.ncl.la.soar.data.{Module, StudentRecords}
 import uk.ac.ncl.la.soar.glance.eval.Survey
 import uk.ac.ncl.la.soar.glance.web.client.{ChangeRanks, Main, SubmitSurveyResponse, SurveyModel}
 import uk.ac.ncl.la.soar.glance.web.client.component._
+import uk.ac.ncl.la.soar.glance.web.client.component.chart.StudentChartsContainer
 import uk.ac.ncl.la.soar.glance.web.client.data.CohortAttainmentSummary
 import uk.ac.ncl.la.soar.glance.web.client.style.Icon
 
@@ -160,8 +161,8 @@ object SurveyView {
             <.h2("Detailed View")
           ),
           model.render { sm =>
-            StudentCharts.component(
-              StudentCharts.Props(
+            StudentChartsContainer.component(
+              StudentChartsContainer.Props(
                 s.selectedL,
                 s.selectedR,
                 s.selectingR,

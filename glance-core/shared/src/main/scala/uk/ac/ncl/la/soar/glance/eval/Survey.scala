@@ -92,6 +92,7 @@ object Survey {
                numQueries: Int,
                queryModules: Seq[ModuleCode],
                visualisations: List[VisualisationType],
+               collection: Option[Int],
                seed: Option[Int]): List[Survey] = {
 
     //Group the records by student and turn them into StudentRecords objects

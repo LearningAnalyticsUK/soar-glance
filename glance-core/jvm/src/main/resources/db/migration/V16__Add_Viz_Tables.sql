@@ -7,6 +7,7 @@ CREATE TABLE IF NOT EXISTS visualisation (
 );
 
 -- Create the survey_visualisation pivot table
+-- TODO: Work out if the PRIMARY KEY is redundant in this table? I think it is
 CREATE TABLE IF NOT EXISTS survey_visualisation (
   survey_id VARCHAR(40) NOT NULL CONSTRAINT survey_visualisation_fkey REFERENCES survey ON DELETE CASCADE,
   visualisation_id VARCHAR(128) NOT NULL CONSTRAINT visualisation_survey_fkey REFERENCES visualisation ON DELETE CASCADE,

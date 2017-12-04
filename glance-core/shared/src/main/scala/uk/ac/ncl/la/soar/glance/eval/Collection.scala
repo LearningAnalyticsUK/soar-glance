@@ -27,9 +27,9 @@ import uk.ac.ncl.la.soar.ModuleCode
 /**
   * Basic struct containing series of surveys
   */
-case class Collection(id: UUID, module: ModuleCode, surveys: NonEmptyVector[Survey], currentIdx: Int) {
+case class Collection(id: UUID, module: ModuleCode, surveyIds: NonEmptyVector[UUID], currentIdx: Int = 0) {
 
-  def current: Survey = surveys.get(currentIdx).getOrElse(surveys.head)
+  def current: UUID = surveyIds.get(currentIdx).getOrElse(surveyIds.head)
 
-  def currentIsLast: Boolean = (surveys.length - 1) == currentIdx
+  def currentIsLast: Boolean = (surveyIds.length - 1) == currentIdx
 }

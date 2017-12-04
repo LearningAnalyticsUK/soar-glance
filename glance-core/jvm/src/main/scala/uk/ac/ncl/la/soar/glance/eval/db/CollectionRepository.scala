@@ -25,6 +25,7 @@ import doobie.imports._
 import monix.eval.Task
 import monix.cats._
 import cats._
+import cats.data.NonEmptyVector
 import cats.implicits._
 import uk.ac.ncl.la.soar.{ModuleCode, StudentNumber}
 import uk.ac.ncl.la.soar.db.{Repository, RepositoryCompanion}
@@ -36,8 +37,8 @@ class CollectionDb private[glance] (xa: Transactor[Task]) extends Repository[Col
 
   type PK = UUID
 
-  override val init = _
-  override val list = _
+  override val init = initQ.transact(xa)
+  override val list = listQ.transact(xa)
 
   override def find(id: UUID) = ???
 
@@ -49,24 +50,37 @@ class CollectionDb private[glance] (xa: Transactor[Task]) extends Repository[Col
 object CollectionDb extends RepositoryCompanion[Collection, CollectionDb] {
 
   type CollectionRow = (UUID, ModuleCode, Int)
-  type CollectionMembershipRow = (UUID, UUID, Int, Boolean)
-  type CollectionMembership = (Survey, Int, Boolean)
+  type CollectionMembership = (UUID, Int, Boolean)
 
   implicit val uuidMeta: Meta[UUID] = Meta[String].nxmap(UUID.fromString, _.toString)
 
   override val initQ = ().pure[ConnectionIO]
-  override val listQ = _
+  override val listQ = List.empty[Collection].pure[ConnectionIO]
 
   override def findQ(id: UUID) = {
-
+    for {
+      cR <- findCollectionRowQ(id)
+      cMR <- findCollectionMembershipsQ(id)
+    } yield cR.flatMap {
+      case (cId, module, num) =>
+        cMR.toVector.sortBy(_._2).map(_._1) match {
+          case hd +: tl => Some(Collection(cId, module, NonEmptyVector(hd, tl)))
+          case _ => None
+        }
+    }
   }
 
-  private def findCollectionRow(id: UUID): ConnectionIO[Option[CollectionRow]] =
+  private def findCollectionRowQ(id: UUID): ConnectionIO[Option[CollectionRow]] =
     sql"""
       SELECT c.id, c.module_num, c.num_entries FROM collection c WHERE c.id = $id;
     """.query[CollectionRow].option
 
-  private def findCollectionMemberships(id: UUID): ConnectionIO[List[CollectionMembership]] = ???
+  private def findCollectionMembershipsQ(id: UUID): ConnectionIO[List[CollectionMembership]] =
+    sql"""
+      SELECT c.collection_id, c.survey_id, c.membership_idx, c.last
+      FROM collection_membership c WHERE c.collection_id = $id;
+    """.query[CollectionMembership].list
+
 
   override def saveQ(entry: Collection) = ???
 

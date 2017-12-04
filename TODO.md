@@ -23,9 +23,9 @@ survey list, and if they come back to the same list later they resume the list f
 * [x] Create the repository types for the tables
 * [x] Draw out a map of React Components to API calls, so that I can make sure the API is robust enough to handle this 
 kind of config. 
-* [ ] Create some kind of in memory component "index" and make sure we can retrieve components by whatever keys come along
+* [x] Create some kind of in memory component "index" and make sure we can retrieve components by whatever keys come along
 with a requested survey.
-* [ ] On the front end, when loading a survey check its visualisations and selectively include the relevant components.
+* [x] On the front end, when loading a survey check its visualisations and selectively include the relevant components.
 * [ ] Look at loading the data for surveys in 2+ trips, adding endpoints for the data required for each viz and fetching
 only the data that is needed (this is low priority unless its low hanging fruit. For now shoving stuff in a big survey 
 json object is fine).

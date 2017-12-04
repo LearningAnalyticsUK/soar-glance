@@ -51,12 +51,14 @@ object GenerateSurveys extends Command[GenerateConfig, Unit] {
 
     //Retrieve the visualisation objects specified in the command line options, discarding any that are unrecognised
     val viz = conf.visualisations.flatMap(VisualisationType.factory).toList
+    val eol = sys.props("line.separator")
 
     for {
       scores <- parseScores(conf.recordsPath)
-      surveys <- Task.now(Survey.generate(scores, conf.numStudents, conf.modules, viz, conf.seed))
+      surveys <- Task.now(Survey.generate(scores, conf.numStudents, conf.modules, viz, conf.collection, conf.seed))
       db <- Repositories.Survey
-      _ <- { println("Finished creating tables."); surveys.traverse(db.save) }
+      _ <- surveys.traverse(db.save)
+      _ <- { println(s"Surveys generated with the following ids: $eol${surveys.map(_.id).mkString(eol)}") }
     } yield ()
   }
 

@@ -108,15 +108,19 @@ object CommandConfig {
       .action((x, c) => c.copy(numStudents = x))
       .text("an optional parameter specifying how many student records to include in the generated surveys")
 
+    opt[Seq[String]]('v', "visualisations").required().valueName("e.g. recap_vs_time,stud_module_scores,...")
+      .action( (x,c) => c.copy(visualisations = x) )
+      .text("visualisations is a required parameter detailing the list of visualisations to use in a Glance survey.")
+
+    opt[Seq[String]]('m', "modules").required().valueName("e.g. CSC1021, CSC2024...")
+      .action((x, c) => c.copy(modules = x))
+      .text("a required list of modules for which to generate surveys. Unless the --collection option is used, only one survey " +
+        "will be generated per module.")
+
     opt[Seq[String]]('s', "students").valueName("e.g. 3789,11722,98,...")
       .action((x, c) => c.copy(students = x))
       .text("an optional parameter specifying exactly which student records to include in the generated surveys. " +
         "Note that if --students are provided then --num-students and --collection will be ignored.")
-
-    opt[Seq[String]]('m', "modules").required().valueName("e.g. CSC1021, CSC2024...")
-      .action((x, c) => c.copy(modules = x))
-      .text("list of modules for which to generate surveys. Unless the --collection option is used, only one survey " +
-        "will be generated per module.")
 
     opt[Int]('c', "collection").valueName("<int>")
       .action((x, c) => c.copy(collection = Option(x)))
@@ -128,9 +132,6 @@ object CommandConfig {
       .text("random-seed is an optional integer to use as a seed when randomly (uniformly) selecting student records " +
         "to include in a survey.")
 
-    opt[Seq[String]]('v', "visualisations").required().valueName("e.g. recap_vs_time,stud_module_scores,...")
-      .action( (x,c) => c.copy(visualisations = x) )
-      .text("visualisations is a required parameter detailing the list of visualisations to use in a Glance survey.")
   }
 
   //TODO: Remove or Rewrite Assess task

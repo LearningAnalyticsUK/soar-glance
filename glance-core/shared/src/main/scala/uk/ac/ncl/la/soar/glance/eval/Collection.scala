@@ -32,4 +32,6 @@ case class Collection(id: UUID, module: ModuleCode, surveyIds: NonEmptyVector[UU
   def current: UUID = surveyIds.get(currentIdx).getOrElse(surveyIds.head)
 
   def currentIsLast: Boolean = (surveyIds.length - 1) == currentIdx
+
+  val numEntries: Int = surveyIds.length
 }

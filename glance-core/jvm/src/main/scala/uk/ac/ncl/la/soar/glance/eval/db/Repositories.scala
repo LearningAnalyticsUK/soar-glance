@@ -37,7 +37,8 @@ object Repositories {
     RecapSessionDb,
     ModuleDb,
     ModuleScoreDb,
-    VisualisationDb)
+    VisualisationDb,
+    CollectionDb)
 
   //TODO: Really refactor this next of lazy snakes. Sure this is stupid
   lazy val Survey: Task[SurveyDb] = schema.map(_._1)
@@ -47,6 +48,7 @@ object Repositories {
   lazy val Module: Task[ModuleDb] = schema.map(_._5)
   lazy val ModuleScore: Task[ModuleScoreDb] = schema.map(_._6)
   lazy val Visualisation: Task[VisualisationDb] = schema.map(_._7)
+  lazy val Collection: Task[CollectionDb] = schema.map(_._8)
 
 
   /** Method to perform db migrations */
@@ -84,6 +86,7 @@ object Repositories {
       mDb = new ModuleDb(xa)
       msDb = new ModuleScoreDb(xa)
       vDb = new VisualisationDb(xa)
+      cDb = new CollectionDb(xa)
       _ <- { println("Initialising Survey tables");sDb.init }
       _ <- { println("Initialising Survey response tables");sRDb.init }
       _ <- { println("Initialising Cluster session tables");cSDb.init }
@@ -91,6 +94,7 @@ object Repositories {
       _ <- { println("Initialising Module tables");mDb.init }
       _ <- { println("Initialising Module Score tables");msDb.init }
       _ <- { println("Initialising Visualisation tables");vDb.init }
-    } yield (sDb, sRDb, cSDb, rSDb, mDb, msDb, vDb)
+      _ <- { println("Initialising Collection tables");cDb.init }
+    } yield (sDb, sRDb, cSDb, rSDb, mDb, msDb, vDb, cDb)
   }
 }

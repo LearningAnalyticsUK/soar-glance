@@ -56,11 +56,15 @@ object GenerateSurveys extends Command[GenerateConfig, Unit] {
     for {
       scores <- parseScores(conf.recordsPath)
       surveys <- Task.now(Survey.generate(scores, conf.numStudents, conf.modules, viz, conf.collection, conf.seed))
-      db <- Repositories.Survey
-      _ <- surveys.traverse(db.save)
+      surveyDb <- Repositories.Survey
+      collectionDb <- Repositories.Collection
+      _ <- surveys.traverse(surveyDb.save)
       _ <- { println(s"Surveys generated with the following ids: $eol${surveys.map(_.id).mkString(eol)}") }
     } yield ()
   }
+
+  //TODO: create a method to take a collection config and a list of generated surveys, returning a list of collections
+  // to save
 
   /** Retrieve and parse all ModuleScores from provided file if possible */
   private def parseScores(recordsPath: String): Task[List[ModuleScore]] = Task.delay {

@@ -35,17 +35,17 @@ object Main {
     //Bring in Args - pass to Config factory
     val conf = CommandConfig(args).fold(
       Task.raiseError[CommandConfig](
-        new IllegalArgumentException("Failed to parse command line arguments! " +
-          "Format: ./submit.sh [command] --options"))
+        new IllegalArgumentException(
+          "Failed to parse command line arguments! " +
+            "Format: ./submit.sh [command] --options"))
     )(Task.now)
 
     //TODO: Fix the horrible pattern match anon function below. Uses type annotations....
     conf.flatMap {
-      case a: GenerateConfig => GenerateSurveys.run(a)
-      case a: AssessConfig => AssessSurveyResponses.run(a)
-      case a: TansformConfig => TransformData.run(a)
-      case a: LoadSupportConfig => LoadSupportData.run(a)
-      case a: LoadExtraMarksConfig => LoadExtraMarks.run(a)
+      case a: GenerateConfig            => GenerateSurveys.run(a)
+      case a: TansformConfig            => TransformData.run(a)
+      case a: LoadSupportConfig         => LoadSupportData.run(a)
+      case a: LoadExtraMarksConfig      => LoadExtraMarks.run(a)
       case a: ExportSurveyResultsConfig => ExportSurveyResults.run(a)
     } runOnComplete {
       case Failure(e) =>
@@ -62,4 +62,3 @@ object Main {
   }
 
 }
-

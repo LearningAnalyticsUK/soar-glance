@@ -1,15 +1,15 @@
 
 ### Survey list feature
 
-* [ ] Add a `--collection` command line option to the `generate` command. Given a collection parameter _n_, the `generate` 
+* [x] Add a `--collection` command line option to the `generate` command. Given a collection parameter _n_, the `generate` 
 command should: 
     * Create _n_ surveys, uniformly sampling from the students each time. This should be repeated for each module code
     requested.
     * Create a Collection object which indexes these surveys. 
-* [ ] Add two additional tables to Glance's DB Schema, `Collection` and `CollectionMembership`:
+* [x] Add two additional tables to Glance's DB Schema, `Collection` and `CollectionMembership`:
     * The `Collection` table should have a structure like: `UUID | Module Code | Number`
     * The `CollectionMembership` table should have a structure like: `Collection Id | Survey Id | Index | Last`
-* [ ] Add an API endpoint which given a collection id returns the first survey in a collection. Perhaps in a wrapper 
+* [x] Add an API endpoint which given a collection id returns the first survey in a collection. Perhaps in a wrapper 
 object carrying some meta data like the survey's index and whether it is the last one in the collection
 * [ ] Build a "Next Survey" button into the thank you page, unless its the last survey at which point tell the user. 
 * [ ] Build some basic session management so that a member of staff only has to put their email in at the start of a 

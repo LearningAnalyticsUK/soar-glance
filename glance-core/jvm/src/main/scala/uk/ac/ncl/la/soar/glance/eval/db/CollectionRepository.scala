@@ -25,13 +25,19 @@ import doobie.imports._
 import monix.eval.Task
 import monix.cats._
 import cats._
-import cats.data.NonEmptyVector
+import cats.data.{NonEmptyVector, OptionT}
 import cats.implicits._
 import uk.ac.ncl.la.soar.{ModuleCode, StudentNumber}
 import uk.ac.ncl.la.soar.db.{Repository, RepositoryCompanion}
-import uk.ac.ncl.la.soar.glance.eval.{ClusterSession, Collection, RecapSession, Survey}
+import uk.ac.ncl.la.soar.glance.eval.{
+  ClusterSession,
+  Collection,
+  RecapSession,
+  Survey
+}
 
-class CollectionDb private[glance] (xa: Transactor[Task]) extends Repository[Collection] {
+class CollectionDb private[glance] (xa: Transactor[Task])
+    extends Repository[Collection] {
 
   import CollectionDb._
 
@@ -41,6 +47,11 @@ class CollectionDb private[glance] (xa: Transactor[Task]) extends Repository[Col
   override val list = listQ.transact(xa)
 
   override def find(id: UUID) = findQ(id).transact(xa)
+
+  def findIdx(id: UUID, idx: Int): F[Option[Survey]] =
+    findIdxQ(id, idx).transact(xa)
+
+  def findFirst(id: UUID): F[Option[Survey]] = findIdx(id, 0)
 
   override def save(entry: Collection) = saveQ(entry).transact(xa)
 
@@ -53,7 +64,8 @@ object CollectionDb extends RepositoryCompanion[Collection, CollectionDb] {
   type CollectionMembership = (UUID, Int, Boolean)
   type CollectionMembershipRow = (UUID, UUID, Int, Boolean)
 
-  implicit val uuidMeta: Meta[UUID] = Meta[String].nxmap(UUID.fromString, _.toString)
+  implicit val uuidMeta: Meta[UUID] =
+    Meta[String].nxmap(UUID.fromString, _.toString)
 
   override val initQ: ConnectionIO[Unit] = ().pure[ConnectionIO]
   override val listQ: ConnectionIO[List[Collection]] = {
@@ -68,13 +80,28 @@ object CollectionDb extends RepositoryCompanion[Collection, CollectionDb] {
 
     rowsQ.map { rows: List[Row] =>
       val collToMem = rows.groupBy(r => (r._1, r._2, r._3))
-      val memSorted = collToMem.collect { case (c, m) if m.nonEmpty => c -> m.sortBy(_._2).map(_._1) }
+      val memSorted = collToMem.collect {
+        case (c, m) if m.nonEmpty => c -> m.sortBy(_._2).map(_._1)
+      }
       val collOpts = memSorted.flatMap {
-        case (c, hd :: tl) => Some(Collection(c._1, c._2, NonEmptyVector(hd, tl.toVector)))
+        case (c, hd :: tl) =>
+          Some(Collection(c._1, c._2, NonEmptyVector(hd, tl.toVector)))
         case (c, Nil) => None
       }
       collOpts.toList
     }
+  }
+
+  def findIdxQ(id: UUID, idx: Int): ConnectionIO[Option[Survey]] = {
+
+    val surveyOpt = for {
+      collection <- OptionT(findQ(id))
+      surveyId <- OptionT.fromOption[ConnectionIO](
+        collection.surveyIds.get(idx))
+      survey <- OptionT(SurveyDb.findQ(surveyId))
+    } yield survey
+
+    surveyOpt.value
   }
 
   //TODO: Look at refactoring or factoring out this method and the above. One must be better than the other
@@ -82,13 +109,15 @@ object CollectionDb extends RepositoryCompanion[Collection, CollectionDb] {
     for {
       cR <- findCollectionRowQ(id)
       cMR <- findCollectionMembershipsQ(id)
-    } yield cR.flatMap {
-      case (cId, module, num) =>
-        cMR.toVector.sortBy(_._2).map(_._1) match {
-          case hd +: tl => Some(Collection(cId, module, NonEmptyVector(hd, tl)))
-          case _ => None
-        }
-    }
+    } yield
+      cR.flatMap {
+        case (cId, module, num) =>
+          cMR.toVector.sortBy(_._2).map(_._1) match {
+            case hd +: tl =>
+              Some(Collection(cId, module, NonEmptyVector(hd, tl)))
+            case _ => None
+          }
+      }
   }
 
   private def findCollectionRowQ(id: UUID) =
@@ -101,7 +130,6 @@ object CollectionDb extends RepositoryCompanion[Collection, CollectionDb] {
       SELECT c.survey_id, c.membership_idx, c.last
       FROM collection_membership c WHERE c.collection_id = $id;
     """.query[CollectionMembership].list
-
 
   override def saveQ(entry: Collection): ConnectionIO[Unit] = {
 
@@ -122,16 +150,17 @@ object CollectionDb extends RepositoryCompanion[Collection, CollectionDb] {
     val surveyIndices = entry.surveyIds.toVector.zipWithIndex
 
     //Add collection id and "last" flag
-    val last = entry.numEntries -1
+    val last = entry.numEntries - 1
     val membershipRows = surveyIndices.map {
       case (s, i) if i == last => (entry.id, s, i, true)
-      case (s, i) => (entry.id, s, i, false)
+      case (s, i)              => (entry.id, s, i, false)
     }
 
     //Add all db rows
     for {
       _ <- addCollectionQ
-      _ <- Update[CollectionMembershipRow](addMembershipsSQL).updateMany(membershipRows)
+      _ <- Update[CollectionMembershipRow](addMembershipsSQL)
+        .updateMany(membershipRows)
     } yield ()
   }
 

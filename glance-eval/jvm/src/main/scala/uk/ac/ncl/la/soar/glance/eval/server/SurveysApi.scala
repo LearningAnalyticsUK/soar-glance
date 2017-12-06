@@ -26,14 +26,48 @@ import io.finch._
 import io.finch.circe._
 import monix.cats._
 import monix.eval.Task
-import uk.ac.ncl.la.soar.glance.eval.db.{ClusterSessionDb, RecapSessionDb, SurveyDb}
-import uk.ac.ncl.la.soar.glance.eval.{ClusterSession, RecapSession, Session, Survey}
+import uk.ac.ncl.la.soar.glance.eval.db.{
+  ClusterSessionDb,
+  CollectionDb,
+  RecapSessionDb,
+  SurveyDb
+}
+import uk.ac.ncl.la.soar.glance.eval.{
+  ClusterSession,
+  RecapSession,
+  Session,
+  Survey
+}
 import uk.ac.ncl.la.soar.server.Implicits._
 
 /**
   * Class defines the REST api for Surveys
   */
-class SurveysApi(surveyRepository: SurveyDb, clusterRepository: ClusterSessionDb, recapRepository: RecapSessionDb) {
+class SurveysApi(surveyRepository: SurveyDb,
+                 collectionRepository: CollectionDb,
+                 clusterRepository: ClusterSessionDb,
+                 recapRepository: RecapSessionDb) {
+
+  /** Endpoint returns the the first survey in a collection in response to `GET /collections/id` */
+  val collectionFirst = get("collections" :: path[UUID]) { (id: UUID) =>
+    //TODO: Switch this from Option to Either or Validated so that we can actually have a purpose build notfound message
+    //  At the moment nominally a collection id could exist but a survey id could not. Tbf this does indicate an issue
+    //  on our end rather than user error.
+    collectionRepository.findFirst(id).toFuture.map {
+      case Some(s) => Ok(Survey.truncateQueryRecords(s))
+      case None    => genNotFound("Collection", id)
+    }
+  }
+
+  //collection/id/index - return indexed survey in collection, if exists
+  /** Endpoint returns the survey in a collection at a given index in response to `GET/collections/id/idx` */
+  val collectionIdx = get("collections" :: path[UUID] :: path[Int]) {
+    (id: UUID, idx: Int) =>
+      collectionRepository.findIdx(id, idx).toFuture.map {
+        case Some(s) => Ok(Survey.truncateQueryRecords(s))
+        case None    => genNotFound("Collection", id)
+      }
+  }
 
   /** Endpoint returns all survey ids in response to `GET /surveys` */
   val list = get("surveys") {
@@ -41,11 +75,11 @@ class SurveysApi(surveyRepository: SurveyDb, clusterRepository: ClusterSessionDb
   }
 
   /** Endpoint to retrieve a specific Survey by id */
-  val read = get("surveys" :: path[UUID] ) { (id: UUID) =>
+  val read = get("surveys" :: path[UUID]) { (id: UUID) =>
     println(s"received a request for this survey: $id")
     surveyRepository.find(id).toFuture.map {
       case Some(s) => Ok(Survey.truncateQueryRecords(s))
-      case None => notFound(id)
+      case None    => notFound(id)
     }
   }
 
@@ -55,15 +89,17 @@ class SurveysApi(surveyRepository: SurveyDb, clusterRepository: ClusterSessionDb
       surveyDates <- surveyRepository.findDateRange(id)
       sessions <- surveyDates match {
         case Some((start, end)) => clusterRepository.findBetween(start, end)
-        case None => Task.now(List.empty[ClusterSession])
+        case None               => Task.now(List.empty[ClusterSession])
       }
     } yield {
-      surveyDates.map { case (s, e) => Session.getSummary(sessions, s, e, Period.ofDays(7)) }
+      surveyDates.map {
+        case (s, e) => Session.getSummary(sessions, s, e, Period.ofDays(7))
+      }
     }
 
     fetchSummary.toFuture.map {
       case Some(s) => Ok(s)
-      case None => notFound(id)
+      case None    => notFound(id)
     }
   }
 
@@ -73,15 +109,17 @@ class SurveysApi(surveyRepository: SurveyDb, clusterRepository: ClusterSessionDb
       surveyDates <- surveyRepository.findDateRange(id)
       sessions <- surveyDates match {
         case Some((start, end)) => recapRepository.findBetween(start, end)
-        case None => Task.now(List.empty[RecapSession])
+        case None               => Task.now(List.empty[RecapSession])
       }
     } yield {
-      surveyDates.map { case (s, e) => Session.getSummary(sessions, s, e, Period.ofDays(7)) }
+      surveyDates.map {
+        case (s, e) => Session.getSummary(sessions, s, e, Period.ofDays(7))
+      }
     }
 
     fetchSummary.toFuture.map {
       case Some(s) => Ok(s)
-      case None => notFound(id)
+      case None    => notFound(id)
     }
   }
 
@@ -90,12 +128,16 @@ class SurveysApi(surveyRepository: SurveyDb, clusterRepository: ClusterSessionDb
   val preflight = options(*) { Ok(()) }
 
   /** All endpoints in this API, enriched with CORS headers. */
-  val endpoints = (list :+: read :+: readClusters :+: readRecap :+: preflight).withCorsHeaders
+  val endpoints =
+    (list :+: read :+: readClusters :+: readRecap :+: collectionFirst :+: collectionIdx :+: preflight).withCorsHeaders
 
   /** API endpoints exposed as a service */
   val service = endpoints.toService
 
   /** Response when a survey with the given id is not found in the database */
-  private[server] def notFound(id: UUID) = NotFound(new RuntimeException(s"Survey not found with id:$id"))
+  private[server] def notFound(id: UUID) = genNotFound("Survey", id)
+
+  private[server] def genNotFound(name: String, id: UUID) =
+    NotFound(new RuntimeException(s"$name not found with id:$id"))
 
 }

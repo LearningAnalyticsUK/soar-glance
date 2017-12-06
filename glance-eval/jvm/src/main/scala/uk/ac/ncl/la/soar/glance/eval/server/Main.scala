@@ -41,16 +41,20 @@ object Main extends TwitterServer {
 
     val surveysTask =
       (Repositories.Survey,
-        Repositories.ClusterSession,
-        Repositories.RecapSession).map3(new SurveysApi(_, _, _))
+       Repositories.Collection,
+       Repositories.ClusterSession,
+       Repositories.RecapSession).map4(new SurveysApi(_, _, _, _))
 
-    val responsesTask = Repositories.SurveyResponse.map(new SurveyResponsesApi(_))
+    val responsesTask =
+      Repositories.SurveyResponse.map(new SurveyResponsesApi(_))
 
     val modulesTask = Repositories.Module.map(new ModulesApi(_))
 
-    val (surveysApi, responsesApi, modulesApi) = Await.result(Task.zip3(surveysTask, responsesTask, modulesTask).toFuture)
+    val (surveysApi, responsesApi, modulesApi) =
+      Await.result(Task.zip3(surveysTask, responsesTask, modulesTask).toFuture)
 
-    val service = (surveysApi.endpoints :+: responsesApi.endpoints :+: modulesApi.endpoints).toService
+    val service =
+      (surveysApi.endpoints :+: responsesApi.endpoints :+: modulesApi.endpoints).toService
 
     val server = Http.server.serve(":8080", service)
 

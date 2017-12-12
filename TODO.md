@@ -30,12 +30,18 @@ with a requested survey.
 only the data that is needed (this is low priority unless its low hanging fruit. For now shoving stuff in a big survey 
 json object is fine).
 
+### Focused/Active time
+
+* [ ] Look to enrich ranking time data with metadata about whether they are actually looking at the page at the time.
+
+
 ### Cleanup
 
 * [ ] Titles for visualisations.
 * [ ] Scores / Results optionally included on thank you screen
 * [ ] Root url should take you to a generic landing page which lists surveys and lists.
 * [ ] Website should link to github repo in case of issues
+* [ ] Add ordering for visualisations in postgres
 
 ### Dockerize
 

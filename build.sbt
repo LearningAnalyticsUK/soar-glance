@@ -193,10 +193,10 @@ lazy val soarJSSettings = commonSettings ++ Seq(
 )
 
 def flywaySettings(dbName: String) = Seq(
-  flywayUrl  := s"jdbc:postgresql://glance-eval-db:8003/$dbName",
+  flywayUrl  := s"jdbc:postgresql://localhost:5432/$dbName",
   flywayUser := "postgres",
   flywayLocations := Seq(
-    s"filesystem:${baseDirectory.value}/src/main/resources/db/db.migrations"
+    s"filesystem:${baseDirectory.value}/src/main/resources/db/migration"
   )
 )
 

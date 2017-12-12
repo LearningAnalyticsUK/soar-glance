@@ -70,9 +70,10 @@ object GenerateSurveys extends Command[GenerateConfig, Unit] {
       _ <- collections.traverse(collectionDb.save)
     } yield {
 
-      if (conf.collection.nonEmpty)
+      if (conf.collection.nonEmpty) {
         println(
           s"[INFO] - Survey collections generated with ids: $eol${collections.map(_.id).mkString(eol)}")
+      }
 
       println(
         s"[INFO] - Surveys generated with the following ids: $eol${surveys.map(_.id).mkString(eol)}")
@@ -82,21 +83,6 @@ object GenerateSurveys extends Command[GenerateConfig, Unit] {
   private def buildCollections(num: Int,
                                modules: Set[ModuleCode],
                                surveys: List[Survey]) = {
-
-//    val sByM = surveys.groupBy(_.moduleToRank).filter {
-//      case (k, v) => modules.contains(k)
-//    }
-//
-//    sByM.flatMap { case (m, s) =>
-//
-//      val id = UUID.randomUUID()
-//      val surveyIds = s.take(num).map(_.id)
-//
-//      surveyIds match {
-//        case hd :: tl => Some(Collection(id, m, NonEmptyVector(hd, tl.toVector)))
-//        case Nil => None
-//      }
-//    }
 
     (for {
       (m, s) <- surveys.groupBy(_.moduleToRank) if modules.contains(m)

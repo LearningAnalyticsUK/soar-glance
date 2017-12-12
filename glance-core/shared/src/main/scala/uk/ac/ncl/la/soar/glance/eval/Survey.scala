@@ -35,7 +35,9 @@ import scala.util.Random
 /**
   * Case class representing an unanswered survey which will be presented to members of staff to fill out.
   */
-case class Survey(modules: Set[ModuleCode], moduleToRank: ModuleCode, queries: List[StudentNumber],
+case class Survey(modules: Set[ModuleCode],
+                  moduleToRank: ModuleCode,
+                  queries: List[StudentNumber],
                   entries: List[StudentRecords[SortedMap, ModuleCode, Double]],
                   visualisations: List[VisualisationType],
                   id: UUID = UUID.randomUUID)
@@ -53,10 +55,11 @@ object Survey {
       "visualisations" -> a.visualisations.asJson
     )
 
-    private def recordAsJson(a: StudentRecords[SortedMap, ModuleCode, Double]) = Json.obj(
-      "student_number" -> a.number.asJson,
-      "scores" -> a.record.asJson
-    )
+    private def recordAsJson(a: StudentRecords[SortedMap, ModuleCode, Double]) =
+      Json.obj(
+        "student_number" -> a.number.asJson,
+        "scores" -> a.record.asJson
+      )
   }
 
   implicit val decodeSurvey: Decoder[Survey] = new Decoder[Survey] {
@@ -71,17 +74,24 @@ object Survey {
         entries <- c.downField("entries").as[List[(StudentNumber, Map[ModuleCode, Double])]]
         visualisations <- c.downField("visualisations").as[List[VisualisationType]]
       } yield {
-        Survey(modules, moduleToRank, queries, recordsFrom(entries), visualisations, UUID.fromString(id))
+        Survey(modules,
+               moduleToRank,
+               queries,
+               recordsFrom(entries),
+               visualisations,
+               UUID.fromString(id))
       }
     }
 
-    private implicit val decodeRecord = Decoder.forProduct2("student_number", "scores")((s: StudentNumber, r: Map[ModuleCode, Double]) => (s,r))
+    private implicit val decodeRecord: Decoder[(StudentNumber, Map[ModuleCode, Double])] =
+      Decoder.forProduct2("student_number", "scores")((s, r) => (s, r))
 
-    private def recordsFrom(part: List[(StudentNumber, Map[ModuleCode, Double])]) = part.map { case (stNum, records) =>
-      val bldr = SortedMap.newBuilder[ModuleCode, Double]
-      for(entry <- records) { bldr += entry }
+    private def recordsFrom(part: List[(StudentNumber, Map[ModuleCode, Double])]) = part.map {
+      case (stNum, records) =>
+        val bldr = SortedMap.newBuilder[ModuleCode, Double]
+        for (entry <- records) { bldr += entry }
 
-      StudentRecords[SortedMap, ModuleCode, Double](stNum, bldr.result())
+        StudentRecords[SortedMap, ModuleCode, Double](stNum, bldr.result())
     }
   }
 
@@ -95,30 +105,69 @@ object Survey {
                collection: Option[Int],
                seed: Option[Int]): List[Survey] = {
 
+//    require(
+//      studentRecords.size > (numQueries * queryModules.size) + trainingData,
+//      "The number of students for which " +
+//        "you have records must be greater than the formula " +
+//        "(num queries * num modules) + (num training records). Instead, you " +
+//        s"provided #queries:$numQueries, #modules: ${queryModules.size}, " +
+//        s"#training: $trainingData and students: ${studentRecords.size}."
+//    )
+
     //Group the records by student and turn them into StudentRecords objects
     val stRecords = groupByStudents(records)
     println(s"Number of scores: ${records.size} Number of records: ${stRecords.size}")
     //Build the set of modules across all entries.
     val allModules = records.iterator.map(_.module).toSet
-    //Pass the StudentRecords objects to generate a set of queries
-    //TODO: provide a config parameter for training rather than magically deriving it
-    val queries = sampleQueries(stRecords, 5, numQueries, queryModules.toSet, seed)
-    //Each entry in queries represents the query set for one survey. Split them out and and make surveys
-    queries.iterator.map { case (module, students) =>
-        Survey(allModules, module, students, stRecords, visualisations)
-    }.toList
+
+    //Create the rng with provided seed
+    val rand = seed match {
+      case Some(i) => new Random(i)
+      case None    => new Random()
+    }
+
+    //Random is mutable so the below works as intended
+    val collectionSize = collection match {
+      case Some(i) if i <= 1 =>
+        throw new IllegalArgumentException(
+          "--collection option must have a " +
+            s"value >1 if specified at all. You provided $i")
+      case Some(i) => i
+      case None    => 1
+    }
+
+    for {
+      _ <- 0 until collectionSize
+      module <- queryModules.toSet
+      surveys <- generateSurvey(stRecords, numQueries, allModules, module, visualisations, rand)
+      s <- surveys
+    } yield s
+  }
+
+  private def generateSurvey(records: List[StudentRecords[SortedMap, ModuleCode, Double]],
+                             numQueries: Int,
+                             allModules: Set[ModuleCode],
+                             queryModule: ModuleCode,
+                             visualisations: List[VisualisationType],
+                             rand: Random) = {
+
+    //Create a set of queries
+    val queries = sampleQueries(records, 5, numQueries, queryModule, rand)
+    //Pass queries to a Survey
+    Survey(allModules, queryModule, queries, records, visualisations)
   }
 
   /**
-    * Removing the score for queries (student -> module) and the score for any module which follows it
-    * (where alphanum ~ chronological). Note: Likely do this on front-end after persistence.
+    * Removing the score for queries (student -> module) and the score for any module which follows
+    * it (where alphanum ~ chronological). Note: Likely do this on front-end after persistence.
     */
   private[glance] def truncateQueryRecords(s: Survey): Survey = {
 
     val qSet = s.queries.toSet
-    val dEntries = ListBuffer.empty[StudentRecords[SortedMap, ModuleCode, Double]]
-    
-    for(e <- s.entries) {
+    val dEntries =
+      ListBuffer.empty[StudentRecords[SortedMap, ModuleCode, Double]]
+
+    for (e <- s.entries) {
       if (qSet.contains(e.number)) {
         dEntries += StudentRecords(e.number, e.record - s.moduleToRank)
       } else {
@@ -130,58 +179,55 @@ object Survey {
   }
 
   /** Group module scores by studnet numbers and construct StudentRecords */
-  private[glance] def groupByStudents(scores: List[ModuleScore]): List[StudentRecords[SortedMap, ModuleCode, Double]] = {
+  private[glance] def groupByStudents(
+      scores: List[ModuleScore]): List[StudentRecords[SortedMap, ModuleCode, Double]] = {
     //Group by studentNumber and construct records
-    val fullRecords = scores.groupBy(_.student).map { case (stud, studScores) =>
-      val full = SortedMap.newBuilder[ModuleCode, Double] ++= studScores.iterator.map(s => s.module -> s.score)
-      StudentRecords(stud, full.result)
+    val fullRecords = scores.groupBy(_.student).map {
+      case (stud, studScores) =>
+        val full = SortedMap
+          .newBuilder[ModuleCode, Double] ++= studScores.iterator.map(s => s.module -> s.score)
+        StudentRecords(stud, full.result)
     }
 
     //TODO: replace magic number filter to drop students with few records with a conf option
     fullRecords.filter(_.record.size > 4).toList
   }
 
-  /** Split a list of student records into records with a score for the given module (upto n records) and the remainder */
+  /**
+    * Split a list of student records into records with a score for the given module (upto n
+    * records) and the remainder
+    */
   private def splitNWithModule(records: List[StudentRecords[SortedMap, ModuleCode, Double]],
-                               module: ModuleCode, n: Int) = {
+                               module: ModuleCode,
+                               n: Int) = {
     var counter = 0
     records.partition { r =>
-      if (r.record.contains(module) && counter < n) { counter += 1; true } else false
+      if (r.record.contains(module) && counter < n) { counter += 1; true } else
+        false
     }
   }
 
   /**
-    * Randomly sample the student records, selecting conf.elided students *per* module
+    * Randomly sample the student records, selecting conf.elided students *per* module.
     */
   private def sampleQueries(studentRecords: List[StudentRecords[SortedMap, ModuleCode, Double]],
-                      trainingData: Int,
-                      numQueries: Int,
-                      queryModules: Set[ModuleCode],
-                      seed: Option[Int]): Map[ModuleCode, List[StudentNumber]] = {
+                            trainingData: Int,
+                            numQueries: Int,
+                            queryModule: ModuleCode,
+                            rand: Random) = {
 
-    require(studentRecords.size > (numQueries * queryModules.size) + trainingData, "The number of students for which " +
-      "you have records must be greater than the formula (Number of queries * number of modules) + (Number of " +
-      s"training records). Instead, you provided #queries:$numQueries, #modules: ${queryModules.size}, " +
-      s"#training: $trainingData and students: ${studentRecords.size}.")
-
-    //Take the list of students, shuffle then split off the training data from the head.
-    //Create the rng with provided seed
-    val rand = seed match {
-      case Some(i) => new Random(i)
-      case None => new Random()
-    }
-
-    def findNWithModule(n: Int, records: List[StudentRecords[SortedMap, ModuleCode, Double]], module: ModuleCode) = {
-      records.iterator.filter(_.record.contains(module)).map(_.number).take(n).toList
-    }
     //Split off a random first n student records which have a score for a given query module
-    val studentsPerQuery = for {
-      qM <- queryModules
-    } yield qM -> findNWithModule(numQueries, rand.shuffle(studentRecords), qM)
-    
-    studentsPerQuery.toMap
+    // Then, take the list of students, shuffle then split off the training data from the head.
+    rand
+      .shuffle(studentRecords)
+      .iterator
+      .filter(_.record.contains(queryModule))
+      .map(_.number)
+      .take(numQueries)
+      .toList
   }
 
   /** get the list of distinct modulecodes, sorted alphanumerically (therefore chronologically) */
-  private def getAllModules(scores: List[ModuleScore]): List[ModuleCode] = scores.map(_.module).sortWith(_ < _).distinct
+  private def getAllModules(scores: List[ModuleScore]) =
+    scores.map(_.module).sortWith(_ < _).distinct
 }

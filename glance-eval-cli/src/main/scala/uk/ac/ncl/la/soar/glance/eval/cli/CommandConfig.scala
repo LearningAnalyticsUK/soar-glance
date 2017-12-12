@@ -37,7 +37,8 @@ final case class GenerateConfig(recordsPath: String = "",
                                 visualisations: Seq[String] = Seq.empty[String],
                                 modules: Seq[String] = Seq.empty[String],
                                 collection: Option[Int] = None,
-                                seed: Option[Int] = None) extends CommandConfig
+                                seed: Option[Int] = None)
+    extends CommandConfig
 
 /**
   * Config "bag" case class for the survey evaluator and accompanying scopt parser.
@@ -45,7 +46,8 @@ final case class GenerateConfig(recordsPath: String = "",
 final case class AssessConfig(inputPath: String = "",
                               outputPath: String = "",
                               modelPath: String = "",
-                              metric: String = "rmse") extends CommandConfig
+                              metric: String = "rmse")
+    extends CommandConfig
 
 /**
   * Config "bag" case class for the job which transforms Soar data csv's and its accompanying scopt parser.
@@ -60,194 +62,283 @@ final case class TansformConfig(clusterPath: Option[String] = None,
                                 outputPath: String = "",
                                 prefix: String = "",
                                 start: String = "",
-                                stage: Int = 0) extends CommandConfig
+                                stage: Int = 0)
+    extends CommandConfig
 
 /**
   * Config "bag" case class for the job which loads transformed soar data to support surveys. Also the parser ...
   */
 final case class LoadSupportConfig(clusterPath: String = "",
-                                   recapPath: String = "") extends CommandConfig
+                                   recapPath: String = "")
+    extends CommandConfig
 
 /**
   * Config "bag" case class for the job which loads extra marks data in, besides that depended on by a survey.
   * Useful if students in a survey are expected to have taken modules with a different prefix code.
   */
-final case class LoadExtraMarksConfig(extraMarks: String = "") extends CommandConfig
+final case class LoadExtraMarksConfig(extraMarks: String = "")
+    extends CommandConfig
 
 /**
   * Config "bag" case class for the job which exports csv results from survey response tables in the database.
   */
-final case class ExportSurveyResultsConfig(outputPath: String = "", surveyId: String = "") extends CommandConfig
+final case class ExportSurveyResultsConfig(outputPath: String = "",
+                                           surveyId: String = "")
+    extends CommandConfig
 
-
+/**
+  * Config "bag" case class for the job which exports csv representations of surveys from the database.
+  */
+final case class ExportSurveysConfig(outputPath: String = "",
+                                     surveyId: String = "")
+    extends CommandConfig
 
 object CommandConfig {
 
   /** Factory method for Config objects - similar to scopt commands, but they seem inflexible */
-  def apply(args: Array[String]): Option[CommandConfig] = args.headOption.flatMap {
-    case "generate" => generateParser.parse(args.tail, GenerateConfig())
-    case "assess" => assessParser.parse(args.tail, AssessConfig())
-    case "transform" => transformParser.parse(args.tail, TansformConfig())
-    case "load-support" => loadParser.parse(args.tail, LoadSupportConfig())
-    case "load-extra-marks" => extraMarkParser.parse(args.tail, LoadExtraMarksConfig())
-    case "export-results" => exportResultsParser.parse(args.tail, ExportSurveyResultsConfig())
-    case _ => None
-  }
+  def apply(args: Array[String]): Option[CommandConfig] =
+    args.headOption.flatMap {
+      case "generate"     => generateParser.parse(args.tail, GenerateConfig())
+      case "assess"       => assessParser.parse(args.tail, AssessConfig())
+      case "transform"    => transformParser.parse(args.tail, TansformConfig())
+      case "load-support" => loadParser.parse(args.tail, LoadSupportConfig())
+      case "load-extra-marks" =>
+        extraMarkParser.parse(args.tail, LoadExtraMarksConfig())
+      case "export-results" =>
+        exportResultsParser.parse(args.tail, ExportSurveyResultsConfig())
+      case "export-surveys" =>
+        exportSurveysParser.parse(args.tail, ExportSurveysConfig())
+      case _ => None
+    }
 
   /** Package private helper object for parsing command line arguments, provided by scopt */
-  private[cli] val generateParser = new OptionParser[GenerateConfig]("GlanceGen") {
-    //Define the header for the command line display text
-    head("Glance Survey Generator", "0.1.x")
+  private[cli] val generateParser =
+    new OptionParser[GenerateConfig]("GlanceGen") {
+      //Define the header for the command line display text
+      head("Glance Survey Generator", "0.1.x")
 
-    //Define the individual command line options
-    opt[String]('i', "input").required().valueName("<file>")
-      .action((x, c) => c.copy(recordsPath = x))
-      .text("a required .csv file containing student marks.")
+      //Define the individual command line options
+      opt[String]('i', "input")
+        .required()
+        .valueName("<file>")
+        .action((x, c) => c.copy(recordsPath = x))
+        .text("a required .csv file containing student marks.")
 
-    opt[Int]('n', "num-students").valueName("e.g. 10")
-      .action((x, c) => c.copy(numStudents = x))
-      .text("an optional parameter specifying how many student records to include in the generated surveys")
+      opt[Int]('n', "num-students")
+        .valueName("e.g. 10")
+        .action((x, c) => c.copy(numStudents = x))
+        .text("an optional parameter specifying how many student records to include in the generated surveys")
 
-    opt[Seq[String]]('s', "students").valueName("e.g. 3789,11722,98,...")
-      .action((x, c) => c.copy(students = x))
-      .text("an optional parameter specifying exactly which student records to include in the generated surveys. " +
-        "Note that if --students are provided then --num-students and --collection will be ignored.")
+      opt[Seq[String]]('s', "students")
+        .valueName("e.g. 3789,11722,98,...")
+        .action((x, c) => c.copy(students = x))
+        .text("an optional parameter specifying exactly which student records to include in the generated surveys. " +
+          "Note that if --students are provided then --num-students and --collection will be ignored.")
 
-    opt[Seq[String]]('m', "modules").required().valueName("e.g. CSC1021, CSC2024...")
-      .action((x, c) => c.copy(modules = x))
-      .text("list of modules for which to generate surveys. Unless the --collection option is used, only one survey " +
-        "will be generated per module.")
+      opt[Seq[String]]('m', "modules")
+        .required()
+        .valueName("e.g. CSC1021, CSC2024...")
+        .action((x, c) => c.copy(modules = x))
+        .text(
+          "list of modules for which to generate surveys. Unless the --collection option is used, only one survey " +
+            "will be generated per module.")
 
-    opt[Int]('c', "collection").valueName("<int>")
-      .action((x, c) => c.copy(collection = Option(x)))
-      .text("a number of surveys to generate in series. They will all use different students and may be completed one " +
-        "after another.")
+      opt[Int]('c', "collection")
+        .valueName("<int>")
+        .action((x, c) => c.copy(collection = Option(x)))
+        .text(
+          "a number of surveys to generate in series. They will all use different students and may be completed one " +
+            "after another.")
 
-    opt[Int]('r', "random-seed").valueName("<int>")
-      .action((x, c) => c.copy(seed = Option(x)))
-      .text("random-seed is an optional integer to use as a seed when randomly (uniformly) selecting student records " +
-        "to include in a survey.")
+      opt[Int]('r', "random-seed")
+        .valueName("<int>")
+        .action((x, c) => c.copy(seed = Option(x)))
+        .text(
+          "random-seed is an optional integer to use as a seed when randomly (uniformly) selecting student records " +
+            "to include in a survey.")
 
-    opt[Seq[String]]('v', "visualisations").required().valueName("e.g. recap_vs_time,stud_module_scores,...")
-      .action( (x,c) => c.copy(visualisations = x) )
-      .text("visualisations is a required parameter detailing the list of visualisations to use in a Glance survey.")
-  }
+      opt[Seq[String]]('v', "visualisations")
+        .required()
+        .valueName("e.g. recap_vs_time,stud_module_scores,...")
+        .action((x, c) => c.copy(visualisations = x))
+        .text("visualisations is a required parameter detailing the list of visualisations to use in a Glance survey.")
+    }
 
   //TODO: Remove or Rewrite Assess task
-  private[cli] val assessParser = new OptionParser[AssessConfig]("GlanceAssess") {
-    //Define the header for the command line display text
-    head("Glance Survey Assessor", "0.1.x")
+  private[cli] val assessParser =
+    new OptionParser[AssessConfig]("GlanceAssess") {
+      //Define the header for the command line display text
+      head("Glance Survey Assessor", "0.1.x")
 
-    //Define the individual command line options
-    opt[String]('i', "input").required().valueName("<directory>")
-      .action((x, c) => c.copy(inputPath = x))
-      .text("input is a required directory containing completed survey csvs, in the folder structure producted by `generate`.")
+      //Define the individual command line options
+      opt[String]('i', "input")
+        .required()
+        .valueName("<directory>")
+        .action((x, c) => c.copy(inputPath = x))
+        .text("input is a required directory containing completed survey csvs, in the folder structure producted by `generate`.")
 
-    opt[String]('o', "output").required().valueName("<file>")
-      .action((x, c) => c.copy(outputPath = x))
-      .text("output is a required parameter specifying the file to write survey evaluations to.")
+      opt[String]('o', "output")
+        .required()
+        .valueName("<file>")
+        .action((x, c) => c.copy(outputPath = x))
+        .text("output is a required parameter specifying the file to write survey evaluations to.")
 
-    opt[String]('m', "model").required().valueName("<directory>")
-      .action((x, c) => c.copy(modelPath = x))
-      .text("model is a required directory containing the Spark based predictive model against which we are " +
-        "comparing surveys.")
+      opt[String]('m', "model")
+        .required()
+        .valueName("<directory>")
+        .action((x, c) => c.copy(modelPath = x))
+        .text(
+          "model is a required directory containing the Spark based predictive model against which we are " +
+            "comparing surveys.")
 
-    opt[String]("metric").valueName("e.g. mse, rmse...")
-      .action((x, c) => c.copy(metric = x))
-      .text("metric is an optional parameter specifying the metric to be used in the comparison between predictive " +
-        "model and surveys. Default is rmse.")
-  }
+      opt[String]("metric")
+        .valueName("e.g. mse, rmse...")
+        .action((x, c) => c.copy(metric = x))
+        .text(
+          "metric is an optional parameter specifying the metric to be used in the comparison between predictive " +
+            "model and surveys. Default is rmse.")
+    }
 
-  private[cli] val transformParser = new OptionParser[TansformConfig]("GlanceTransform") {
-    //Define the header for the command line display text
-    head("Glance Data Transformer", "0.1.x")
+  private[cli] val transformParser =
+    new OptionParser[TansformConfig]("GlanceTransform") {
+      //Define the header for the command line display text
+      head("Glance Data Transformer", "0.1.x")
 
-    //Define the individual command line options
-    opt[String]('m', "marks").required().valueName("<file>")
-      .action((x, c) => c.copy(nessMarkPath = x))
-      .text("marks is a required .csv file containing student marks.")
+      //Define the individual command line options
+      opt[String]('m', "marks")
+        .required()
+        .valueName("<file>")
+        .action((x, c) => c.copy(nessMarkPath = x))
+        .text("marks is a required .csv file containing student marks.")
 
-    //    opt[String]('i', "module-info").required().valueName("<file>")
-    //      .action((x, c) => c.copy(moduleInfoPath = x))
-    //      .text("module-info is a required .csv file containing information about each of the modules for which a student " +
-    //        "may have received marks.")
+      //    opt[String]('i', "module-info").required().valueName("<file>")
+      //      .action((x, c) => c.copy(moduleInfoPath = x))
+      //      .text("module-info is a required .csv file containing information about each of the modules for which a student " +
+      //        "may have received marks.")
 
-    opt[String]('o', "output").required().valueName("<path>")
-      .action((x, c) => c.copy(outputPath = x))
-      .text("output is a required parameter specifying the directory to write transformed data to.")
+      opt[String]('o', "output")
+        .required()
+        .valueName("<path>")
+        .action((x, c) => c.copy(outputPath = x))
+        .text("output is a required parameter specifying the directory to write transformed data to.")
 
-    opt[String]('p', "prefix").required().valueName("e.g. CSC")
-      .action((x, c) => c.copy(prefix = x))
-      .text("prefix is a required parameter which indicates the module code prefix for which we should transform marks.")
+      opt[String]('p', "prefix")
+        .required()
+        .valueName("e.g. CSC")
+        .action((x, c) => c.copy(prefix = x))
+        .text("prefix is a required parameter which indicates the module code prefix for which we should transform marks.")
 
-    opt[String]('y', "year").required().valueName("e.g. 2015")
-      .action((x, c) => c.copy(start = x))
-      .text("year is a required parameter which indicates the earliest academic year for which to transform marks.")
+      opt[String]('y', "year")
+        .required()
+        .valueName("e.g. 2015")
+        .action((x, c) => c.copy(start = x))
+        .text("year is a required parameter which indicates the earliest academic year for which to transform marks.")
 
-    opt[Int]('s', "stage").required().valueName("e.g. 2")
-      .action((x, c) => c.copy(stage = x))
-      .text("stage is a required parameter which indicates the earliest academic stage for which to transform marks.")
-    
-    opt[String]("cluster").valueName("<file>")
-      .action((x, c) => c.copy(clusterPath = Option(x)))
-      .text("cluster is an optional .csv file containing student sessions using University clusters.")
+      opt[Int]('s', "stage")
+        .required()
+        .valueName("e.g. 2")
+        .action((x, c) => c.copy(stage = x))
+        .text("stage is a required parameter which indicates the earliest academic stage for which to transform marks.")
 
-    opt[String]("recap").valueName("<file>")
-      .action((x, c) => c.copy(recapPath = Option(x)))
-      .text("recap is an optional .csv file containing student sessions using the ReCap video lecture service.")
+      opt[String]("cluster")
+        .valueName("<file>")
+        .action((x, c) => c.copy(clusterPath = Option(x)))
+        .text("cluster is an optional .csv file containing student sessions using University clusters.")
 
-    opt[String]("printed").valueName("<file>")
-      .action((x, c) => c.copy(printedPath = Option(x)))
-      .text("printed is an optional .csv file containing student print events.")
+      opt[String]("recap")
+        .valueName("<file>")
+        .action((x, c) => c.copy(recapPath = Option(x)))
+        .text("recap is an optional .csv file containing student sessions using the ReCap video lecture service.")
 
-    opt[String]("vle").valueName("<file>")
-      .action((x, c) => c.copy(vlePath = Option(x)))
-      .text("vlePath is an optional .csv file containing student VLE sessions.")
+      opt[String]("printed")
+        .valueName("<file>")
+        .action((x, c) => c.copy(printedPath = Option(x)))
+        .text(
+          "printed is an optional .csv file containing student print events.")
 
-    opt[String]("meetings").valueName("<file>")
-      .action((x, c) => c.copy(meetingsPath = Option(x)))
-      .text("meetingsPath is an optional .csv file containing student meeting records.")
-  }
+      opt[String]("vle")
+        .valueName("<file>")
+        .action((x, c) => c.copy(vlePath = Option(x)))
+        .text(
+          "vlePath is an optional .csv file containing student VLE sessions.")
 
-  private[cli] val loadParser = new OptionParser[LoadSupportConfig]("GlanceLoadSupport") {
-    //Define the header for the command line display text
-    head("Glance Support Data Loader", "0.1.x")
+      opt[String]("meetings")
+        .valueName("<file>")
+        .action((x, c) => c.copy(meetingsPath = Option(x)))
+        .text("meetingsPath is an optional .csv file containing student meeting records.")
+    }
 
-    //Define the individual command line options
-    opt[String]('c', "cluster-sessions").required().valueName("<file>")
-      .action((x, c) => c.copy(clusterPath = x))
-      .text("cluster-sessions is a required .csv file containing student sessions using University clusters.")
+  private[cli] val loadParser =
+    new OptionParser[LoadSupportConfig]("GlanceLoadSupport") {
+      //Define the header for the command line display text
+      head("Glance Support Data Loader", "0.1.x")
 
-    opt[String]('r', "recap-sessions").required().valueName("<file>")
-      .action((x, c) => c.copy(recapPath = x))
-      .text("recap-sessions is a required .csv file containing student sessions using the ReCap video lecture service.")
+      //Define the individual command line options
+      opt[String]('c', "cluster-sessions")
+        .required()
+        .valueName("<file>")
+        .action((x, c) => c.copy(clusterPath = x))
+        .text("cluster-sessions is a required .csv file containing student sessions using University clusters.")
 
-  }
+      opt[String]('r', "recap-sessions")
+        .required()
+        .valueName("<file>")
+        .action((x, c) => c.copy(recapPath = x))
+        .text("recap-sessions is a required .csv file containing student sessions using the ReCap video lecture service.")
 
-  private[cli] val extraMarkParser = new OptionParser[LoadExtraMarksConfig]("GlanceLoadExtraMarks") {
-    //Define the header for the command line display text
-    head("Glance Extra Marks Loader", "0.1.x")
+    }
 
-    //Define the individual command line options
-    opt[String]('m', "marks").required().valueName("<file>")
-      .action((x, c) => c.copy(extraMarks = x))
-      .text("marks is an optional .csv file containing extra student marks to load (perhaps with a different module " +
-        "code).")
-  }
+  private[cli] val extraMarkParser =
+    new OptionParser[LoadExtraMarksConfig]("GlanceLoadExtraMarks") {
+      //Define the header for the command line display text
+      head("Glance Extra Marks Loader", "0.1.x")
 
-  private[cli] val exportResultsParser = new OptionParser[ExportSurveyResultsConfig]("GlanceExportResults") {
-    //Define the header for the command line display text
-    head("Glance Survey Result Exporter", "0.1.x")
+      //Define the individual command line options
+      opt[String]('m', "marks")
+        .required()
+        .valueName("<file>")
+        .action((x, c) => c.copy(extraMarks = x))
+        .text(
+          "marks is an optional .csv file containing extra student marks to load (perhaps with a different module " +
+            "code).")
+    }
 
-    //Define the individual command line options
-    opt[String]('o', "output").required().valueName("<directory>")
-      .action((x, c) => c.copy(outputPath = x))
-      .text("ouput is a required parameter specifying the directory to write the survey results into")
+  private[cli] val exportResultsParser =
+    new OptionParser[ExportSurveyResultsConfig]("GlanceExportResults") {
+      //Define the header for the command line display text
+      head("Glance Survey Result Exporter", "0.1.x")
 
-    opt[String]('s', "survey").required().valueName("<uuid>")
-      .action((x, c) => c.copy(surveyId = x))
-      .text("survey is a required parameter specifying the survey id to write the results for")
-  }
+      //Define the individual command line options
+      opt[String]('o', "output")
+        .required()
+        .valueName("<directory>")
+        .action((x, c) => c.copy(outputPath = x))
+        .text("ouput is a required parameter specifying the directory to write the survey results into")
+
+      opt[String]('s', "survey")
+        .required()
+        .valueName("<uuid>")
+        .action((x, c) => c.copy(surveyId = x))
+        .text("survey is a required parameter specifying the survey id to write the results for")
+    }
+
+  private[cli] val exportSurveysParser =
+    new OptionParser[ExportSurveysConfig]("GlanceExportSurveys") {
+      //Define the header for the command line display text
+      head("Glance Survey Exporter", "0.1.x")
+
+      //Define the individual command line options
+      opt[String]('o', "output")
+        .required()
+        .valueName("<directory>")
+        .action((x, c) => c.copy(outputPath = x))
+        .text("ouput is a required parameter specifying the directory to write the surveys into")
+
+      opt[String]('s', "survey")
+        .required()
+        .valueName("<uuid>")
+        .action((x, c) => c.copy(surveyId = x))
+        .text(
+          "survey is a required parameter specifying the survey id to write out")
+    }
 }
-
-

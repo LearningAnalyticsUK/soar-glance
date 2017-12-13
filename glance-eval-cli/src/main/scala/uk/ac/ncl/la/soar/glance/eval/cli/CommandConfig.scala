@@ -41,15 +41,6 @@ final case class GenerateConfig(recordsPath: String = "",
     extends CommandConfig
 
 /**
-  * Config "bag" case class for the survey evaluator and accompanying scopt parser.
-  */
-final case class AssessConfig(inputPath: String = "",
-                              outputPath: String = "",
-                              modelPath: String = "",
-                              metric: String = "rmse")
-    extends CommandConfig
-
-/**
   * Config "bag" case class for the job which transforms Soar data csv's and its accompanying scopt parser.
   */
 final case class TansformConfig(clusterPath: Option[String] = None,
@@ -99,7 +90,6 @@ object CommandConfig {
   def apply(args: Array[String]): Option[CommandConfig] =
     args.headOption.flatMap {
       case "generate"     => generateParser.parse(args.tail, GenerateConfig())
-      case "assess"       => assessParser.parse(args.tail, AssessConfig())
       case "transform"    => transformParser.parse(args.tail, TansformConfig())
       case "load-support" => loadParser.parse(args.tail, LoadSupportConfig())
       case "load-extra-marks" =>
@@ -162,41 +152,6 @@ object CommandConfig {
         .valueName("e.g. recap_vs_time,stud_module_scores,...")
         .action((x, c) => c.copy(visualisations = x))
         .text("visualisations is a required parameter detailing the list of visualisations to use in a Glance survey.")
-    }
-
-  //TODO: Remove or Rewrite Assess task
-  private[cli] val assessParser =
-    new OptionParser[AssessConfig]("GlanceAssess") {
-      //Define the header for the command line display text
-      head("Glance Survey Assessor", "0.1.x")
-
-      //Define the individual command line options
-      opt[String]('i', "input")
-        .required()
-        .valueName("<directory>")
-        .action((x, c) => c.copy(inputPath = x))
-        .text("input is a required directory containing completed survey csvs, in the folder structure producted by `generate`.")
-
-      opt[String]('o', "output")
-        .required()
-        .valueName("<file>")
-        .action((x, c) => c.copy(outputPath = x))
-        .text("output is a required parameter specifying the file to write survey evaluations to.")
-
-      opt[String]('m', "model")
-        .required()
-        .valueName("<directory>")
-        .action((x, c) => c.copy(modelPath = x))
-        .text(
-          "model is a required directory containing the Spark based predictive model against which we are " +
-            "comparing surveys.")
-
-      opt[String]("metric")
-        .valueName("e.g. mse, rmse...")
-        .action((x, c) => c.copy(metric = x))
-        .text(
-          "metric is an optional parameter specifying the metric to be used in the comparison between predictive " +
-            "model and surveys. Default is rmse.")
     }
 
   private[cli] val transformParser =

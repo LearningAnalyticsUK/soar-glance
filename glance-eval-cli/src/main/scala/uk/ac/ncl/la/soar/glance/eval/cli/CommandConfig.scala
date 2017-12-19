@@ -59,29 +59,25 @@ final case class TansformConfig(clusterPath: Option[String] = None,
 /**
   * Config "bag" case class for the job which loads transformed soar data to support surveys. Also the parser ...
   */
-final case class LoadSupportConfig(clusterPath: String = "",
-                                   recapPath: String = "")
+final case class LoadSupportConfig(clusterPath: String = "", recapPath: String = "")
     extends CommandConfig
 
 /**
   * Config "bag" case class for the job which loads extra marks data in, besides that depended on by a survey.
   * Useful if students in a survey are expected to have taken modules with a different prefix code.
   */
-final case class LoadExtraMarksConfig(extraMarks: String = "")
-    extends CommandConfig
+final case class LoadExtraMarksConfig(extraMarks: String = "") extends CommandConfig
 
 /**
   * Config "bag" case class for the job which exports csv results from survey response tables in the database.
   */
-final case class ExportSurveyResultsConfig(outputPath: String = "",
-                                           surveyId: String = "")
+final case class ExportSurveyResultsConfig(outputPath: String = "", surveyId: String = "")
     extends CommandConfig
 
 /**
   * Config "bag" case class for the job which exports csv representations of surveys from the database.
   */
-final case class ExportSurveysConfig(outputPath: String = "",
-                                     surveyId: String = "")
+final case class ExportSurveysConfig(outputPath: String = "", surveyId: String = "")
     extends CommandConfig
 
 object CommandConfig {
@@ -176,7 +172,8 @@ object CommandConfig {
         .required()
         .valueName("<path>")
         .action((x, c) => c.copy(outputPath = x))
-        .text("output is a required parameter specifying the directory to write transformed data to.")
+        .text(
+          "output is a required parameter specifying the directory to write transformed data to.")
 
       opt[String]('p', "prefix")
         .required()
@@ -199,7 +196,8 @@ object CommandConfig {
       opt[String]("cluster")
         .valueName("<file>")
         .action((x, c) => c.copy(clusterPath = Option(x)))
-        .text("cluster is an optional .csv file containing student sessions using University clusters.")
+        .text(
+          "cluster is an optional .csv file containing student sessions using University clusters.")
 
       opt[String]("recap")
         .valueName("<file>")
@@ -209,14 +207,12 @@ object CommandConfig {
       opt[String]("printed")
         .valueName("<file>")
         .action((x, c) => c.copy(printedPath = Option(x)))
-        .text(
-          "printed is an optional .csv file containing student print events.")
+        .text("printed is an optional .csv file containing student print events.")
 
       opt[String]("vle")
         .valueName("<file>")
         .action((x, c) => c.copy(vlePath = Option(x)))
-        .text(
-          "vlePath is an optional .csv file containing student VLE sessions.")
+        .text("vlePath is an optional .csv file containing student VLE sessions.")
 
       opt[String]("meetings")
         .valueName("<file>")
@@ -269,7 +265,8 @@ object CommandConfig {
         .required()
         .valueName("<directory>")
         .action((x, c) => c.copy(outputPath = x))
-        .text("ouput is a required parameter specifying the directory to write the survey results into")
+        .text(
+          "ouput is a required parameter specifying the directory to write the survey results into")
 
       opt[String]('s', "survey")
         .required()
@@ -294,7 +291,6 @@ object CommandConfig {
         .required()
         .valueName("<uuid>")
         .action((x, c) => c.copy(surveyId = x))
-        .text(
-          "survey is a required parameter specifying the survey id to write out")
+        .text("survey is a required parameter specifying the survey id to write out")
     }
 }

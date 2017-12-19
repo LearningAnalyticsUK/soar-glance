@@ -30,7 +30,7 @@ import io.circe.generic.auto._
 import io.circe.parser._
 import io.circe.syntax._
 import uk.ac.ncl.la.soar.data.Module
-import uk.ac.ncl.la.soar.glance.eval.{SessionSummary, Survey, SurveyResponse}
+import uk.ac.ncl.la.soar.glance.eval.{Collection, SessionSummary, Survey, SurveyResponse}
 import org.scalajs.dom
 
 /**
@@ -45,10 +45,19 @@ object ApiClient {
   /** TODO: Figure out if there is a way to do compiletime config? Or something of that sort. Setting this here is bad */
   def url(rel: String) = s"$protocol//$host:$port/$rel"
 
+  /* Collections */
+
+  /** Load the first survey of a collection with a given id */
+  def loadCollection(id: UUID): Future[Either[Error, Collection]] =
+    Ajax.get(url(s"collections/$id")).map(decodeReq[Collection])
+
+  def loadCollectionT(id: UUID): EitherT[Future, Error, Collection] = EitherT(loadCollection(id))
+
   /* Surveys */
 
   /** Load the survey ids from the surveys API, then decode them using circe */
-  def loadSurveyIds: Future[Either[Error, List[UUID]]] = Ajax.get(url("surveys")).map(decodeReq[List[UUID]])
+  def loadSurveyIds: Future[Either[Error, List[UUID]]] =
+    Ajax.get(url("surveys")).map(decodeReq[List[UUID]])
 
   /** Load the survey ids, decode them then lift into an either transformer. Would be preferable to do this always, but
     * [[diode.Effect]]'s `apply` method expects an un evaluated future and it seems crazy to lift only to call `.value`
@@ -57,10 +66,10 @@ object ApiClient {
   def loadSurveysIdsT: EitherT[Future, Error, List[UUID]] = EitherT(loadSurveyIds)
 
   /** Load a survey with the given id from the surveys API, then decode using circe */
-  def loadSurvey(id: UUID): Future[Either[Error, Survey]] = Ajax.get(url(s"surveys/$id")).map(decodeReq[Survey])
+  def loadSurvey(id: UUID): Future[Either[Error, Survey]] =
+    Ajax.get(url(s"surveys/$id")).map(decodeReq[Survey])
 
   def loadSurveyT(id: UUID): EitherT[Future, Error, Survey] = EitherT(loadSurvey(id))
-
 
   /* Survey specific data */
 
@@ -89,7 +98,8 @@ object ApiClient {
   /* Modules */
 
   /** Load the modules and module info */
-  def loadModules: Future[Either[Error, List[Module]]] = Ajax.get(url("modules")).map(decodeReq[List[Module]])
+  def loadModules: Future[Either[Error, List[Module]]] =
+    Ajax.get(url("modules")).map(decodeReq[List[Module]])
 
   def loadModulesT: EitherT[Future, Error, List[Module]] = EitherT(loadModules)
 

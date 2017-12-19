@@ -84,7 +84,8 @@ object Survey {
     }
 
     private implicit val decodeRecord: Decoder[(StudentNumber, Map[ModuleCode, Double])] =
-      Decoder.forProduct2("student_number", "scores")((s, r) => (s, r))
+      Decoder.forProduct2("student_number", "scores")(
+        (s: StudentNumber, r: Map[ModuleCode, Double]) => (s, r))
 
     private def recordsFrom(part: List[(StudentNumber, Map[ModuleCode, Double])]) = part.map {
       case (stNum, records) =>
@@ -136,12 +137,13 @@ object Survey {
       case None    => 1
     }
 
-    for {
+    val qM = queryModules.toSet
+
+    (for {
       _ <- 0 until collectionSize
-      module <- queryModules.toSet
-      surveys <- generateSurvey(stRecords, numQueries, allModules, module, visualisations, rand)
-      s <- surveys
-    } yield s
+      module <- qM
+      s = generateSurvey(stRecords, numQueries, allModules, module, visualisations, rand)
+    } yield s).toList
   }
 
   private def generateSurvey(records: List[StudentRecords[SortedMap, ModuleCode, Double]],

@@ -30,7 +30,12 @@ import japgolly.scalajs.react.extra.OnUnmount
 import japgolly.scalajs.react.vdom.html_<^._
 import org.scalajs.dom
 import uk.ac.ncl.la.soar.glance.web.client.style.GlobalStyle
-import uk.ac.ncl.la.soar.glance.web.client.view.{MainMenuView, SimpleSurveyView, SurveyCompleteView, SurveyView}
+import uk.ac.ncl.la.soar.glance.web.client.view.{
+  MainMenuView,
+  SimpleSurveyView,
+  SurveyCompleteView,
+  SurveyView
+}
 
 import scala.scalajs.js
 import scalacss.DevDefaults._
@@ -48,6 +53,10 @@ object Main extends js.JSApp {
   sealed trait Loc
   case object AboutLoc extends Loc
 
+  sealed trait CollectionLoc extends Loc
+  case class CollectionInitLoc(id: UUID) extends CollectionLoc
+  case class CollectionIdxLoc(id: UUID, idx: Int) extends CollectionLoc
+
   sealed trait SurveyLoc extends Loc
   case object AnySurveyFormLoc extends SurveyLoc
   case class SurveyFormLoc(id: UUID) extends SurveyLoc
@@ -55,54 +64,68 @@ object Main extends js.JSApp {
   case object SurveyCompleteLoc extends SurveyLoc
 
   /** Lets initialise the router config */
-  val routerConfig: RouterConfig[Loc] = RouterConfigDsl[Loc].buildConfig({ dsl =>
-    import dsl._
+  val routerConfig: RouterConfig[Loc] = RouterConfigDsl[Loc]
+    .buildConfig({ dsl =>
+      import dsl._
 
-    val surveyConnector: ReactConnectProxy[Pot[SurveyModel]] = GlanceCircuit.connect(_.survey)
-    //Construct routes
+      val surveyConnector: ReactConnectProxy[Pot[SurveyModel]] = GlanceCircuit.connect(_.survey)
 
-    def allSurveys = staticRoute(root, AnySurveyFormLoc) ~> renderR { ctl =>
-      GlanceCircuit.dispatch(RefreshSurveys)
-      surveyConnector(p => SurveyView.component(SurveyView.Props(p, ctl.narrow[Main.SurveyLoc])))
-    }
+      //Construct routes
 
-    //TODO: Work out why redirects after initial page loads don't reload the ranking table contents.
-    def survey = dynamicRouteCT("#survey" / uuid.caseClass[SurveyFormLoc] / "detailed") ~> dynRenderR { (s, ctl) =>
-      surveyConnector(p => SurveyView.component(SurveyView.Props(p, ctl.narrow[Main.SurveyLoc])))
-    }
+      def collection =
+        dynamicRouteCT("#collection" / uuid.caseClass[CollectionIdxLoc]) ~> dynRenderR { (c, ctl) =>
+          GlanceCircuit.dispatch()
+        }
 
-    def simpleSurvey = dynamicRouteCT("#survey" / uuid.caseClass[SimpleSurveyFormLoc]) ~> dynRenderR { (s, ctl) =>
-      GlanceCircuit.dispatch(RefreshSurvey(s.id))
-      surveyConnector(p => SimpleSurveyView.component(SimpleSurveyView.Props(p, ctl.narrow[Main.SurveyLoc])))
-    }
+      def allSurveys = staticRoute(root, AnySurveyFormLoc) ~> renderR { ctl =>
+        GlanceCircuit.dispatch(RefreshSurveys)
+        surveyConnector(p => SurveyView.component(SurveyView.Props(p, ctl.narrow[Main.SurveyLoc])))
+      }
 
-    val listRt =
-      (allSurveys
-        | survey
-        | simpleSurvey
-        | staticRoute("#thanks", SurveyCompleteLoc) ~> renderR(ctl => SurveyCompleteView.component()))
+      //TODO: Work out why redirects after initial page loads don't reload the ranking table contents.
+      def survey =
+        dynamicRouteCT("#survey" / uuid.caseClass[SurveyFormLoc] / "detailed") ~> dynRenderR {
+          (s, ctl) =>
+            surveyConnector(
+              p => SurveyView.component(SurveyView.Props(p, ctl.narrow[Main.SurveyLoc])))
+        }
 
-    //Construct and return final routing table, adding a "Not Found" behaviour
-    listRt.notFound(redirectToPage(AboutLoc)(Redirect.Replace))
-  }).renderWith(layout)
+      def simpleSurvey =
+        dynamicRouteCT("#survey" / uuid.caseClass[SimpleSurveyFormLoc]) ~> dynRenderR { (s, ctl) =>
+          GlanceCircuit.dispatch(RefreshSurvey(s.id))
+          surveyConnector(
+            p => SimpleSurveyView.component(SimpleSurveyView.Props(p, ctl.narrow[Main.SurveyLoc])))
+        }
+
+      val listRt =
+        (allSurveys
+          | survey
+          | simpleSurvey
+          | staticRoute("#thanks", SurveyCompleteLoc) ~> renderR(
+            ctl => SurveyCompleteView.component()))
+
+      //Construct and return final routing table, adding a "Not Found" behaviour
+      listRt.notFound(redirectToPage(AboutLoc)(Redirect.Replace))
+    })
+    .renderWith(layout)
 
   // base layout for all pages
   private def layout(c: RouterCtl[Loc], r: Resolution[Loc]) = {
     <.div(
       // here we use plain Bootstrap class names as these are specific to the top level layout defined here
-      <.nav(^.className := "navbar navbar-inverse navbar-fixed-top",
-        <.div(^.className := "container",
+      <.nav(
+        ^.className := "navbar navbar-inverse navbar-fixed-top",
+        <.div(
+          ^.className := "container",
           <.div(^.className := "navbar-header",
-            <.span(
-              ^.className := "navbar-brand",
-              ^.id := "title",
-              <.img(^.src := "assets/ncl-shield.png"),
-              "SOAR Glance - Evaluation")),
+                <.span(^.className := "navbar-brand",
+                       ^.id := "title",
+                       <.img(^.src := "assets/ncl-shield.png"),
+                       "SOAR Glance - Evaluation")),
           <.div(^.className := "collapse navbar-collapse",
-            MainMenuView.component(
-              MainMenuView.Props(c, r.page)
-            )
-          )
+                MainMenuView.component(
+                  MainMenuView.Props(c, r.page)
+                ))
         )
       ),
       // currently active module is shown in this container
@@ -111,9 +134,8 @@ object Main extends js.JSApp {
   }
 
   /** Mount the router React Component */
-  val router: ScalaComponent.Unmounted[Unit, Resolution[Loc], OnUnmount.Backend] = Router(baseUrl, routerConfig.logToConsole)()
-
-
+  val router: ScalaComponent.Unmounted[Unit, Resolution[Loc], OnUnmount.Backend] =
+    Router(baseUrl, routerConfig.logToConsole)()
 
   /** Main method where we kick everything off */
   override def main(): Unit = {

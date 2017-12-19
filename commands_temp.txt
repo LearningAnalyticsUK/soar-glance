@@ -1,0 +1,1 @@
+glance-eval-cli/run generate -i /Users/hugofirth/Desktop/SoarPruned -m CSC3621 --visualisations recap_vs_time,cluster_vs_time,stud_avg_vs_time,stud_module_scores --collection 3

@@ -27,8 +27,10 @@ import io.circe._
 import japgolly.scalajs.react._
 import japgolly.scalajs.react.extra.router._
 import japgolly.scalajs.react.extra.OnUnmount
+import japgolly.scalajs.react.extra.router.StaticDsl.Route
 import japgolly.scalajs.react.vdom.html_<^._
 import org.scalajs.dom
+import uk.ac.ncl.la.soar.glance.eval.Collection
 import uk.ac.ncl.la.soar.glance.web.client.style.GlobalStyle
 import uk.ac.ncl.la.soar.glance.web.client.view.{
   MainMenuView,
@@ -68,14 +70,27 @@ object Main extends js.JSApp {
     .buildConfig({ dsl =>
       import dsl._
 
-      val surveyConnector: ReactConnectProxy[Pot[SurveyModel]] = GlanceCircuit.connect(_.survey)
+      val surveyConnector = GlanceCircuit.connect(_.survey)
+      val collectionConnector = GlanceCircuit.connect(_.collection)
 
       //Construct routes
-
       def collection =
-        dynamicRouteCT("#collection" / uuid.caseClass[CollectionIdxLoc]) ~> dynRenderR { (c, ctl) =>
-          GlanceCircuit.dispatch()
+        dynamicRouteCT("#collection" / uuid.caseClass[CollectionInitLoc]) ~> dynRenderR {
+          (c, ctl) =>
+            GlanceCircuit.dispatch(LoadCollection(c.id))
+            surveyConnector { p =>
+              SimpleSurveyView.component(SimpleSurveyView.Props(p, ctl.narrow[Main.SurveyLoc]))
+            }
         }
+
+      def collectionIndex = {
+        val r = ("#collection" / uuid / "survey" / int).caseClass[CollectionIdxLoc]
+        dynamicRouteCT(r) ~> dynRenderR { (c, ctl) =>
+          GlanceCircuit.dispatch(LoadCollection(c.id, c.idx))
+          surveyConnector(
+            p => SurveyView.component(SurveyView.Props(p, ctl.narrow[Main.SurveyLoc])))
+        }
+      }
 
       def allSurveys = staticRoute(root, AnySurveyFormLoc) ~> renderR { ctl =>
         GlanceCircuit.dispatch(RefreshSurveys)
@@ -97,12 +112,17 @@ object Main extends js.JSApp {
             p => SimpleSurveyView.component(SimpleSurveyView.Props(p, ctl.narrow[Main.SurveyLoc])))
         }
 
+      def thanks = staticRoute("#thanks", SurveyCompleteLoc) ~> renderR { ctl =>
+        collectionConnector(p => SurveyCompleteView.component((p, ctl)))
+      }
+
       val listRt =
-        (allSurveys
+        (collection
+          | collectionIndex
+          | allSurveys
           | survey
           | simpleSurvey
-          | staticRoute("#thanks", SurveyCompleteLoc) ~> renderR(
-            ctl => SurveyCompleteView.component()))
+          | thanks)
 
       //Construct and return final routing table, adding a "Not Found" behaviour
       listRt.notFound(redirectToPage(AboutLoc)(Redirect.Replace))

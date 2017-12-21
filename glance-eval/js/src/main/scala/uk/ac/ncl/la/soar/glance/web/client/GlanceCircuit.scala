@@ -77,18 +77,15 @@ final case class SubmitSurveyResponse(response: SurveyResponse) extends SurveyAc
 final case class RefreshSurvey(id: UUID) extends SurveyAction
 case object ProgressSimpleSurvey extends SurveyAction
 case object RefreshSurveys extends SurveyAction
-case object DoNothing extends SurveyAction
 
 sealed trait RankingAction extends Action
 final case class ChangeRanks(newRanks: List[StudentNumber], change: IndexChange)
     extends RankingAction
 
 sealed trait CollectionAction extends Action
-final case class LoadCollection(id: UUID) extends CollectionAction
-final case class LoadCollectionIdx(id: UUID, idx: Int) extends CollectionAction
-final case class InitCollection(coll: Either[Error, Collection]) extends CollectionAction
+final case class LoadCollection(id: UUID, idx: Int = 0) extends CollectionAction
+final case class InitCollection(coll: Either[Error, Collection], idx: Int) extends CollectionAction
 case object NextSurvey extends CollectionAction
-case object DoNothing extends CollectionAction
 
 /**
   * Handles actions related to Surveys
@@ -136,7 +133,7 @@ class SurveyHandler[M](modelRW: ModelRW[M, Pot[SurveyModel]]) extends ActionHand
       )
 
     case SubmitSurveyResponse(response) =>
-      effectOnly(Effect(ApiClient.postResponse(response).map(_ => DoNothing)))
+      effectOnly(Effect(ApiClient.postResponse(response).map(_ => NoAction)))
 
     case ProgressSimpleSurvey =>
       updated(modelRW.value.map(_.copy(detailedStage = true)))
@@ -163,14 +160,28 @@ class RankingHandler[M](modelRW: ModelRW[M, Pot[Ranking]]) extends ActionHandler
 class CollectionHandler[M](modelRW: ModelRW[M, Pot[Collection]]) extends ActionHandler(modelRW) {
 
   override protected def handle = {
-    case LoadCollection(id) =>
-      effectOnly(Effect(ApiClient.loadCollection(id).map(c => InitCollection(c))))
-    case InitCollection(decodedCollection) =>
+    case LoadCollection(id, idx) =>
+      effectOnly(Effect(ApiClient.loadCollection(id).map(c => InitCollection(c, idx))))
+    case InitCollection(decodedCollection, idx) =>
+      println(s"[INFO] - decoding collection")
       decodedCollection match {
-        case Left(err) => updated(Failed(err))
+        case Left(err) =>
+          println(s"[WARN] - failed to decode collection: $err")
+          updated(Failed(err))
         case Right(coll) =>
-          val surveyId = coll.surveyIds.head
+          println(s"[INFO] - $coll")
+          val surveyId = coll.surveyIds.get(idx).getOrElse(coll.surveyIds.head)
           updated(Ready(coll), Effect.action(RefreshSurvey(surveyId)))
+      }
+    case NextSurvey =>
+      value match {
+        case Ready(c) if c.currentIsLast => noChange
+        case Ready(c) =>
+          val nextIdx = c.currentIdx + 1
+          c.surveyIds.get(nextIdx).fold(updated(Empty)) { nextSurvey =>
+            updated(Ready(c.copy(currentIdx = nextIdx)), Effect.action(RefreshSurvey(nextSurvey)))
+          }
+        case _ => noChange
       }
   }
 }
@@ -183,6 +194,7 @@ object GlanceCircuit extends Circuit[GlanceModel] with ReactConnector[GlanceMode
 
   override protected def initialModel = GlanceModel(Empty, Empty)
 
+  private val collectionRW = zoomTo(_.collection)
   private val surveyRW = zoomTo(_.survey)
   //TODO: Figure out if this RW is an absolute nightmare.
   private val rankRW = {
@@ -206,6 +218,7 @@ object GlanceCircuit extends Circuit[GlanceModel] with ReactConnector[GlanceMode
 
   //TODO: Look into zoom vs zoomMapRW
   override protected def actionHandler: GlanceCircuit.HandlerFunction = composeHandlers(
+    new CollectionHandler(collectionRW),
     new SurveyHandler(surveyRW),
     new RankingHandler(rankRW)
   )

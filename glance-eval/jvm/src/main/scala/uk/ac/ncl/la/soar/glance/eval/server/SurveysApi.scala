@@ -26,18 +26,8 @@ import io.finch._
 import io.finch.circe._
 import monix.cats._
 import monix.eval.Task
-import uk.ac.ncl.la.soar.glance.eval.db.{
-  ClusterSessionDb,
-  CollectionDb,
-  RecapSessionDb,
-  SurveyDb
-}
-import uk.ac.ncl.la.soar.glance.eval.{
-  ClusterSession,
-  RecapSession,
-  Session,
-  Survey
-}
+import uk.ac.ncl.la.soar.glance.eval.db.{ClusterSessionDb, CollectionDb, RecapSessionDb, SurveyDb}
+import uk.ac.ncl.la.soar.glance.eval.{ClusterSession, RecapSession, Session, Survey}
 import uk.ac.ncl.la.soar.server.Implicits._
 
 /**
@@ -53,20 +43,20 @@ class SurveysApi(surveyRepository: SurveyDb,
     //TODO: Switch this from Option to Either or Validated so that we can actually have a purpose build notfound message
     //  At the moment nominally a collection id could exist but a survey id could not. Tbf this does indicate an issue
     //  on our end rather than user error.
-    collectionRepository.findFirst(id).toFuture.map {
-      case Some(s) => Ok(Survey.truncateQueryRecords(s))
+    collectionRepository.find(id).toFuture.map {
+      case Some(c) => Ok(c)
       case None    => genNotFound("Collection", id)
     }
   }
 
   //collection/id/index - return indexed survey in collection, if exists
+  //TODO: Work out if this endpoint is actually needed on the backend - its never called.
   /** Endpoint returns the survey in a collection at a given index in response to `GET/collections/id/idx` */
-  val collectionIdx = get("collections" :: path[UUID] :: path[Int]) {
-    (id: UUID, idx: Int) =>
-      collectionRepository.findIdx(id, idx).toFuture.map {
-        case Some(s) => Ok(Survey.truncateQueryRecords(s))
-        case None    => genNotFound("Collection", id)
-      }
+  val collectionIdx = get("collections" :: path[UUID] :: path[Int]) { (id: UUID, idx: Int) =>
+    collectionRepository.findIdx(id, idx).toFuture.map {
+      case Some(s) => Ok(Survey.truncateQueryRecords(s))
+      case None    => genNotFound("Collection", id)
+    }
   }
 
   /** Endpoint returns all survey ids in response to `GET /surveys` */

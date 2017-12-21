@@ -28,8 +28,8 @@ import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.html_<^._
 import uk.ac.ncl.la.soar.{ModuleCode, StudentNumber}
 import uk.ac.ncl.la.soar.data.{Module, StudentRecords}
-import uk.ac.ncl.la.soar.glance.eval.Survey
-import uk.ac.ncl.la.soar.glance.web.client.{ChangeRanks, Main, SubmitSurveyResponse, SurveyModel}
+import uk.ac.ncl.la.soar.glance.eval.{Collection, Survey}
+import uk.ac.ncl.la.soar.glance.web.client._
 import uk.ac.ncl.la.soar.glance.web.client.component._
 import uk.ac.ncl.la.soar.glance.web.client.component.chart.StudentChartsContainer
 import uk.ac.ncl.la.soar.glance.web.client.data.CohortAttainmentSummary
@@ -56,7 +56,7 @@ object SurveyView {
 
     def handleStudentClick(student: StudentRecords[SortedMap, ModuleCode, Double]) =
       bs.modState { s =>
-        if(s.selectingR)
+        if (s.selectingR)
           s.copy(selectedR = student.some)
         else
           s.copy(selectedL = student.some)
@@ -64,7 +64,7 @@ object SurveyView {
 
     def handleClearStudent =
       bs.modState { s =>
-        if(s.selectingR)
+        if (s.selectingR)
           s.copy(selectedR = None)
         else
           s.copy(selectedL = None)
@@ -86,13 +86,15 @@ object SurveyView {
     private def students(survey: Survey) = survey.entries
 
     /** Construct the presentation of the query students to fill the rankable table rows */
-    private def queryStudents(survey: Survey) = survey.entries.filter( r => survey.queries.contains(r.number) )
+    private def queryStudents(survey: Survey) =
+      survey.entries.filter(r => survey.queries.contains(r.number))
 
     /** Construct the function which provides the presentation of a table cell, given a StudentRecord and string key */
-    private def renderCell(default: String)(student: StudentRecords[SortedMap, ModuleCode, Double], key: String) =
+    private def renderCell(default: String)(student: StudentRecords[SortedMap, ModuleCode, Double],
+                                            key: String) =
       key match {
         case k if k == indexCol => student.number
-        case k => student.record.get(k).fold(default)(_.toString)
+        case k                  => student.record.get(k).fold(default)(_.toString)
       }
 
     /** Construct the NEL of filters from the survey model, to be passed to the charts component */
@@ -101,52 +103,56 @@ object SurveyView {
       val keywordModSets = modKeywordPairs.groupBy(_._1).mapValues(_.map(_._2).toSet)
       NonEmptyVector(
         Select.Choice((_: ModuleCode, _: Double) => true, "None"),
-        keywordModSets.map({ case (keyword, modSet) =>
-          Select.Choice((mc: ModuleCode, _: Double) => modSet.contains(mc), keyword)
-        }).toVector
+        keywordModSets
+          .map({
+            case (keyword, modSet) =>
+              Select.Choice((mc: ModuleCode, _: Double) => modSet.contains(mc), keyword)
+          })
+          .toVector
       )
     }
 
     private val rankingTable =
-      ScalaComponent.builder[(ModelProxy[Pot[SurveyModel]], State)]("RankingTable")
-      .render($ => {
-        val (proxy, state) = $.props
-        val model = proxy()
+      ScalaComponent
+        .builder[(ModelProxy[Pot[SurveyModel]], State)]("RankingTable")
+        .render($ => {
+          val (proxy, state) = $.props
+          val model = proxy()
 
-        val focused = (state.selectedL, state.selectedR)
+          val focused = (state.selectedL, state.selectedR)
 
-        <.div(
-          ^.id := "ranking",
-          <.span(
-            ^.className := "sub-title",
-            Icon.listOl(Icon.Medium),
-            <.h2("Rank students")
-          ),
-          model.render { sm =>
-
-            val rankModule = sm.survey.moduleToRank
-            <.div(
-              ^.classSet1(
-                "table-responsive",
-                "selecting" -> !state.selectingR,
-                "comparing" -> state.selectingR
-              ),
-              StudentsSortableTable.component(
-                StudentsSortableTable.Props(
-                  rankModule,
-                  queryStudents(sm.survey),
-                  headings(sm.survey, sm.modules),
-                  renderCell(" "),
-                  handleStudentClick,
-                  (ranks, change) => proxy.dispatchCB(ChangeRanks(ranks, change)),
-                  focused
+          <.div(
+            ^.id := "ranking",
+            <.span(
+              ^.className := "sub-title",
+              Icon.listOl(Icon.Medium),
+              <.h2("Rank students")
+            ),
+            model.render {
+              sm =>
+                val rankModule = sm.survey.moduleToRank
+                <.div(
+                  ^.classSet1(
+                    "table-responsive",
+                    "selecting" -> !state.selectingR,
+                    "comparing" -> state.selectingR
+                  ),
+                  StudentsSortableTable.component(
+                    StudentsSortableTable.Props(
+                      rankModule,
+                      queryStudents(sm.survey),
+                      headings(sm.survey, sm.modules),
+                      renderCell(" "),
+                      handleStudentClick,
+                      (ranks, change) => proxy.dispatchCB(ChangeRanks(ranks, change)),
+                      focused
+                    )
+                  )
                 )
-              )
-            )
-          }
-        )
-      })
-      .build
+            }
+          )
+        })
+        .build
 
     def render(p: Props, s: State): VdomElement = {
       //Get the necessary data from the model
@@ -188,9 +194,10 @@ object SurveyView {
             val smConnector = p.proxy.connect(_.get)
             SurveyResponseForm.component(
               SurveyResponseForm.Props(
-                p.proxy,
-                {
-                  case Some(r) => p.proxy.dispatchCB(SubmitSurveyResponse(r)) >> p.ctrl.set(Main.SurveyCompleteLoc)
+                p.proxy, {
+                  case Some(r) =>
+                    p.proxy.dispatchCB(SubmitSurveyResponse(r)) >> p.ctrl.set(
+                      Main.SurveyCompleteLoc)
                   case None => Callback.empty
                 }
               )
@@ -208,11 +215,13 @@ object SurveyView {
             <.p(
               <.strong("Welcome"),
               " Please rank students below by how you believe they will perform in the module ",
-              <.strong(s"$rankModule: ${sm.modules.get(rankModule).flatMap(m => m.title).getOrElse("")}"),
+              <.strong(
+                s"$rankModule: ${sm.modules.get(rankModule).flatMap(m => m.title).getOrElse("")}"),
               ". Higher is better."
             ),
             //Why is the type annotation necessary below?
-            <.p(<.strong("Module aims: "), sm.modules.get(rankModule).flatMap(m => m.description).getOrElse(""): String),
+            <.p(<.strong("Module aims: "),
+                sm.modules.get(rankModule).flatMap(m => m.description).getOrElse(""): String),
             <.p(
               <.strong("Module keywords: "),
               sm.modules.get(rankModule).fold(List.empty[String])(_.keywords).mkString(", ")
@@ -231,7 +240,8 @@ object SurveyView {
 
   }
 
-  val component = ScalaComponent.builder[Props]("SurveyView")
+  val component = ScalaComponent
+    .builder[Props]("SurveyView")
     .initialStateFromProps(p => State(None, None, selectingR = false))
     .renderBackend[Backend]
     .componentDidMount(scope => scope.backend.mounted(scope.props))
@@ -243,13 +253,32 @@ object SurveyView {
   * React Component for the SurveyCompleteView, shown after a Survey is submitted
   */
 object SurveyCompleteView {
-  val component = ScalaComponent.builder[Unit]("Survey Complete")
-    .renderStatic({
-      <.div(
-        ^.className := "placeholders",
-        <.h4("Thank you for completing a survey")
-      )
-    })
-    .build
-}
+  val component =
+    ScalaComponent
+      .builder[(ModelProxy[Pot[Collection]], RouterCtl[Main.Loc])]("Survey Complete")
+      .render_P({ p =>
+        val (model, ctl) = p
 
+        <.div(
+          ^.className := "placeholders",
+          <.h4("Thank you for completing a survey"),
+          model().render {
+            c =>
+              if (c.currentIsLast) {
+                <.p("We have no more surveys at this time.")
+              } else {
+                <.p("If you have time, please consider doing another survey.")
+                <.button(
+                  ^.`type` := "button",
+                  ^.className := "btn btn-primary",
+                  "Next Survey",
+                  ^.onClick -->
+                    (model.dispatchCB(NextSurvey) >>
+                      ctl.set(Main.CollectionIdxLoc(c.id, c.currentIdx)))
+                )
+              }
+          }
+        )
+      })
+      .build
+}

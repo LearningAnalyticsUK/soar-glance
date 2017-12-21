@@ -22,16 +22,32 @@ import java.util.UUID
 import cats._
 import cats.implicits._
 import cats.data.NonEmptyVector
+import io.circe._
+import io.circe.syntax._
 import uk.ac.ncl.la.soar.ModuleCode
 
 /**
   * Basic struct containing series of surveys
   */
-case class Collection(id: UUID, module: ModuleCode, surveyIds: NonEmptyVector[UUID], currentIdx: Int = 0) {
+case class Collection(id: UUID,
+                      module: ModuleCode,
+                      surveyIds: NonEmptyVector[UUID],
+                      currentIdx: Int = 0) {
 
   def current: UUID = surveyIds.get(currentIdx).getOrElse(surveyIds.head)
 
   def currentIsLast: Boolean = (surveyIds.length - 1) == currentIdx
 
   val numEntries: Int = surveyIds.length
+}
+
+object Collection {
+
+//  implicit val encodeCollection: Encoder[Collection] = new Encoder[Collection] {
+//    override def apply(a: Collection): Json = Json.obj(
+//      "id" -> a.id.asJson,
+//      "module" -> a.module.asJson,
+//      "surveyIds" -> a.surveyIds.
+//    )
+//  }
 }

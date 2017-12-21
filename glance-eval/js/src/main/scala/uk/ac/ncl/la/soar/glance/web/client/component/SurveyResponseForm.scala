@@ -37,7 +37,8 @@ import scala.scalajs.js.Date
   */
 object SurveyResponseForm {
 
-  case class Props(proxy: ModelProxy[Pot[SurveyModel]], submitHandler: Option[IncompleteResponse] => Callback)
+  case class Props(proxy: ModelProxy[Pot[SurveyModel]],
+                   submitHandler: Option[IncompleteResponse] => Callback)
 
   case class State(respondent: String)
 
@@ -51,7 +52,8 @@ object SurveyResponseForm {
       bs.modState(s => s.copy(respondent = text))
     }
 
-    private val emailRegex = """^[a-zA-Z0-9\.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$""".r
+    private val emailRegex =
+      """^[a-zA-Z0-9\.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$""".r
 
     private def validEmail(e: String): Boolean = {
       if (e.trim.isEmpty)
@@ -64,7 +66,12 @@ object SurveyResponseForm {
 
     private def buildResponseFromProps(p: Props, s: State) = {
       p.proxy().toOption.map { sm =>
-        IncompleteResponse(sm.survey, sm.simpleRanking, sm.detailedRanking, s.respondent, sm.startTime, UUID.randomUUID)
+        IncompleteResponse(sm.survey,
+                           sm.simpleRanking,
+                           sm.detailedRanking,
+                           s.respondent,
+                           sm.startTime,
+                           UUID.randomUUID)
       }
     }
 
@@ -79,7 +86,7 @@ object SurveyResponseForm {
             ^.id := "emailInput",
             ^.placeholder := "Email",
             ^.onChange ==> formValueChange
-          ),
+          )
         ),
         <.button(
           ^.`type` := "button",
@@ -92,7 +99,8 @@ object SurveyResponseForm {
     }
   }
 
-  val component = ScalaComponent.builder[Props]("SurveyResponseForm")
+  val component = ScalaComponent
+    .builder[Props]("SurveyResponseForm")
     .initialStateFromProps(p => State(""))
     .renderBackend[Backend]
     .build

@@ -260,23 +260,50 @@ object SurveyCompleteView {
         val (model, ctl) = p
 
         <.div(
-          ^.className := "placeholders",
-          <.h4("Thank you for completing a survey"),
+          ^.className := "row",
           model().render {
             c =>
-              if (c.currentIsLast) {
-                <.p("We have no more surveys at this time.")
-              } else {
-                <.p("If you have time, please consider doing another survey.")
-                <.button(
-                  ^.`type` := "button",
-                  ^.className := "btn btn-primary",
-                  "Next Survey",
-                  ^.onClick --> {
-                    model.dispatchCB(NextCollectionSurvey(ctl.set(Main.NextCollectionLoc(c.id))))
-                  }
-                )
+              val callToAction = {
+                if (c.currentIsLast) {
+                  <.p("We have no more surveys at this time. Thank you for all your help!")
+                } else {
+                  List(
+                    <.p("If you have time, please consider doing another one."),
+                    <.p("Otherwise, if you'd like to resume at a later date, please do so using " +
+                      "the link below. This helps us track which surveys you have completed."),
+                    <.div(
+                      ^.className := "input-group",
+                      <.div(
+                        ^.className := "bootstrap-tagsinput",
+                        <.span(ctl.urlFor(Main.CollectionIdxLoc(c.id, c.currentIdx + 1)).value)
+                      ),
+                      <.div(
+                        ^.className := "input-group-btn",
+                        <.button(
+                          ^.`type` := "button",
+                          ^.className := "btn btn-primary",
+                          Icon.copy(Icon.Small)
+                        )
+                      )
+                    ),
+                    <.button(
+                      ^.`type` := "button",
+                      ^.className := "btn btn-primary",
+                      "Next Survey",
+                      ^.onClick --> {
+                        model.dispatchCB(
+                          NextCollectionSurvey(ctl.set(Main.NextCollectionLoc(c.id))))
+                      }
+                    )
+                  ).toTagMod
+                }
               }
+
+              <.div(
+                ^.className := "col-md-12",
+                <.h4("Thank you for completing a survey"),
+                callToAction
+              )
           }
         )
       })

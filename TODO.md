@@ -50,3 +50,6 @@ json object is fine).
 * [ ] Create an uninstall script which removes docker images and all mounted volumes etc...
     * Add an option for a hard uninstall which removes all dependencies as well.
      
+
+### Other admin
+

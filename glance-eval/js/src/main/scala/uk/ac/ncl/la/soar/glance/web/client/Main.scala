@@ -57,6 +57,7 @@ object Main extends js.JSApp {
 
   sealed trait CollectionLoc extends Loc
   case class CollectionInitLoc(id: UUID) extends CollectionLoc
+  case class NextCollectionLoc(id: UUID) extends CollectionLoc
   case class CollectionIdxLoc(id: UUID, idx: Int) extends CollectionLoc
 
   sealed trait SurveyLoc extends Loc
@@ -88,7 +89,16 @@ object Main extends js.JSApp {
         dynamicRouteCT(r) ~> dynRenderR { (c, ctl) =>
           GlanceCircuit.dispatch(LoadCollection(c.id, c.idx))
           surveyConnector(
-            p => SurveyView.component(SurveyView.Props(p, ctl.narrow[Main.SurveyLoc])))
+            p => SimpleSurveyView.component(SimpleSurveyView.Props(p, ctl.narrow[Main.SurveyLoc])))
+        }
+      }
+
+      def nextCollection = {
+        val r = ("#collection" / uuid / "next").caseClass[NextCollectionLoc]
+        dynamicRouteCT(r) ~> dynRenderR { (c, ctl) =>
+          surveyConnector { p =>
+            SimpleSurveyView.component(SimpleSurveyView.Props(p, ctl.narrow[Main.SurveyLoc]))
+          }
         }
       }
 
@@ -119,6 +129,7 @@ object Main extends js.JSApp {
       val listRt =
         (collection
           | collectionIndex
+          | nextCollection
           | allSurveys
           | survey
           | simpleSurvey

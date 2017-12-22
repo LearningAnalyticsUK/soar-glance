@@ -28,6 +28,7 @@ import diode.data._
 import diode.util._
 import diode.react.ReactConnector
 import io.circe._
+import japgolly.scalajs.react.CallbackTo
 import uk.ac.ncl.la.soar.{ModuleCode, StudentNumber}
 import uk.ac.ncl.la.soar.glance.eval._
 import uk.ac.ncl.la.soar.glance.web.client.data.CohortAttainmentSummary
@@ -38,6 +39,8 @@ import uk.ac.ncl.la.soar.glance.web.client.component.sortable.IndexChange
 
 import scala.scalajs.js.Date
 import scala.collection.immutable.SortedMap
+import scala.concurrent.Future
+import scala.concurrent.duration._
 
 /**
   * Hierarchical definition of Application model, composing various other models.
@@ -75,6 +78,7 @@ final case class InitSurvey(info: Either[Error, SurveyModel.Info]) extends Surve
 final case class SelectStudent(id: StudentNumber) extends SurveyAction
 final case class SubmitSurveyResponse(response: SurveyResponse) extends SurveyAction
 final case class RefreshSurvey(id: UUID) extends SurveyAction
+final case class RefreshSurveyWithEffect(id: UUID, eff: Effect) extends SurveyAction
 case object ProgressSimpleSurvey extends SurveyAction
 case object RefreshSurveys extends SurveyAction
 
@@ -85,7 +89,8 @@ final case class ChangeRanks(newRanks: List[StudentNumber], change: IndexChange)
 sealed trait CollectionAction extends Action
 final case class LoadCollection(id: UUID, idx: Int = 0) extends CollectionAction
 final case class InitCollection(coll: Either[Error, Collection], idx: Int) extends CollectionAction
-case object NextSurvey extends CollectionAction
+final case class NextCollectionSurvey(redirect: CallbackTo[Unit]) extends CollectionAction
+final case class LoadCollectionSurvey(coll: Collection, idx: Int) extends CollectionAction
 
 /**
   * Handles actions related to Surveys
@@ -114,7 +119,12 @@ class SurveyHandler[M](modelRW: ModelRW[M, Pot[SurveyModel]]) extends ActionHand
       effectOnly(Effect(ApiClient.loadSurveyIds.map(s => InitSurveys(s))))
 
     case RefreshSurvey(id) =>
+      println(s"[INFO] - Submitting rest requests for survey $id")
       effectOnly(loadSurveyInfo(id))
+
+    case RefreshSurveyWithEffect(id, eff) =>
+      println(s"[INFO] - Submitting rest requests for survey $id")
+      effectOnly(loadSurveyInfo(id) >> eff)
 
     case InitSurveys(decodedSurveyIds) =>
       decodedSurveyIds.fold(
@@ -136,7 +146,7 @@ class SurveyHandler[M](modelRW: ModelRW[M, Pot[SurveyModel]]) extends ActionHand
       effectOnly(Effect(ApiClient.postResponse(response).map(_ => NoAction)))
 
     case ProgressSimpleSurvey =>
-      updated(modelRW.value.map(_.copy(detailedStage = true)))
+      updated(value.map(_.copy(detailedStage = true)))
   }
 }
 
@@ -159,31 +169,54 @@ class RankingHandler[M](modelRW: ModelRW[M, Pot[Ranking]]) extends ActionHandler
   */
 class CollectionHandler[M](modelRW: ModelRW[M, Pot[Collection]]) extends ActionHandler(modelRW) {
 
+  private def isCached(pc: Pot[Collection], id: UUID) = pc.fold(false)(_.id == id)
+
   override protected def handle = {
     case LoadCollection(id, idx) =>
-      effectOnly(Effect(ApiClient.loadCollection(id).map(c => InitCollection(c, idx))))
+      if (isCached(modelRW.value, id)) {
+        value.fold(noChange)(c => effectOnly(Effect.action(LoadCollectionSurvey(c, idx))))
+      } else {
+        effectOnly(Effect(ApiClient.loadCollection(id).map(c => InitCollection(c, idx))))
+      }
+
     case InitCollection(decodedCollection, idx) =>
-      println(s"[INFO] - decoding collection")
       decodedCollection match {
         case Left(err) =>
           println(s"[WARN] - failed to decode collection: $err")
           updated(Failed(err))
         case Right(coll) =>
-          println(s"[INFO] - $coll")
-          val surveyId = coll.surveyIds.get(idx).getOrElse(coll.surveyIds.head)
-          updated(Ready(coll), Effect.action(RefreshSurvey(surveyId)))
+          effectOnly(Effect.action(LoadCollectionSurvey(coll, idx)))
       }
-    case NextSurvey =>
+
+    case NextCollectionSurvey(redir) =>
+      println(s"[INFO] - Received Action to load next survey")
       value match {
         case Ready(c) if c.currentIsLast => noChange
         case Ready(c) =>
           val nextIdx = c.currentIdx + 1
-          c.surveyIds.get(nextIdx).fold(updated(Empty)) { nextSurvey =>
-            updated(Ready(c.copy(currentIdx = nextIdx)), Effect.action(RefreshSurvey(nextSurvey)))
-          }
+          println(s"[INFO] - Next survey index is $nextIdx")
+          //TODO: Fix this horrible mess
+          val surveyId = c.surveyIds.get(nextIdx).getOrElse(c.surveyIds.head)
+          val redirEffect = Effect(redir.toFuture.map(_ => NoAction))
+          val eff = Effect.action(RefreshSurveyWithEffect(surveyId, redirEffect))
+          val newColl = c.copy(currentIdx = nextIdx)
+          println(
+            s"[INFO] - Loading survey (id: $surveyId) from collection " +
+              s"(id: ${c.id}), with index $nextIdx.")
+          updated(Ready(newColl), eff)
         case _ => noChange
       }
+
+    case LoadCollectionSurvey(c, idx) =>
+      val surveyId = c.surveyIds.get(idx).getOrElse(c.surveyIds.head)
+
+      val newColl = c.copy(currentIdx = idx)
+      println(
+        s"[INFO] - Loading survey (id: $surveyId) from collection " +
+          s"(id: ${c.id}), with index $idx.")
+      updated(Ready(newColl), Effect.action(RefreshSurvey(surveyId)))
   }
+
 }
 
 /**

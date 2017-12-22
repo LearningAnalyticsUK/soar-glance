@@ -272,9 +272,9 @@ object SurveyCompleteView {
                   ^.`type` := "button",
                   ^.className := "btn btn-primary",
                   "Next Survey",
-                  ^.onClick -->
-                    (model.dispatchCB(NextSurvey) >>
-                      ctl.set(Main.CollectionIdxLoc(c.id, c.currentIdx)))
+                  ^.onClick --> {
+                    model.dispatchCB(NextCollectionSurvey(ctl.set(Main.NextCollectionLoc(c.id))))
+                  }
                 )
               }
           }

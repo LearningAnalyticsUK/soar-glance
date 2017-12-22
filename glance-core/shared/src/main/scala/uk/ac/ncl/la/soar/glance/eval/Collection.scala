@@ -39,15 +39,6 @@ case class Collection(id: UUID,
   def currentIsLast: Boolean = (surveyIds.length - 1) == currentIdx
 
   val numEntries: Int = surveyIds.length
-}
 
-object Collection {
-
-//  implicit val encodeCollection: Encoder[Collection] = new Encoder[Collection] {
-//    override def apply(a: Collection): Json = Json.obj(
-//      "id" -> a.id.asJson,
-//      "module" -> a.module.asJson,
-//      "surveyIds" -> a.surveyIds.
-//    )
-//  }
+  def isValidIdx(idx: Int) = idx >= 0 && idx < numEntries
 }

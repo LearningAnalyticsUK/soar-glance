@@ -260,3 +260,20 @@ tr.active-comparing {
 div#cohort-summary {
     float: right;
 }
+
+/*
+ * Thank you page
+ */
+.panel#thanks-panel {
+    padding: 10px;
+}
+
+div.overflow-x-container {
+    overflow-x: hidden;
+    white-space: nowrap;
+}
+
+.overflow-x-item {
+    display: inline-block;
+    text-overflow: ellipsis;
+}

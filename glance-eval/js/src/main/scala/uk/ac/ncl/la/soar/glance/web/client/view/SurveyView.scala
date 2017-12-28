@@ -37,6 +37,8 @@ import uk.ac.ncl.la.soar.glance.web.client.style.Icon
 
 import scala.collection.immutable.SortedMap
 import scala.scalajs.js
+import org.scalajs.dom
+import uk.ac.ncl.la.soar.glance.web.client.component.clipboard.CopyToClipboard
 
 /**
   * React Component for the SurveyView
@@ -257,52 +259,73 @@ object SurveyCompleteView {
     ScalaComponent
       .builder[(ModelProxy[Pot[Collection]], RouterCtl[Main.Loc])]("Survey Complete")
       .render_P({ p =>
-        val (model, ctl) = p
+        val (proxy, ctl) = p
+        val model = proxy()
 
         <.div(
           ^.className := "row",
-          model().render {
+          model.render {
             c =>
+              val resumeUrl = ctl.urlFor(Main.CollectionIdxLoc(c.id, c.currentIdx + 1)).value
+
               val callToAction = {
                 if (c.currentIsLast) {
                   <.p("We have no more surveys at this time. Thank you for all your help!")
                 } else {
                   List(
                     <.p("If you have time, please consider doing another one."),
-                    <.p("Otherwise, if you'd like to resume at a later date, please do so using " +
-                      "the link below. This helps us track which surveys you have completed."),
+                    <.p("Otherwise, if you'd like to resume later, please do so using the link " +
+                      "below. This helps us track which surveys you have completed."),
+                    <.hr(),
                     <.div(
-                      ^.className := "input-group",
+                      ^.className := "row",
                       <.div(
-                        ^.className := "bootstrap-tagsinput",
-                        <.span(ctl.urlFor(Main.CollectionIdxLoc(c.id, c.currentIdx + 1)).value)
-                      ),
-                      <.div(
-                        ^.className := "input-group-btn",
+                        ^.className := "col-md-2 col-md-offset-2",
                         <.button(
                           ^.`type` := "button",
                           ^.className := "btn btn-primary",
-                          Icon.copy(Icon.Small)
+                          "Next Survey",
+                          ^.onClick -->
+                            proxy.dispatchCB(
+                              NextCollectionSurvey(ctl.set(Main.NextCollectionLoc(c.id))))
+                        )
+                      ),
+                      <.div(
+                        ^.className := "col-md-6",
+                        <.div(
+                          ^.className := "input-group",
+                          <.input(
+                            ^.`type` := "text",
+                            ^.className := "form-control",
+                            ^.value := resumeUrl,
+                            ^.readOnly := true
+                          ),
+                          <.span(
+                            ^.className := "input-group-btn",
+                            CopyToClipboard(
+                              CopyToClipboard.props(resumeUrl),
+                              <.button(
+                                ^.`type` := "button",
+                                ^.className := "btn btn-primary",
+                                "Copy"
+                              )
+                            )
+                          )
                         )
                       )
-                    ),
-                    <.button(
-                      ^.`type` := "button",
-                      ^.className := "btn btn-primary",
-                      "Next Survey",
-                      ^.onClick --> {
-                        model.dispatchCB(
-                          NextCollectionSurvey(ctl.set(Main.NextCollectionLoc(c.id))))
-                      }
                     )
                   ).toTagMod
                 }
               }
 
               <.div(
-                ^.className := "col-md-12",
-                <.h4("Thank you for completing a survey"),
-                callToAction
+                ^.className := "col-md-8 col-md-offset-2",
+                <.div(
+                  ^.className := "panel panel-default",
+                  ^.id := "thanks-panel",
+                  <.h4("Thank you for completing a survey!"),
+                  callToAction
+                )
               )
           }
         )

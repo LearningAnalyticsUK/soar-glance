@@ -369,6 +369,7 @@ lazy val glanceEvalJS = glanceEval.js
       "org.webjars" % "datatables" % datatablesVersion / "jquery.dataTables.js" minified "jquery.dataTables.min.js" dependsOn "jquery.js",
       "org.webjars" % "datatables" % datatablesVersion / "dataTables.bootstrap.js" minified "dataTables.bootstrap.min.js" dependsOn "jquery.js",
       "org.webjars" % "chartjs" % "2.1.3" / "Chart.js" minified "Chart.min.js",
+      "org.webjars.npm" % "react-copy-to-clipboard" % "5.0.1" / "react-copy-to-clipboard.js" minified "react-copy-to-clipboard.min.js" dependsOn("react-with-addons.js", "react-dom.js"),
       ProvidedJS / "react-sortable-hoc.js" minified "react-sortable-hoc.min.js" dependsOn("react-with-addons.js", "react-dom.js")
     ),
     scalaJSUseMainModuleInitializer := true,

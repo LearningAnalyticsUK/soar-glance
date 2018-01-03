@@ -6,14 +6,13 @@ been freshly installed and be mostly unmodified. The standard Ubuntu image from 
 etc...) will work perfectly.
 
 If you are comfortable with the technology involved in building Glance and don't want to 
-use the "default" configuration for some reason then of course you can just build it yourself. To that end we also
-provide a list of software prerequisites and a brief description of the build structure. Most people should try and use 
+use the "default" configuration for some reason then of course you can just build it yourself. Most people should try and use 
 Ubuntu 16 however, as this has been well tested and we provide a number of helpful scripts for installations with that OS. 
 
 The guide does assume very basic familiarity with the use of a bash shell on Ubuntu, though all commands to be executed 
 are listed verbatim and explained. 
 
-### Installing Glance on Ubuntu 16 (the first path) 
+### Installing Glance on Ubuntu 16 
 
 1. Check that the packages already installed on your server are up to date: 
     ```bash
@@ -193,9 +192,11 @@ Glance's database: This can be done with the following command:
                            an optional integer to use as a seed when randomly (uniformly) selecting student records to include in a survey.
     ```
     
-    The first 3 options are compulsory, whilst the remaining 4 are optional depending on the surveys you wish to generate.
-    When run, the above command will create surveys in the Glance database and return links where they may be 
-    accessed and conducted by instructors. 
+    The first 3 options are compulsory, whilst the remaining 4 are optional depending on the 
+    surveys you wish to generate. When run, the above command will create surveys in the Glance 
+    database and return their ids (long strings of number and letters like: 
+    `6d7ca6f2-7970-4f24-881b-4f84c0386c63`). These may be used to access surveys in a web browser, 
+    as detailed in the next step. 
     
     **Note**: Such a large number of options are included in the `glance-cli` tools in order to support configurability,
     however they also create edge cases where combinations of commands or options may fail to behave as they should. 
@@ -205,14 +206,27 @@ Glance's database: This can be done with the following command:
     
     Effort has been made to make the error reporting of the `glance-cli` tools fairly comprehensive. If you encounter such 
     an error, please adjust your combination of command line options accordingly. If you encounter no error, but Glance
-    still isn't generating surveys as you believe it should, please submit an [issue](). 
+    still isn't generating surveys as you believe it should, please submit an [issue](https://github.com/NewcastleComputingScience/student-outcome-accelerator/issues/new). 
     
     **Note**: The optional `random-seed` option is used if you wish to ensure that `glance-cli`  generates the exact same
     surveys as on a previous execution (selects the same students etc...). Most of the time it can be safely ignored.
     
-5. Check the surveys are working. 
+5. Check the surveys are working in your browser of choice. You can access them at 
+_http://server.address/index.html#survey/{id}_ where _{id}_ is the long string of characters 
+produced by the _generate_ command. If you would like to check that a collection of surveys is 
+working the url to use is similar: _http://server.address/index.html#collection/{id}_ where _{id}_ 
+corresponds to one of the long strings listed as a collection in the output of _generate_. 
 
-6. Download some results.
+    **Note**: _server.address_ corresponds to the ip address or domain name associated with the 
+    server on which you are setting up Glance. If you are trying to test the surveys from the same
+    machine you should instead use _http://localhost/index..._.
+
+6. Share individual surveys or collections with instructors using the links from the previous step.
+Once they have completed some (a simple process which is briefly explained [here](README.md)), you 
+will wish to download their results. One way of doing this is simply to take a backup of the 
+Glance database, which we explain later. Another way is to run the following command: 
+
+
 
 ### Performing miscellaneous tasks 
 
@@ -230,86 +244,10 @@ Glance's database: This can be done with the following command:
 
 ### Support and issues
 
-If you have any issues with any of the steps in this Guide, please submit an issue here according to the following template:
-
-### Other information
-
-If you have followed the above guides successfully you may safely ignore this section.
-
-##### Software prerequisites for Glance
+If you have any issues with any of the steps in this Guide, please submit an issue 
+[here](https://github.com/NewcastleComputingScience/student-outcome-accelerator/issues/new) and we 
+will try to help.
 
 
-##### Glance build description
-
-
-1. Create Postgres database with correct details using the following two commands:
-    ```
-    psql -c 'create user postgres createdb'
-    psql -c 'create database glance_eval' -U postgres
-    ```
-
-2. Download and extract datafiles from provided NCL Dropoff link.
-
-3. Start the `sbt` console in the `soar` directory by executing the `sbt` command.
-
-4. Once the sbt console has started, generate the database schema using the following command: 
-    ```
-    glance-evalJVM/flywayMigrate
-    ``` 
-    
-5. Unfortunately the prepackaged versions of the cli tools are failing silently at the moment. I'm figuring out why as 
- we speak, but in the mean time run the `transform` job (which prepares sql12 data for insertion into the glance 
- database) using the following command in sbt: 
-    ```
-    glance-eval-cli/run transform -c /Location/Of/CSClusterSessions.csv -r /Location/Of/RecapSessions.csv -m /Location/Of/NessMarks.csv -o /Directory/To/Write/Transformed/Csvs -p CSC -y 2015 -s 2
-    ``` 
-    
-6. Run the `generate` job (which creates the surveys in the glance database) using the following command in sbt:
-    ```
-    glance-eval-cli/run generate -i /Location/Of/marks.csv --modules CSC3621,CSC3222,CSC2026
-    ```
-    **Note** that `marks.csv` is generated by the previous job.
-    
-7. Run `load-support` job (which loads cluster and recap info transformed by step 5, into the glance database) using the
-following command in sbt: 
-    ```
-    glance-eval-cli/run load-support -c /Location/Of/clusterSessions.csv -r /Location/Of/recapSessions.csv
-    ```
-    **Note** that `clusterSessions.csv` and `recapSessions.csv` are generated by the `transform` job.
-
-8. Exit the `sbt` console and manually execute .sql dump in `glance-eval-cli/cs-surveys-bin` against the glance 
-postgres database. This loads module titles, descriptions, keywords, and start dates/durations (where needed).
-
-9. Restart the sbt console (using `sbt`).
-
-10. Start the survey app with the following command:
-    ```
-    glance-evalJVM/reStart
-    ``` 
-    Once you have done this, the api is available [here](http://localhost:8080), whilst the front-end is available  
-    [here](http://localhost:12345/glance-eval/js/target/scala-2.11/classes/index-dev.html).
-    
-11. If you want to load specific surveys (rather than the default) then you need to use the following url structure: 
-`.../index-dev.html#survey/{id}` where `{id}` corresponds to the uuid string for the the survey in question. E.g:
-
-    ```
-    .../index-dev.html#survey/13927f7f-ded8-4862-a61f-66b7dd90b709   
-    ```
-    
-    I suggest we keep a list of the links and the surveys they correspond to so that we can quickly load them at the 
-    start of each in person session.
-
-### Updating (no data changes)
-
-1. Pull down the soar repo
-2. re-run `glance-evalJVM/flyWayMigrate` 
-3. Perform steps 8-9 above.
-
-### Updating (data changes)
-1. Pull down the soar repo
-2. Backup database with the `pg_dump` utility or similar
-3. Run `glance-evalJVM/flywayClean` then `glance-evalJVM/flywayMigrate`. **Note** that the clean command will wipe the 
-database.
-4. Rerun steps 4-9 above. 
 
 

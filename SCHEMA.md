@@ -22,9 +22,8 @@ them. You can see which visualisations require which files [here](VISUALISATIONS
 are unlikely to be an exhaustive description of all the useful student data available to each institution. Instead they 
 are simply the data which is needed to power Glance's various visualisations.  
 
-If you have any questions about the files specified in this document, please create an issue with the following format:
-
-TODO: Write an issue template for reporting schema issues.
+If you have any questions about the files specified in this document, please create an issue 
+[here](https://github.com/NewcastleComputingScience/student-outcome-accelerator/issues/new)
 
 ## Files
 
